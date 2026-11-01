@@ -149,6 +149,49 @@ TEST_CASE("register names in immediates stand for their address") {
     CHECK(one("DW R1") == "A70E");
 }
 
+TEST_CASE("DEFR and BIT may repeat a definition with the same address") {
+    // Register files define the core registers and PSW bits again.
+    auto r = run(program("PSW DEFR 0FF10H\n"      // 2  built-in SFR
+                         "MDC DEFR 0FF0EH, RW\n"  // 3  the access attribute does not matter
+                         "IEN BIT PSW.11\n"       // 4  built-in bit
+                         "MULIP BIT 0FF10H.5\n"   // 5
+                         "REG1 DEFR 0FE40H\n"     // 6
+                         "REG1 DEFR 0FE40H, W\n"  // 7
+                         "DB1 DEFB 0FD00H.4\n"    // 8
+                         "DB1 BIT 0FD00H.4\n"     // 9  BIT may repeat a DEFB bit
+                         "PORT DEFR 0FFC4H\n"     // 10
+                         "PIN BIT PORT.4\n"       // 11
+                         "PIN BIT 0FFC4H.4\n",    // 12
+                         " MOV PSW, #1\n"         // 15
+                         " BCLR IEN\n"            // 16
+                         " MOV REG1, R1\n"        // 17
+                         " BSET PIN\n"));         // 18
+    REQUIRE(r.ok());
+    CHECK(code(r, 15) == "E6880100");
+    CHECK(code(r, 16) == "BE88");
+    CHECK(code(r, 17) == "F6F140FE");
+    CHECK(code(r, 18) == "4FE2");
+}
+
+TEST_CASE("other repeated definitions are A25") {
+    auto r = run(program("MDH DEFR 0FE40H\n"     // 2  different address
+                         "V BIT PSW.3\n"         // 3  different bit
+                         "C DEFB PSW.1\n"        // 4  DEFB never repeats
+                         "R0 DEFR 0FE00H\n"      // 5  a GPR is not an SFR
+                         "A1 DEFA 0FA00H\n"      // 6
+                         "A1 DEFA 0FA00H\n"      // 7  DEFA never repeats
+                         "B1 BIT 0FD02H.1\n"     // 8
+                         "B1 DEFB 0FD02H.1\n"    // 9  nor DEFB after BIT
+                         "E1 EQU 5\n"            // 10
+                         "E1 EQU 5\n"            // 11 EQU never repeats
+                         "RG2 DEFR 0FE48H\n"     // 12
+                         "RG2 EQU 0FE48H\n",     // 13 different kinds
+                         " MOV MDH, R1\n"));     // 16 keeps the first address
+    for (int line : {2, 3, 4, 5, 7, 9, 11, 13}) CHECK(diags(r, line) == "A25E");
+    for (int line : {6, 8, 10, 12}) CHECK(diags(r, line).empty());
+    CHECK(code(r, 16) == "F6F10CFE");
+}
+
 TEST_CASE("LIT belongs to AX51") {
     auto r = run(program("LT LIT 'R1'\n", " NOP\n"));
     CHECK(diags(r, 2) == "A6E");

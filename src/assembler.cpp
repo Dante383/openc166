@@ -419,7 +419,7 @@ private:
     void section_end(const Token& name);
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
-    void define(const Token& name, SymbolKind kind, const Value& v);
+    void define(const Token& name, SymbolKind kind, const Value& v, bool same_ok = false);
     void undefine(const Token& name);
     Value here(LType type) const;
     Value expression(TokenCursor& cur);
@@ -444,15 +444,23 @@ std::optional<Value> Assembler::lookup(std::string_view name) {
     return it->second.sym.value;
 }
 
-void Assembler::define(const Token& name, SymbolKind kind, const Value& v) {
+// same_ok: DEFR and BIT may repeat a register or bit definition (predefined or
+// not) with the same address, as Keil's own register files do.
+void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool same_ok) {
     std::string u = upper(name.text);
     if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
         throw AsmError("A4", "illegal use of a reserved word", name.column);
-    if (predefined(name.text, cpu_, sys166_)) throw AsmError("A25", "symbol redefinition", name.column);
+    auto repeat = [&](const Value& old) { return same_ok && v.known && old.known && same_value(old, v); };
+    if (auto p = predefined(name.text, cpu_, sys166_)) {
+        if (repeat(*p)) return;
+        throw AsmError("A25", "symbol redefinition", name.column);
+    }
     auto [it, inserted] = symbols_.try_emplace(key(name.text));
     Entry& e = it->second;
-    if (!inserted && e.pass == pass_ && !(kind == SymbolKind::Set && e.sym.kind == SymbolKind::Set))
+    if (!inserted && e.pass == pass_ && !(kind == SymbolKind::Set && e.sym.kind == SymbolKind::Set)) {
+        if (repeat(e.sym.value)) return;
         throw AsmError("A25", "symbol redefinition", name.column);
+    }
     if (kind != SymbolKind::Set && (inserted || !same_value(e.sym.value, v))) changed_ = true;
     e.sym = Symbol{std::string(name.text), kind, v, line_no_};
     e.pass = pass_;
@@ -1170,7 +1178,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A70", "invalid type of expression: bit address expected", column);
         if (kind != SymbolKind::Bit && v.type == VType::Bit)
             throw AsmError("A70", "invalid type of expression: use BIT for bit addresses", column);
-        define(name, kind, v);
+        define(name, kind, v, kind == SymbolKind::Bit);
         if (v.known) lst.value = v;
     } else if (dir == "LABEL") {
         int need = 1;
@@ -1249,7 +1257,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         if (sfr && forward_ref_)
             undefine(name);
         else
-            define(name, SymbolKind::Equ, d);
+            define(name, SymbolKind::Equ, d, sfr);
         access_attribute(cur);
         expect_end(cur);
     } else if (dir == "DEFB") {
