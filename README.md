@@ -91,10 +91,13 @@ written), and 2 for usage or file errors. Messages use the format
 `file:line: error A74: ...`.
 
 [examples/payload.a66](examples/payload.a66) is a short, commented example.
+[examples/mtos/](examples/mtos/) holds real ECU payloads for Siemens SIMK43
+ECUs, taken from gkflasher.
 
 ## Testing
 
-- `ctest --test-dir build` runs the unit tests and assembles the example.
+- `ctest --test-dir build` runs the unit tests and assembles the examples,
+  checking every byte.
 - `tests/diff/` contains the differential test against Keil A166. Keil is
   **not** included. If you have your own copy, run:
 
