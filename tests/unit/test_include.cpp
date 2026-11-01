@@ -159,6 +159,44 @@ TEST_CASE("a missing include file ends the assembly") {
     CHECK(r.listing.size() == 1);
 }
 
+TEST_CASE("REG167.INC is built in") {
+    // C167 sources include a register file; Keil's own definitions agree with
+    // these values.
+    std::string src = std::string("$MOD167\n$INCLUDE (reg167.inc)\n") + kHead +
+                      " MOV SYSCON3, R1\n BSET T3IR\n BCLR SSCEN\n JB T3EUD, P\n BSET S0PEN\n BSET IEN\n" + kTail;
+    SUBCASE("used when no file of that name is found") {
+        Files f;
+        auto r = oc166::assemble(src, f.options());
+        REQUIRE(r.ok());
+        CHECK(r.warning_count() == 0);
+        CHECK(listing_line(r, 3)->file == "<bundled>/REG167.INC");
+        int n = static_cast<int>(r.listing.size());
+        CHECK(at(r, n - 8) == "F6F1D4F1");
+        CHECK(at(r, n - 7) == "7FB1");
+        CHECK(at(r, n - 6) == "FED9");
+        CHECK(at(r, n - 5) == "8AE2FA40");
+        CHECK(at(r, n - 4) == "5FD8");
+        CHECK(at(r, n - 3) == "BF88");
+        CHECK(symbol(r, "ADDAT") == 0xFEA0);
+        CHECK(symbol(r, "XP3IC") == 0xF19E);
+    }
+    SUBCASE("a file found on the search path comes first") {
+        Files f;
+        f.files["reg167.inc"] = "SYSCON3 DEFR 0F000H\nT3IR BIT 0FD00H.0\nSSCEN BIT 0FD00H.1\n"
+                                "T3EUD BIT 0FD00H.2\nS0PEN BIT 0FD00H.3\n";
+        auto r = oc166::assemble(src, f.options());
+        REQUIRE(r.ok());
+        CHECK(at(r, 10) == "F6F100F0");
+        CHECK(!symbol(r, "ADDAT"));
+    }
+    SUBCASE("only for a bare file name") {
+        Files f;
+        auto r = oc166::assemble("$MOD167\n$INCLUDE (inc\\reg167.inc)\n END\n", f.options());
+        REQUIRE(r.error_count() == 1);
+        CHECK(r.diagnostics[0].code == "OC5");
+    }
+}
+
 TEST_CASE("recursive includes are stopped") {
     Files f;
     f.files["self.inc"] = "$INCLUDE (self.inc)\n";

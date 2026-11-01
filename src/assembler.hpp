@@ -31,7 +31,8 @@ struct AssembleOptions {
     std::int64_t origin = 0;
     // Directories searched by $INCLUDE. The order is: the current directory,
     // the directory of file_name, these directories, then the directories
-    // given by $INCDIR in the source.
+    // given by $INCDIR in the source. A bare file name that is found nowhere
+    // falls back to the copy built into openc166 (inc/REG167.INC).
     std::vector<std::string> include_dirs;
     // Reads include files. The default reads from the file system and, like
     // Windows, ignores the case of file names.

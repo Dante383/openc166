@@ -20,10 +20,25 @@ add_custom_command(
     COMMENT "Generating C166 instruction table"
     VERBATIM)
 
+# Build the files in inc/ (assembler include files) into the library.
+set(_bundled ${PROJECT_SOURCE_DIR}/inc/REG167.INC)
+set(_bundled_inc ${OPENC166_GENERATED_DIR}/openc166/bundled_files.inc)
+string(REPLACE ";" "|" _bundled_arg "${_bundled}")
+add_custom_command(
+    OUTPUT ${_bundled_inc}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${OPENC166_GENERATED_DIR}/openc166
+    COMMAND ${CMAKE_COMMAND} -DOUTPUT=${_bundled_inc} -DFILES=${_bundled_arg}
+            -P ${PROJECT_SOURCE_DIR}/cmake/embed_files.cmake
+    DEPENDS ${_bundled} ${PROJECT_SOURCE_DIR}/cmake/embed_files.cmake
+    COMMENT "Embedding include files"
+    VERBATIM)
+
 add_library(openc166_core STATIC
     ${_isa_inc}
+    ${_bundled_inc}
     isa/isa.cpp
     assembler.cpp
+    bundled.cpp
     encode.cpp
     expr.cpp
     lexer.cpp

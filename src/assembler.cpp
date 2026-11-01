@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "assembler.hpp"
 
+#include "bundled.hpp"
 #include "encode.hpp"
 #include "expr.hpp"
 #include "lexer.hpp"
@@ -1152,6 +1153,11 @@ void Assembler::include(std::string_view name, int column) {
             if (!text) continue;
             it->second = static_cast<int>(add_file(path, std::move(*text)));
             break;
+        }
+        // Last resort for a bare file name: the copy built into openc166.
+        if (it->second < 0 && wanted.find('/') == std::string::npos) {
+            if (auto f = bundled_file(wanted))
+                it->second = static_cast<int>(add_file("<bundled>/" + std::string(f->name), std::string(f->text)));
         }
     }
     if (it->second < 0) {

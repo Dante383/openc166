@@ -25,8 +25,10 @@ Early development (version 0.0.x). What works today:
 - Absolute sections (`SECTION CODE AT 0E000H`), `PROC`/`ENDP`, `ORG`, `EVEN`,
   `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`, and `DS`/`DSB`/`DSW`/`DSD`, including
   Keil's automatic alignment of word data.
-- `DEFR`/`DEFA`/`DEFB`, the register-definition directives that Keil's
-  `reg167.inc` uses.
+- `DEFR`/`DEFA`/`DEFB`, the register-definition directives that register
+  files use, with Keil's rules for repeated definitions.
+- A built-in `REG167.INC` register file, written from Infineon's manuals, so
+  `$INCLUDE(REG167.INC)` works without Keil installed.
 - Keil's rules for label arithmetic, which decide between short and long
   instruction forms.
 - Generic `JMP` and `CALL`: like Keil, openc166 picks the shortest
@@ -45,7 +47,6 @@ Early development (version 0.0.x). What works today:
 
 Not done yet:
 
-- a bundled register file (`reg167.inc`)
 - macros
 - relocatable sections and linking, and OMF-166 object files
 - the TASKING assembler dialect

@@ -90,6 +90,60 @@ The access attribute only matters to a debugger and is ignored. As in Keil:
 In C166 mode there are no extended SFRs, so a bit address in that area
 fails with A68, as in Keil.
 
+**Repeating a definition.** Register files define some names that already
+exist: the core registers (`PSW`, `MDC`, `CP`, ...), the PSW bits (`C`, `Z`,
+`IEN`, ...), and sometimes a name twice. As in Keil, these may repeat:
+
+- `DEFR` for a name that is already an SFR **at the same address** (the
+  access attribute may differ);
+- `BIT` for a name that is already a bit **at the same bit address** (from
+  `BIT`, `DEFB` or a built-in name).
+
+Every other repeat is error A25: a different address, a repeated `DEFA`,
+`DEFB` or `EQU` (even with the same value), `DEFB` after `BIT`, a change of
+kind (`DEFR` then `EQU`), and `DEFR` for a GPR name such as `R0`.
+
+## Register file REG167.INC
+
+C167 programs usually start with
+
+```
+$MOD167
+$INCLUDE(REG167.INC)
+```
+
+to get names for the C167's registers and bits (`SYSCON`, `T3CON`, `T3IR`,
+`ADST`, ...). openc166 has its own [`inc/REG167.INC`](../inc/REG167.INC),
+built into the program, so this works without any extra file. When a file
+called `REG167.INC` is found on the [search path](#include-files), that
+file is used instead, for example Keil's own.
+
+The file was written from Infineon's documentation, not copied from Keil:
+
+- every register of the C167CR User's Manual V3.1, including the core
+  registers, and `SYSCON2`, `SYSCON3` and `ISNC` from the C167CS data sheet;
+- a name for every single-bit field in the register descriptions, such as
+  `T3R` or `ADST`; a field of several bits (`T3I`, `ADCH`) has no name, so
+  use `T3CON.0` and so on;
+- `xxIR` (bit 7) and `xxIE` (bit 6) for every interrupt control register
+  `xxIC`;
+- the port pins that the timers use: `T0IN`, `T2IN`, `T3IN`, `T4IN`, `T3EUD`,
+  `T3OUT`, `CAPIN`, `T6OUT` on P3, and `T2EUD`, `T4EUD`, `T5EUD`, `T6EUD`,
+  `T5IN`, `T6IN` on P5;
+- `SGTEN` (= `SGTDIS`, SYSCON.11) and `SSCP0` (= `SSCPO`, SSCCON.6), other
+  spellings that existing sources use.
+
+Every name that also appears in Keil's `REG167.INC` has the same address;
+this was checked name by name. Keil's file has some names that ours lacks:
+the bits of the C167CS registers `SYSCON2`, `SYSCON3` and `ISNC` (their
+layout is not in any document we have), and the C167CS registers `SCUSLC`
+and `SCUSLS`. Use `SYSCON3.4` and so on, or a `BIT` line of your own. Ours
+has some names Keil's lacks, mostly bits that the manual names but Keil does
+not (`VISIBLE`, `SWR`, `CT3`, ...).
+
+Without `$MOD167` the file fails (with Keil's file too): the extended SFRs
+do not exist on the C166, and some C167 registers moved.
+
 ## Include files
 
 `$INCLUDE(file)` reads another file in place of the control line, like
@@ -104,7 +158,13 @@ A file is searched for in this order, and the first match wins:
 2. the directory of the **main** source file (not of the file that contains
    the `$INCLUDE`);
 3. directories given with `-I` on the command line, in order;
-4. directories given with `$INCDIR(dir;dir...)`, in order.
+4. directories given with `$INCDIR(dir;dir...)`, in order;
+5. for a bare file name such as `REG167.INC` (no directory part): the copy
+   built into openc166, see [Register file REG167.INC](#register-file-reg167inc).
+
+Keil also searches its own `C166\ASM` directory, which holds Keil's register
+files, right after the current directory. openc166 has no such directory;
+its built-in copy comes last, so a `REG167.INC` next to the source wins.
 
 Names are matched without regard to upper and lower case, on every
 operating system, because Keil sources written on Windows often mix them.
@@ -383,6 +443,8 @@ follow are unchanged. Other bad items are dropped.
 | stray `ENDIF`, second `ELSE`, `ELSEIF` after `ELSE`, text after a condition | silently accepted | accepted with warning OC9 |
 | two conditional keywords on one line (`ELSE ELSE`, `ENDIF IF 0`) | sometimes A6, sometimes silent; can leave the nesting confused | error A6; the line is ignored |
 | `$INCLUDE` of a missing file after `END` | fatal error | ignored, like every line after `END` |
+| `$INCLUDE(REG167.INC)` (or another name Keil ships) | Keil's own `C166\ASM` directory is searched right after the current directory, before the source directory | the built-in copy is used only when the name is found nowhere else |
+| repeated definition with a different value (A25) | the new value is used from then on | the first value stays |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to
