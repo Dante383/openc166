@@ -44,6 +44,7 @@ the complete memory image.
 - **Conditional assembly:** `$SET`/`$RESET`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF`,
   the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, and `$COND`/`$NOCOND`. See
   [Conditional assembly](#conditional-assembly).
+- **Text replacement:** `name LIT 'text'`. See [LIT](#lit).
 - **Accepted and ignored:** these only matter to a linker or debugger.
   - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `ASSUME`, `REGDEF`, `REGBANK`,
     `SSKDEF`, `PECDEF`, `TYPEDEC`.
@@ -62,9 +63,6 @@ silently skipped:
 - `EXTERN`/`EXTRN` (a raw image has no linker to resolve them)
 - `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
 - the XC16x/Super10 extended instruction set
-
-`LIT` belongs to Keil's AX51 assembler. A166 rejects it with A6, and so does
-openc166.
 
 ## Register definitions
 
@@ -280,6 +278,43 @@ COUNT   EQU     4                ; ordinary symbols for IF
   `$NOCOND` leaves out every line after which assembly is off; `$COND`
   (the default) shows them again.
 
+## LIT
+
+`name LIT 'text'` (or `"text"`) makes `name` stand for a piece of text.
+Before a line is read, every whole-word use of the name is replaced by the
+text, which is replaced again if it holds other LIT names:
+
+```
+PORT    LIT     'R2'
+CNT     LIT     '1+2'
+        BSET    PORT.3           ; read as BSET R2.3
+        MOV     R1,#CNT*2        ; read as MOV R1,#1+2*2, which is 5, not 6
+```
+
+- **Where.** Anywhere a name can stand: the mnemonic, a directive, the
+  name in front of a directive (`NM EQU 5` defines whatever `NM` stands
+  for), a label, operands, and the conditions of `IF` and `$IF`/`$SET`.
+  Strings and comments are left alone. The listing shows the replaced
+  line. Names follow `$CASE`/`$NOCASE` like other symbols.
+- **Not in file names.** `$INCLUDE (name)` and `$INCDIR (name)` open the
+  file or directory as written, although Keil's listing shows the name
+  replaced. openc166 does the same.
+- **Order.** A LIT works from the line after it, also in later passes. A
+  name used before its LIT, or a LIT whose text leads back to itself
+  (`A1 LIT 'B1'`, `B1 LIT 'A1'`), is error A60. A LIT inside an `IF` block
+  that is left out is not defined.
+- **The text is raw.** A `;` in the text starts a comment where the text
+  lands, and an empty text (`''`) is allowed.
+- **Errors.** Defining a name that already exists is A25; so is a LIT
+  whose name is itself replaced by a register name. A missing or unquoted
+  text, or anything after the closing quote, is A6.
+
+**Labels.** As in Keil, a colon label cannot stand in front of a name and
+a directive (`X1: ABC EQU 5`, also `SET`, `LIT`, `PROC`, `DW` and the
+like). Inside a section the label is still defined and the rest of the line
+is ignored, with A6 at the name and A6 at the directive. Outside a section
+it is a single A6 and nothing is defined.
+
 ## openc166's own messages
 
 Messages that Keil does not have use codes starting with `OC`:
@@ -296,6 +331,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC8 | warning | the last line of an include file was joined to the next line |
 | OC9 | warning | an `IF`-statement structure that Keil accepts but that is probably a mistake |
 | OC10 | warning | a condition that counts as false because only bit 0 is tested (`IF 2`) |
+| OC11 | error | a line longer than 65536 characters after LIT replacement |
 
 ## Data alignment
 
@@ -445,6 +481,8 @@ follow are unchanged. Other bad items are dropped.
 | `$INCLUDE` of a missing file after `END` | fatal error | ignored, like every line after `END` |
 | `$INCLUDE(REG167.INC)` (or another name Keil ships) | Keil's own `C166\ASM` directory is searched right after the current directory, before the source directory | the built-in copy is used only when the name is found nowhere else |
 | repeated definition with a different value (A25) | the new value is used from then on | the first value stays |
+| `LIT` that fails with A25 (`E1 LIT 'R1'` after `E1 EQU 3`) | the text is still used, in the second pass even on the lines before it (`E1 EQU 3` becomes `R1 EQU 3`) | the LIT is not defined |
+| name used before its `LIT` | A60; the listing shows the line replaced | A60; the listing shows the line as written |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

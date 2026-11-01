@@ -39,6 +39,8 @@ Early development (version 0.0.x). What works today:
 - Conditional assembly: `$SET`/`$RESET`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF`
   and the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, with Keil's quirks (only
   bit 0 of a condition counts) and listing format.
+- `LIT` text replacement (`PORT LIT 'R2'`), with Keil's rules for where
+  names are replaced.
 - The `$MOD167` and `$CASE` controls, with Keil's rule that these come
   before the first statement. Listing-only controls are accepted and
   ignored.

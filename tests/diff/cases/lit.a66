@@ -1,0 +1,64 @@
+; LIT: a name that stands for a piece of text. Before a line is read, each
+; whole-word use of the name is replaced by the text, which is replaced
+; again if it holds LIT names. Strings and comments stay as they are.
+$MOD167
+U1      LIT     'R5'
+U2      LIT     "R6"
+EX      LIT     '1+2'
+MYMOV   LIT     'MOV'
+NESTED  LIT     'U1'                    ; replaced again: R5
+PAIR    LIT     'R1, R2'
+EMPTY   LIT     ''
+PORT    LIT     'R2'
+ADR     LIT     '0FA00H'
+CNT     LIT     '3'
+MSK     LIT     '0FFH'
+QS      LIT     "'AB'"
+QT      LIT     '''IT''''S'''               ; the text is 'IT''S'
+SP1     LIT     '  R3  '
+NM      LIT     'ABC'
+DIR     LIT     'EQU'
+LBL     LIT     'START'
+FLAG    LIT     '1'
+KIND    LIT     'CODE'
+INC     LIT     'nowhere'
+$INCLUDE (inc/lit.inc)                  ; lists 'nowhere', reads inc
+VAL     EQU     EX*2                    ; 1+2*2 = 5, not 3*2
+NM      EQU     5                       ; the name is replaced too: defines ABC
+XYZ     DIR     9
+$IF FLAG
+IN1     EQU     1
+$ENDIF
+        IF FLAG
+IN2     EQU     2
+        ENDIF
+C1      SECTION KIND AT 0C000H
+P       PROC
+LBL:    NOP
+        MOV     U1,#1
+        MOV     U2,u1                   ; names ignore case under $NOCASE
+        MOV     R1,#EX*2
+        MYMOV   R1,R2
+        MOV     NESTED,#3
+        ADD     PAIR
+        MOV     R1,#VAL
+        DB      'U1'
+        MOV     R1,#U1+1                ; U1 is R5 here: the address of R5 plus 1
+        BSET    PORT.3
+        BCLR    PORT.CNT
+        MOV     R1,ADR
+        MOV     R1,#CNT
+        DW      CNT, CNT+1, EMPTY 7
+        AND     R1,#MSK
+        DB      QS
+        DB      QT
+        MOV     SP1,#1
+        MOV     R2,#ABC
+        MOV     R2,#XYZ
+        MOV     R1,#IN1+IN2
+        MOV     INCREG,#INCVAL
+        JMP     START
+        RET
+P       ENDP
+C1      ENDS
+        END

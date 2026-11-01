@@ -75,7 +75,14 @@ public:
         case TokKind::Ident: {
             cur_.next();
             if (is_operator_keyword(t.text)) throw AsmError("A6", "syntax error: unexpected operator", t.column);
-            if (auto v = ctx_.lookup(t.text)) {
+            std::optional<Value> v;
+            try {
+                v = ctx_.lookup(t.text);
+            } catch (const AsmError& e) {
+                if (e.column()) throw;
+                throw AsmError(e.code(), e.message(), t.column);
+            }
+            if (v) {
                 // A GPR's address is that of its short register number F0H + n.
                 if (immediate_ && (v->type == VType::Gpr || v->type == VType::GprB)) {
                     v->num = 0xFE00 + 2 * (0xF0 + v->num);

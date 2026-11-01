@@ -32,6 +32,10 @@ std::vector<Token> tokenize(std::string_view line);
 // Decodes a quoted string's contents (doubled quotes become one quote).
 std::vector<std::uint8_t> string_bytes(const Token& t);
 
+// Characters that start and continue a name.
+bool ident_start(char c);
+bool ident_char(char c);
+
 // Case-insensitive comparison with an upper-case keyword.
 bool ieq(std::string_view s, std::string_view upper);
 

@@ -25,6 +25,8 @@ namespace {
 
 constexpr int kMaxPasses = 32;
 constexpr std::size_t kMaxIncludeDepth = 32;
+// Guards against LITs whose texts multiply ('A LIT 'B B'', 'B LIT 'C C'', ...).
+constexpr std::size_t kMaxExpandedLine = 65536;
 constexpr std::int64_t kAddressLimit = 0x1000000;  // 16 MB C167 address space
 
 std::string upper(std::string_view s) {
@@ -356,6 +358,7 @@ private:
     int level_ = 0;  // include nesting depth of the current line
     std::string joined_;  // include file whose last line was joined to the current line
     std::unordered_map<std::string, Entry> symbols_;
+    bool lits_ = false;  // some pass defined a LIT, so lines need expand_lits()
     std::vector<int> sizes_;  // instruction sizes of the previous pass
     std::set<int> misaligned_;  // lines that were misaligned in some pass
 
@@ -399,6 +402,8 @@ private:
     bool active() const { return conds_.empty() || conds_.back().active; }
     void run_pass();
     void process_line(std::string_view text);
+    bool expand_lits(std::string_view text, std::string& out, std::vector<std::string>& open,
+                     bool keep_file_names = false);
     std::size_t add_file(std::string name, std::string text);
     void statement(std::string_view text, Reporter& rep, ListingLine& lst);
     void controls(std::string_view text, std::size_t from, Reporter& rep);
@@ -438,6 +443,13 @@ std::optional<Value> Assembler::lookup(std::string_view name) {
     if (auto p = predefined(name, cpu_, sys166_)) return p;
     auto it = symbols_.find(key(name));
     if (it == symbols_.end()) return std::nullopt;
+    // expand_lits() leaves a LIT name in place when the LIT line comes later
+    // or the text leads back to the name. Keil reports both as A60.
+    if (it->second.sym.kind == SymbolKind::Lit) {
+        if (!final_) return Value::unknown();
+        throw AsmError("A60", "illegal identifier: LIT '" + std::string(name) +
+                                  "' is used before its definition or its text refers back to it");
+    }
     if (it->second.pass != pass_) {
         forward_ref_ = true;
         ++forward_count_;
@@ -463,7 +475,7 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
         throw AsmError("A25", "symbol redefinition", name.column);
     }
     if (kind != SymbolKind::Set && (inserted || !same_value(e.sym.value, v))) changed_ = true;
-    e.sym = Symbol{std::string(name.text), kind, v, line_no_};
+    e.sym = Symbol{std::string(name.text), kind, v, line_no_, {}};
     e.pass = pass_;
 }
 
@@ -730,9 +742,93 @@ void Assembler::process_line(std::string_view text) {
     res_.listing.push_back(std::move(lst));
 }
 
+// Copies 'text' to 'out', replacing the name of each LIT defined earlier in
+// this pass by the LIT's text, which is expanded the same way. Strings and
+// comments are copied as they are. 'open' holds the LITs being expanded: a
+// name whose text leads back to it stays, and lookup() reports it.
+// keep_file_names leaves the parentheses after INCLUDE, IC, INCDIR and ID
+// alone. Returns true if a name was replaced.
+bool Assembler::expand_lits(std::string_view text, std::string& out, std::vector<std::string>& open,
+                            bool keep_file_names) {
+    bool replaced = false;
+    std::size_t i = 0;
+    while (i < text.size()) {
+        const auto c = static_cast<unsigned char>(text[i]);
+        std::size_t j = i + 1;
+        if (c == ';') {
+            j = text.size();
+        } else if (c == '\'' || c == '"') {
+            while (j < text.size()) {
+                if (static_cast<unsigned char>(text[j++]) != c) continue;
+                if (j < text.size() && static_cast<unsigned char>(text[j]) == c) {
+                    ++j;
+                    continue;
+                }
+                break;
+            }
+        } else if (std::isdigit(c)) {
+            while (j < text.size() && (std::isalnum(static_cast<unsigned char>(text[j])) || text[j] == '$')) ++j;
+        } else if (ident_start(text[i])) {
+            while (j < text.size() && ident_char(text[j])) ++j;
+            if (keep_file_names) {
+                const std::string word = upper(text.substr(i, j - i));
+                std::size_t p = text.find_first_not_of(" \t", j);
+                if ((word == "INCLUDE" || word == "IC" || word == "INCDIR" || word == "ID") &&
+                    p != std::string_view::npos && text[p] == '(') {
+                    std::size_t close = text.find(')', p);
+                    j = close == std::string_view::npos ? text.size() : close + 1;
+                    out.append(text, i, j - i);
+                    i = j;
+                    continue;
+                }
+            }
+            std::string k = key(text.substr(i, j - i));
+            auto it = symbols_.find(k);
+            if (it != symbols_.end() && it->second.sym.kind == SymbolKind::Lit && it->second.pass == pass_ &&
+                std::find(open.begin(), open.end(), k) == open.end()) {
+                open.push_back(std::move(k));
+                expand_lits(it->second.sym.text, out, open);
+                open.pop_back();
+                if (out.size() > kMaxExpandedLine)
+                    throw AsmError("OC11", "line longer than " + std::to_string(kMaxExpandedLine) +
+                                               " characters after LIT replacement");
+                replaced = true;
+                i = j;
+                continue;
+            }
+        }
+        out.append(text, i, j - i);
+        i = j;
+    }
+    return replaced;
+}
+
 void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst) {
     std::size_t lead = text.find_first_not_of(" \t");
     if (lead == std::string_view::npos) return;
+    // Like Keil, replace LIT names before reading the line, in $ controls too,
+    // and list the result. Lines that a false IF block skips stay as they are.
+    std::string expanded;
+    if (lits_) {
+        std::size_t end = lead;
+        while (end < text.size() && word_char(text[end])) ++end;
+        const bool control = text[lead] == '$';
+        const bool cond_line = control || contains(kCondKeywords, upper(text.substr(lead, end - lead)));
+        const bool parent_active = conds_.empty() || conds_.back().parent_active;
+        std::vector<std::string> open;
+        if ((active() || (cond_line && parent_active)) && expand_lits(text, expanded, open)) {
+            lst.source = expanded;
+            // Keil lists the file names of $INCLUDE and $INCDIR replaced, but
+            // uses them as written.
+            if (control) {
+                expanded.clear();
+                expand_lits(text, expanded, open, true);
+            }
+            text = expanded;
+            lead = text.find_first_not_of(" \t");
+            if (lead == std::string_view::npos) return;
+        }
+    }
     if (text[lead] == '$') {
         controls(text, lead + 1, rep);
         return;
@@ -756,6 +852,16 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     if (cur.peek().kind == TokKind::Ident && cur.peek(1).is_op(":")) {
         const Token& label = cur.next();
         cur.next();
+        // Keil rejects 'label: name EQU ...' and the like. Inside a section the
+        // label is still defined, and both the name and the directive are
+        // reported; outside one, the name is reported and nothing is defined.
+        const Token& name = cur.peek();
+        const Token& dir = cur.peek(1);
+        const bool named = name.kind == TokKind::Ident && dir.kind == TokKind::Ident &&
+                           contains(kNamedDirectives, upper(dir.text));
+        const std::string misplaced = "syntax error: a label cannot come before '" + std::string(name.text) + " " +
+                                      upper(dir.text) + "'";
+        if (named && cur_ == 0) throw AsmError("A6", misplaced, name.column);
         // A label in front of data takes the type and alignment of the data;
         // otherwise it is a NEAR label in code sections and needs an even address.
         std::string next = cur.peek().kind == TokKind::Ident ? upper(cur.peek().text) : std::string();
@@ -767,6 +873,10 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         LType type = data_follows ? data_type(next) : section().code ? LType::Near : LType::Byte;
         define(label, SymbolKind::Label, here(type));
         if (!data_follows && section().code) check_alignment(2, label, rep);
+        if (named) {
+            rep.error("A6", misplaced, name.column);
+            throw AsmError("A6", "syntax error: " + upper(dir.text) + " is ignored after a label", dir.column);
+        }
         if (cur.at_end()) return;
         // Keil defines the label, reports the line and still obeys the IF.
         if (const Token& t = cur.peek(); t.kind == TokKind::Ident && contains(kCondKeywords, upper(t.text))) {
@@ -1286,7 +1396,19 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         access_attribute(cur);
         expect_end(cur);
     } else if (dir == "LIT") {
-        throw AsmError("A6", "syntax error: LIT is only supported by Keil AX51, not A166", name.column);
+        const Token& t = cur.peek();
+        if (t.kind != TokKind::String) throw AsmError("A6", "syntax error: LIT expects a quoted string", t.column);
+        cur.next();
+        auto bytes = string_bytes(t);
+        std::string text(bytes.begin(), bytes.end());
+        auto old = symbols_.find(key(name.text));
+        std::string old_text = old != symbols_.end() ? old->second.sym.text : std::string();
+        define(name, SymbolKind::Lit, Value::number(0));
+        if (old_text != text) changed_ = true;
+        symbols_.at(key(name.text)).sym.text = std::move(text);
+        lits_ = true;
+        // Keil keeps the first string of 'name LIT 'a', 'b''.
+        expect_end(cur);
     } else if (contains(kDataDirectives, dir)) {
         align(data_alignment(dir));
         lst.has_address = true;
@@ -1640,7 +1762,7 @@ std::string format_listing(const AssemblyResult& result) {
 
     out += "\nSYMBOLS\n\n";
     for (const auto& s : result.symbols) {
-        static constexpr const char* kKinds[] = {"LABEL", "EQU", "SET", "BIT"};
+        static constexpr const char* kKinds[] = {"LABEL", "EQU", "SET", "BIT", "LIT"};
         std::string value;
         switch (s.value.type) {
         case VType::Number: value = s.value.known ? hex(s.value.num, 8) + "H" : "?"; break;
@@ -1651,6 +1773,7 @@ std::string format_listing(const AssemblyResult& result) {
         case VType::Cc: value = "cc " + std::to_string(s.value.num); break;
         }
         if (s.value.ltype != LType::None) value += std::string(" ") + type_name(s.value.ltype);
+        if (s.kind == SymbolKind::Lit) value = "\"" + s.text + "\"";
         char row[160];
         std::snprintf(row, sizeof row, "%-32s %-6s %s\n", s.name.c_str(), kKinds[static_cast<int>(s.kind)], value.c_str());
         out += row;

@@ -1,0 +1,38 @@
+; Errors with LIT.
+$MOD167
+U1      LIT     'QQ'
+U1      LIT     'ZZ'                    ; the name is replaced too: defines QQ
+R1X     LIT     'R5'
+R1X     LIT     'R5'                    ; becomes R5 LIT 'R5': R5 is a register
+E1      EQU     3
+E1      LIT     'R1'
+NOARG   LIT
+TWO     LIT     'A', 'B'
+A1      LIT     'B1'
+B1      LIT     'A1'
+SELF    LIT     'SELF'
+X1:     LT2     LIT 'R2'                ; no label in front of a named directive
+X2:     ABC     EQU 5
+X3:     SR1     DEFR 0FE00H
+X4:     ST1     SET 3
+Q       LIT     'R1 ; tail'
+        IF 0
+SKIP    LIT     'R4'
+        ENDIF
+C1      SECTION CODE AT 0C000H
+P       PROC
+Z1:     K1      EQU 1                   ; in a section, Z1 is still defined
+Z2:     N2      DW 1
+        MOV     R1,#FWD                 ; the LIT comes later
+        MOV     R1,#A1                  ; A1 -> B1 -> A1
+        MOV     R1,#SELF
+        MOV     R1,#ZZ
+        MOV     Q,#2
+        MOV     R1,#SKIP
+        MOV     R1,#ABC
+        MOV     R1,#E1                  ; DIVERGES: Keil lists line 7 as R1 EQU 3 and gives A60 here
+        RET
+P       ENDP
+C1      ENDS
+FWD     LIT     '4'
+        END

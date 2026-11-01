@@ -9,9 +9,6 @@
 namespace oc166 {
 namespace {
 
-bool ident_start(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '?'; }
-bool ident_char(char c) { return ident_start(c) || std::isdigit(static_cast<unsigned char>(c)); }
-
 int digit_value(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
@@ -53,6 +50,9 @@ std::uint64_t parse_number(std::string_view text, int column) {
 }
 
 }  // namespace
+
+bool ident_start(char c) { return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '?'; }
+bool ident_char(char c) { return ident_start(c) || std::isdigit(static_cast<unsigned char>(c)); }
 
 bool ieq(std::string_view s, std::string_view upper) {
     if (s.size() != upper.size()) return false;

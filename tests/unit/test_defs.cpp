@@ -191,8 +191,3 @@ TEST_CASE("other repeated definitions are A25") {
     for (int line : {6, 8, 10, 12}) CHECK(diags(r, line).empty());
     CHECK(code(r, 16) == "F6F10CFE");
 }
-
-TEST_CASE("LIT belongs to AX51") {
-    auto r = run(program("LT LIT 'R1'\n", " NOP\n"));
-    CHECK(diags(r, 2) == "A6E");
-}

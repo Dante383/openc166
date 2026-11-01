@@ -60,13 +60,14 @@ struct ListingLine {
     std::vector<std::size_t> diagnostics;  // indices into AssemblyResult::diagnostics
 };
 
-enum class SymbolKind : std::uint8_t { Label, Equ, Set, Bit };
+enum class SymbolKind : std::uint8_t { Label, Equ, Set, Bit, Lit };
 
 struct Symbol {
     std::string name;
     SymbolKind kind = SymbolKind::Label;
-    Value value;
+    Value value;  // unused for a LIT
     int line = 0;  // listing line (ListingLine::line) of the definition
+    std::string text;  // replacement text of a LIT
 };
 
 struct AssemblyResult {
