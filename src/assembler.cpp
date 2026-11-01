@@ -170,6 +170,118 @@ bool contains(const std::string_view (&list)[N], std::string_view upper_name) {
     return std::find(std::begin(list), std::end(list), upper_name) != std::end(list);
 }
 
+// IF, ELSEIF, ELSE and ENDIF, as statements and as $ controls.
+constexpr std::string_view kCondKeywords[] = {"IF", "ELSEIF", "ELSE", "ENDIF"};
+
+// Keil opens a $IF only while fewer than this many IF blocks (of either
+// kind) are open.
+constexpr std::size_t kMaxControlIfDepth = 9;
+
+bool word_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '?' || c == '@';
+}
+
+// Tokens of the part of a line from index 'from' on, with columns of the
+// whole line.
+std::vector<Token> tokenize_from(std::string_view line, std::size_t from) {
+    const int shift = static_cast<int>(from);
+    try {
+        auto toks = tokenize(line.substr(from));
+        for (auto& t : toks) t.column += shift;
+        return toks;
+    } catch (const AsmError& e) {
+        throw AsmError(e.code(), e.message(), e.column() ? e.column() + shift : 0);
+    }
+}
+
+// Tokens of an IF condition. Keil reads 1.0 as a bit address here.
+std::vector<Token> condition_tokens(std::string_view line, std::size_t from) {
+    try {
+        return tokenize_from(line, from);
+    } catch (const AsmError& e) {
+        if (e.code() != "A70") throw;
+        throw AsmError("A6", "syntax error: a bit cannot be a condition", e.column());
+    }
+}
+
+// Value of an IF condition. Keil reports a bit address (x.n) as a syntax error.
+Value condition_value(TokenCursor& cur, SymbolContext& ctx, int column) {
+    if (cur.at_end()) throw AsmError("A6", "syntax error: condition expected", column);
+    for (std::size_t k = 0; cur.peek(k).kind != TokKind::End; ++k)
+        if (cur.peek(k).is_op("."))
+            throw AsmError("A6", "syntax error: a bit cannot be a condition", cur.peek(k).column);
+    return evaluate(cur, ctx);
+}
+
+// Keil tests only bit 0 of a condition, so 2 is false. That keeps NOT
+// working on 0/1 flags (NOT 1 is 0FFFEH, false), but surprises anyone who
+// expects "non-zero is true", so other such values get a warning.
+bool condition_truth(const Value& v, int column, Reporter& rep) {
+    bool bit0 = (v.num & 1) != 0;
+    if (!bit0 && v.num != 0 && (v.num & 0xFFFF) != 0xFFFE)
+        rep.warning("OC10", "the condition is " + hex(v.num & 0xFFFFFFFF, 4) +
+                                "H, which counts as false: Keil tests only bit 0 of a condition", column);
+    return bit0;
+}
+
+// Statement IF and ELSEIF see EQU and SET symbols. Keil treats a condition
+// that uses a label, a register, an SFR or a bit as false without a word,
+// so these are noted for an error.
+class ConditionContext final : public SymbolContext {
+public:
+    explicit ConditionContext(SymbolContext& outer) : outer_(outer) {}
+
+    std::optional<Value> lookup(std::string_view name) override {
+        unsigned before = outer_.forward_references();
+        auto v = outer_.lookup(name);
+        if (outer_.forward_references() != before) forward = true;
+        if (v && v->type == VType::Cc)
+            condition_code = true;
+        else if (v && (v->rel != Rel::None || v->type != VType::Number))
+            unusable = true;
+        return v;
+    }
+    std::int64_t location() const override {
+        dollar = true;
+        return outer_.location();
+    }
+    bool location_fixed() const override { return outer_.location_fixed(); }
+    std::uint16_t section_index() const override { return outer_.section_index(); }
+    bool has_esfr() const override { return outer_.has_esfr(); }
+    unsigned forward_references() const override { return outer_.forward_references(); }
+    bool final_pass() const override { return true; }
+
+    bool forward = false;
+    bool condition_code = false;
+    bool unusable = false;
+    mutable bool dollar = false;
+
+private:
+    SymbolContext& outer_;
+};
+
+// $IF and $ELSEIF see only $SET names; any other name counts as 0.
+class FlagContext final : public SymbolContext {
+public:
+    explicit FlagContext(const std::map<std::string, std::int64_t>& flags) : flags_(flags) {}
+
+    std::optional<Value> lookup(std::string_view name) override {
+        auto it = flags_.find(upper(name));
+        return Value::number(it == flags_.end() ? 0 : it->second);
+    }
+    std::int64_t location() const override {
+        dollar = true;
+        return 0;
+    }
+    bool location_fixed() const override { return true; }
+    bool final_pass() const override { return true; }
+
+    mutable bool dollar = false;
+
+private:
+    const std::map<std::string, std::int64_t>& flags_;
+};
+
 // Controls allowed only before the first statement (Keil's "primary"
 // controls). Those not handled in controls() only affect the listing or
 // object file and are ignored.
@@ -184,7 +296,7 @@ constexpr std::string_view kPrimaryControls[] = {
 
 // Controls allowed anywhere that only affect the listing.
 constexpr std::string_view kIgnoredControls[] = {
-    "LIST", "NOLIST", "TITLE", "TT", "EJECT", "EJ", "GEN", "NOGEN", "GENONLY", "GO", "COND", "NOCOND",
+    "LIST", "NOLIST", "TITLE", "TT", "EJECT", "EJ", "GEN", "NOGEN", "GENONLY", "GO",
     "SYMLIST", "NOSYMLIST", "SAVE", "RESTORE", "REGUSE",
 };
 
@@ -264,17 +376,37 @@ private:
     int ext_left_ = 0;
     bool ext_esfr_ = false;
     bool ended_ = false;
+    std::size_t end_line_ = 0;  // index of the END line in res_.listing
     std::size_t insn_ = 0;
     int line_no_ = 0;  // counts lines across all files, as in Keil's listing
     int file_line_ = 0;  // line number within the current file
 
+    // An open IF block. $IF and IF blocks share one stack, as in Keil: a
+    // $ENDIF can close an IF statement.
+    struct Cond {
+        bool parent_active = true;  // the lines around the block are assembled
+        bool active = true;  // the lines of the current branch are assembled
+        bool taken = false;  // the IF or an ELSEIF was true
+        bool in_else = false;  // an ELSE was seen
+    };
+    std::vector<Cond> conds_;
+    std::map<std::string, std::int64_t> flags_;  // $SET names in upper case
+    bool cond_listing_ = true;  // $COND: list the lines of false IF blocks
+
     AssemblyResult res_;
 
+    bool active() const { return conds_.empty() || conds_.back().active; }
     void run_pass();
     void process_line(std::string_view text);
     std::size_t add_file(std::string name, std::string text);
     void statement(std::string_view text, Reporter& rep, ListingLine& lst);
-    void controls(std::string_view text, Reporter& rep);
+    void controls(std::string_view text, std::size_t from, Reporter& rep);
+    void cond_statement(const std::string& kw, std::string_view text, std::size_t after, Reporter& rep);
+    void cond_control(const std::string& kw, std::string_view text, std::size_t after, int column, bool misplaced,
+                      Reporter& rep);
+    bool statement_condition(std::string_view text, std::size_t after, int column, Reporter& rep);
+    bool control_condition(std::string_view text, std::size_t after, int column, Reporter& rep);
+    void set_flags(std::string_view text, std::size_t from, std::size_t to, bool set);
     void include(std::string_view name, int column);
     void named_directive(const Token& name, const std::string& dir, TokenCursor& cur, Reporter& rep,
                          ListingLine& lst);
@@ -474,6 +606,9 @@ void Assembler::run_pass() {
     incdirs_.clear();
     fatal_ = false;
     primary_done_ = false;
+    conds_.clear();
+    flags_.clear();
+    cond_listing_ = true;
 
     stack_.assign(1, Frame{});
     line_no_ = 0;
@@ -482,7 +617,7 @@ void Assembler::run_pass() {
     std::string carry;
     std::size_t carry_file = 0;
     int carry_line = 0, carry_level = 0;
-    while ((!stack_.empty() || !carry.empty()) && !ended_ && !fatal_) {
+    while ((!stack_.empty() || !carry.empty()) && !fatal_) {
         std::string text;
         if (stack_.empty()) {
             text = std::move(carry);
@@ -520,12 +655,27 @@ void Assembler::run_pass() {
     }
 
     if (!final_ || fatal_) return;
-    auto add = [&](Severity sev, const char* code, std::string msg) {
-        res_.diagnostics.push_back({sev, code, std::move(msg), opt_.file_name, 0, 0});
+    // Like Keil, report problems found at the end on the last line of the
+    // file, or on the END line for unterminated sections and procedures.
+    auto add = [&](Severity sev, const char* code, std::string msg, bool at_end = false) {
+        std::string file = opt_.file_name;
+        int line = 0;
+        if (!res_.listing.empty()) {
+            ListingLine& last = at_end && ended_ ? res_.listing[end_line_] : res_.listing.back();
+            last.diagnostics.push_back(res_.diagnostics.size());
+            file = last.file;
+            line = last.file_line;
+        }
+        res_.diagnostics.push_back({sev, code, std::move(msg), file, line, 0});
     };
     if (!ended_) add(Severity::Warning, "A89", "premature end of file (no END statement)");
-    if (proc_ != ProcKind::None) add(Severity::Error, "A106", "unterminated procedure '" + proc_name_ + "'");
-    for (auto i : open_) add(Severity::Error, "A106", "unterminated section '" + sections_[i].name + "'");
+    if (!conds_.empty())
+        add(Severity::Error, "A12", "unbalanced IF-ENDIF: " + std::to_string(conds_.size()) +
+                                        " IF block(s) not closed by ENDIF");
+    std::string open;
+    if (proc_ != ProcKind::None) open = "procedure '" + proc_name_ + "'";
+    for (auto i : open_) open += (open.empty() ? "section '" : ", section '") + sections_[i].name + "'";
+    if (!open.empty()) add(Severity::Error, "A106", "unterminated " + open, true);
 }
 
 void Assembler::process_line(std::string_view text) {
@@ -536,16 +686,30 @@ void Assembler::process_line(std::string_view text) {
     lst.file_line = file_line_;
     lst.level = level_;
     lst.source = std::string(text);
+    // Keil lists the lines after END but does nothing else with them.
+    if (ended_) {
+        if (final_) res_.listing.push_back(std::move(lst));
+        return;
+    }
     Reporter rep;
     rep_ = &rep;
     if (!joined_.empty())
         rep.warning("OC8", "the last line of '" + joined_ +
                                "' has no newline at the end, so it was joined to this line (as in Keil)");
+    std::size_t lead = text.find_first_not_of(" \t");
+    const bool control_line = lead != std::string_view::npos && text[lead] == '$';
+    const bool was_active = active();
     try {
         statement(text, rep, lst);
     } catch (const AsmError& e) {
         rep.error(e.code(), e.message(), e.column());
     }
+    // Like Keil, a $IF line is numbered in the listing when the lines after
+    // it are assembled, an IF statement when the lines before it are.
+    // $NOCOND leaves out every line after which assembly is off.
+    const bool now_active = active();
+    lst.skipped = !(control_line ? now_active : was_active);
+    lst.hidden = !now_active && !cond_listing_;
     rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
@@ -558,10 +722,23 @@ void Assembler::process_line(std::string_view text) {
 }
 
 void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst) {
-    if (!text.empty() && text[0] == '$') {
-        controls(text.substr(1), rep);
+    std::size_t lead = text.find_first_not_of(" \t");
+    if (lead == std::string_view::npos) return;
+    if (text[lead] == '$') {
+        controls(text, lead + 1, rep);
         return;
     }
+    // Lines in false IF blocks are not assembled, so they may hold anything;
+    // only a first word IF, ELSEIF, ELSE or ENDIF counts, as in Keil.
+    std::size_t end = lead;
+    while (end < text.size() && word_char(text[end])) ++end;
+    std::string word = upper(text.substr(lead, end - lead));
+    if (contains(kCondKeywords, word)) {
+        cond_statement(word, text, end, rep);
+        return;
+    }
+    if (!active()) return;
+
     auto toks = tokenize(text);
     TokenCursor cur(toks);
     if (cur.at_end()) return;
@@ -582,6 +759,12 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         define(label, SymbolKind::Label, here(type));
         if (!data_follows && section().code) check_alignment(2, label, rep);
         if (cur.at_end()) return;
+        // Keil defines the label, reports the line and still obeys the IF.
+        if (const Token& t = cur.peek(); t.kind == TokKind::Ident && contains(kCondKeywords, upper(t.text))) {
+            rep.error("A6", "syntax error: " + upper(t.text) + " cannot have a label", t.column);
+            cond_statement(upper(t.text), text, static_cast<std::size_t>(t.column - 1) + t.text.size(), rep);
+            return;
+        }
     }
 
     const Token& first = cur.peek();
@@ -603,39 +786,64 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         directive(kw, first, cur, rep, lst);
 }
 
-void Assembler::controls(std::string_view text, Reporter& rep) {
+// A $ line: 'from' is the index after the '$'.
+void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep) {
     struct Control {
         std::string name;
-        std::string_view arg;  // text inside the parentheses
+        std::size_t arg = 0;  // index of the text inside the parentheses
+        std::size_t arg_end = 0;
+        bool paren = false;
         int column = 0;
     };
-    std::vector<Control> list;
-    std::size_t i = 0;
+    std::size_t i = from;
     auto skip_space = [&] {
         while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i]))) ++i;
     };
-    for (;;) {
-        skip_space();
-        if (i >= text.size() || text[i] == ';') break;
+    auto read_name = [&] {
         std::size_t start = i;
         while (i < text.size() && (std::isalnum(static_cast<unsigned char>(text[i])) || text[i] == '_')) ++i;
-        Control c{upper(text.substr(start, i - start)), {}, static_cast<int>(start) + 2};
-        if (c.name.empty()) throw AsmError("A16", "unknown control or bad argument(s)", c.column);
+        return upper(text.substr(start, i - start));
+    };
+    // In a false IF block only the first control counts, and only if it is
+    // one of $IF, $ELSEIF, $ELSE and $ENDIF.
+    skip_space();
+    int first_column = static_cast<int>(i) + 1;
+    if (std::string first = read_name(); contains(kCondKeywords, first)) {
+        cond_control(first, text, i, first_column, false, rep);
+        return;
+    }
+    if (!active()) return;
+
+    std::vector<Control> list;
+    std::optional<Control> cond;  // $IF and the like after another control
+    for (i = from;;) {
         skip_space();
-        bool paren = i < text.size() && text[i] == '(';
+        if (i >= text.size() || text[i] == ';') break;
+        Control c;
+        c.column = static_cast<int>(i) + 1;
+        c.name = read_name();
+        if (c.name.empty()) throw AsmError("A16", "unknown control or bad argument(s)", c.column);
+        if (contains(kCondKeywords, c.name)) {
+            c.arg = i;
+            cond = std::move(c);
+            break;
+        }
+        skip_space();
+        c.paren = i < text.size() && text[i] == '(';
         if (c.name == "INCLUDE" || c.name == "IC") {
             // The file name runs to the first ')'; Keil takes quotes and
             // spaces inside it literally.
-            std::size_t close = paren ? text.find(')', i) : std::string_view::npos;
+            std::size_t close = c.paren ? text.find(')', i) : std::string_view::npos;
             if (close == std::string_view::npos) {
-                const char* msg = paren ? "')' expected" : "'(' expected";
+                const char* msg = c.paren ? "')' expected" : "'(' expected";
                 if (!list.empty()) throw AsmError("A22", msg, c.column);
                 rep.error("A22", msg, c.column);
                 throw AsmError("A171", "error in include directive", c.column);
             }
-            c.arg = text.substr(i + 1, close - i - 1);
+            c.arg = i + 1;
+            c.arg_end = close;
             i = close + 1;
-        } else if (paren) {
+        } else if (c.paren) {
             std::size_t open = i;
             int depth = 0;
             for (; i < text.size(); ++i) {
@@ -643,16 +851,18 @@ void Assembler::controls(std::string_view text, Reporter& rep) {
                 if (text[i] == ')' && --depth == 0) break;
             }
             if (i >= text.size()) throw AsmError("A22", "')' expected", c.column);
-            c.arg = text.substr(open + 1, i - open - 1);
+            c.arg = open + 1;
+            c.arg_end = i;
             ++i;
         }
         list.push_back(std::move(c));
     }
+    auto arg = [&](const Control& c) { return text.substr(c.arg, c.arg_end - c.arg); };
 
-    auto add_incdirs = [&](std::string_view arg) {
-        for (std::size_t pos = 0; pos <= arg.size();) {
-            std::size_t semi = std::min(arg.find(';', pos), arg.size());
-            if (std::string dir = portable_path(arg.substr(pos, semi - pos)); !dir.empty())
+    auto add_incdirs = [&](std::string_view dirs) {
+        for (std::size_t pos = 0; pos <= dirs.size();) {
+            std::size_t semi = std::min(dirs.find(';', pos), dirs.size());
+            if (std::string dir = portable_path(dirs.substr(pos, semi - pos)); !dir.empty())
                 incdirs_.push_back(std::move(dir));
             pos = semi + 1;
         }
@@ -665,7 +875,7 @@ void Assembler::controls(std::string_view text, Reporter& rep) {
         });
         if (primary != list.end()) {
             for (const auto& c : list)
-                if (c.name == "INCDIR" || c.name == "ID") add_incdirs(c.arg);
+                if (c.name == "INCDIR" || c.name == "ID") add_incdirs(arg(c));
             throw AsmError("A8", "misplaced primary control, line ignored: $" + primary->name +
                                      " must come before the first statement",
                            primary->column);
@@ -682,16 +892,16 @@ void Assembler::controls(std::string_view text, Reporter& rep) {
                             column);
                 continue;
             }
-            std::string_view file = trim(list[k].arg);
+            std::string_view file = trim(arg(list[k]));
             if (file.empty()) {
                 rep.error("A20", "non-null argument expected", column);
                 throw AsmError("A171", "error in include directive", column);
             }
-            if (list.size() > 1)
+            if (list.size() > 1 || cond)
                 throw AsmError("A171", "error in include directive: no other control may follow it", column);
             include(file, column);
         } else if (name == "INCDIR" || name == "ID") {
-            add_incdirs(list[k].arg);
+            add_incdirs(arg(list[k]));
         } else if (name == "MOD167" || name == "M167") {
             cpu_ = isa::Cpu::C167;
             sys166_ = false;
@@ -708,13 +918,202 @@ void Assembler::controls(std::string_view text, Reporter& rep) {
             case_ = true;
         } else if (name == "NOCASE") {
             case_ = false;
-        } else if (name == "IF" || name == "ELSEIF" || name == "ELSE" || name == "ENDIF" || name == "SET" ||
-                   name == "RESET") {
-            throw AsmError("OC3", "control $" + name + " is not supported yet", column);
+        } else if (name == "SET" || name == "RESET") {
+            if (!list[k].paren) throw AsmError("A22", "'(' expected", column);
+            set_flags(text, list[k].arg, list[k].arg_end, name == "SET");
+        } else if (name == "COND") {
+            cond_listing_ = true;
+        } else if (name == "NOCOND") {
+            cond_listing_ = false;
         } else if (!contains(kIgnoredControls, name) && !contains(kPrimaryControls, name)) {
             throw AsmError("A16", "unknown control '" + name + "'", column);
         }
     }
+    if (cond) cond_control(cond->name, text, cond->arg, cond->column, true, rep);
+}
+
+// $SET (name [= number], ...) and $RESET (name, ...). Keil takes only a plain
+// number as the value, not an expression.
+void Assembler::set_flags(std::string_view text, std::size_t from, std::size_t to, bool set) {
+    auto toks = tokenize_from(text.substr(0, to), from);
+    TokenCursor cur(toks);
+    do {
+        const Token& name = cur.next();
+        if (name.kind != TokKind::Ident) throw AsmError("A23", "identifier expected", name.column);
+        std::int64_t value = set ? 1 : 0;
+        if (set && cur.accept_op("=")) {
+            const Token& t = cur.next();
+            if (t.kind == TokKind::String)
+                throw AsmError("A1", "illegal character in numeric constant: $SET takes a number", t.column);
+            if (t.kind != TokKind::Number) throw AsmError("A22", "')' expected: $SET takes a plain number", t.column);
+            value = static_cast<std::int64_t>(t.num);
+        }
+        if (!cur.at_end() && !cur.peek().is_op(",")) throw AsmError("A22", "')' expected", cur.peek().column);
+        flags_[upper(name.text)] = value;
+    } while (cur.accept_op(","));
+}
+
+// $IF, $ELSEIF, $ELSE and $ENDIF; 'after' is the index after the name. Keil
+// reports a misplaced one (after another control on the line) but still
+// obeys it, taking the condition as false.
+void Assembler::cond_control(const std::string& kw, std::string_view text, std::size_t after, int column,
+                             bool misplaced, Reporter& rep) {
+    if (misplaced) rep.error("A6", "syntax error: $" + kw + " must be the first control on its line", column);
+    // Keil reports text after $ELSE and $ENDIF but still obeys them.
+    auto check_end = [&] {
+        std::size_t p = text.find_first_not_of(" \t", after);
+        if (!misplaced && p != std::string_view::npos && text[p] != ';')
+            rep.error("A6", "syntax error: unexpected text after $" + kw, static_cast<int>(p) + 1);
+    };
+    if (kw == "IF") {
+        if (conds_.size() >= kMaxControlIfDepth) {
+            if (active())
+                rep.error("A6", "syntax error: $IF nested too deeply (Keil allows " +
+                                    std::to_string(kMaxControlIfDepth) + " levels)",
+                          column);
+            return;
+        }
+        if (!active()) {
+            conds_.push_back({false, false, true, false});
+            return;
+        }
+        bool c = !misplaced && control_condition(text, after, column, rep);
+        conds_.push_back({true, c, c, false});
+        return;
+    }
+    if (kw == "ELSEIF") {
+        if (conds_.empty()) {
+            rep.error("A6", "syntax error: $ELSEIF without $IF", column);
+            return;
+        }
+        Cond& top = conds_.back();
+        if (!top.parent_active) return;
+        if (top.in_else) {
+            rep.error("A6", "syntax error: $ELSEIF after $ELSE", column);
+            return;
+        }
+        bool c = !misplaced && control_condition(text, after, column, rep);
+        top.active = !top.taken && c;
+        top.taken = top.taken || c;
+        return;
+    }
+    if (conds_.empty()) throw AsmError("A17", "misplaced $" + kw + ": no IF block is open", column);
+    if (kw == "ELSE") {
+        Cond& top = conds_.back();
+        if (!top.parent_active) return;
+        if (top.in_else) throw AsmError("A17", "misplaced $ELSE: this IF block already has an ELSE", column);
+        top.in_else = true;
+        top.active = !top.taken;
+        check_end();
+        return;
+    }
+    bool live = conds_.back().parent_active;
+    conds_.pop_back();
+    if (live) check_end();
+}
+
+// The condition of $IF and $ELSEIF: the rest of the line. Keil reports text
+// after it but still uses the value.
+bool Assembler::control_condition(std::string_view text, std::size_t after, int column, Reporter& rep) {
+    try {
+        auto toks = condition_tokens(text, after);
+        TokenCursor cur(toks);
+        FlagContext ctx(flags_);
+        Value v = condition_value(cur, ctx, column);
+        if (ctx.dollar) throw AsmError("A6", "syntax error: '$' cannot be used in a condition", column);
+        if (!cur.at_end()) rep.error("A6", "syntax error: unexpected text after the condition", cur.peek().column);
+        return condition_truth(v, column, rep);
+    } catch (const AsmError& e) {
+        rep.error(e.code(), e.message(), e.column());
+        return false;
+    }
+}
+
+// The condition of an IF or ELSEIF statement; false if it has an error.
+bool Assembler::statement_condition(std::string_view text, std::size_t after, int column, Reporter& rep) {
+    static constexpr const char* kForward = "IF condition uses a symbol that is not defined before this line";
+    try {
+        auto toks = condition_tokens(text, after);
+        TokenCursor cur(toks);
+        int at = cur.at_end() ? column : cur.peek().column;
+        ConditionContext ctx(*this);
+        Value v;
+        try {
+            v = condition_value(cur, ctx, column);
+        } catch (const AsmError& e) {
+            if (e.code() != "A42") throw;
+            throw AsmError("A71", kForward, e.column());
+        }
+        if (ctx.dollar || ctx.condition_code)
+            throw AsmError("A6", "syntax error: '$' and condition codes cannot be used in a condition", at);
+        if (ctx.forward || !v.known) throw AsmError("A71", kForward, at);
+        if (ctx.unusable || v.rel != Rel::None || v.type != VType::Number)
+            throw AsmError("A11", "bad conditional expression: labels, registers, SFRs and bits cannot be used "
+                                  "(Keil silently takes such a condition as false)",
+                           at);
+        if (!cur.at_end()) rep.warning("OC9", "text after the condition is ignored (as in Keil)", cur.peek().column);
+        return condition_truth(v, at, rep);
+    } catch (const AsmError& e) {
+        rep.error(e.code(), e.message(), e.column());
+        return false;
+    }
+}
+
+// IF, ELSEIF, ELSE and ENDIF statements; 'after' is the index after the
+// keyword. Keil accepts odd structures such as a stray ENDIF or a second
+// ELSE without a word; openc166 does the same but warns.
+void Assembler::cond_statement(const std::string& kw, std::string_view text, std::size_t after, Reporter& rep) {
+    const int column = static_cast<int>(after - kw.size()) + 1;
+    auto check_end = [&] {
+        std::vector<Token> toks;
+        try {
+            toks = tokenize_from(text, after);
+        } catch (const AsmError&) {
+            rep.warning("OC9", "text after " + kw + " is ignored (as in Keil)", static_cast<int>(after) + 1);
+            return;
+        }
+        const Token& t = toks.front();
+        if (t.kind == TokKind::End) return;
+        if (t.kind == TokKind::Ident && contains(kCondKeywords, upper(t.text)))
+            throw AsmError("A6", "syntax error: " + upper(t.text) + " cannot follow " + kw + " on the same line",
+                           t.column);
+        rep.warning("OC9", "text after " + kw + " is ignored (as in Keil)", t.column);
+    };
+    if (kw == "IF") {
+        if (!active()) {
+            conds_.push_back({false, false, true, false});
+            return;
+        }
+        bool c = statement_condition(text, after, column, rep);
+        conds_.push_back({true, c, c, false});
+        return;
+    }
+    if (conds_.empty()) {
+        rep.warning("OC9", kw + " without IF is ignored (as in Keil)", column);
+        return;
+    }
+    // Keil handles a second conditional keyword on the line erratically, so
+    // openc166 reports it and ignores the line.
+    if (kw == "ENDIF") {
+        if (conds_.back().parent_active) check_end();
+        conds_.pop_back();
+        return;
+    }
+    Cond& top = conds_.back();
+    if (!top.parent_active) return;
+    if (kw == "ELSEIF") {
+        if (top.in_else)
+            rep.warning("OC9", "ELSEIF after ELSE: Keil still assembles its lines if no IF or ELSEIF before was true",
+                        column);
+        bool c = statement_condition(text, after, column, rep);
+        top.active = !top.taken && c;
+        top.taken = top.taken || c;
+        return;
+    }
+    check_end();
+    if (top.in_else) rep.warning("OC9", "second ELSE: Keil assembles it too if no IF or ELSEIF was true", column);
+    top.in_else = true;
+    top.active = !top.taken;
 }
 
 // Finds an include file and arranges for it to be read after the current
@@ -904,6 +1303,7 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
     } else if (kw == "END") {
         expect_end(cur);
         ended_ = true;
+        end_line_ = res_.listing.size();
     } else if (contains(kDataDirectives, kw)) {
         align(data_alignment(kw));
         lst.has_address = true;
@@ -1197,14 +1597,18 @@ std::string format_listing(const AssemblyResult& result) {
         out += "\n";
     };
     for (const auto& l : result.listing) {
+        if (l.hidden && l.diagnostics.empty()) continue;
         std::string loc = l.has_address ? hex(l.address, 8) : l.value ? "=" + value_text(*l.value) : "";
         std::string obj;
         std::size_t shown = 0;
         for (; shown < l.bytes.size() && shown < 8; ++shown) obj += hex(l.bytes[shown], 2);
         // Lines from include files are marked +1, +2, ... like in Keil's listing.
         std::string level = l.level ? "+" + std::to_string(std::min(l.level, 9)) : "";
+        // Lines in false IF blocks have no number, as in Keil's listing.
+        std::string number = l.skipped ? "" : std::to_string(l.line);
         char head[64];
-        std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6d  ", loc.c_str(), obj.c_str(), level.c_str(), l.line);
+        std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6s  ", loc.c_str(), obj.c_str(), level.c_str(),
+                      number.c_str());
         out += head + l.source + "\n";
         // Long DB/DW lines continue on extra rows.
         while (shown < l.bytes.size()) {

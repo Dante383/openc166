@@ -45,6 +45,7 @@ class Line:
         self.loc = None
         self.code = ""
         self.diags = []
+        self.skipped = False  # in a false IF block: listed without a number
 
     def errors(self):
         return sorted(d for d in self.diags if d.endswith("E"))
@@ -61,14 +62,36 @@ def symbol_value(text):
     return int(m.group(1), 16), int(m.group(2)) if m.group(2) else None
 
 
-def parse_keil_listing(text):
+def locate(source, number, text, wrap=None):
+    """Number of the first line after 'number' with the source 'text'. Lines
+    in false IF blocks have no number in the listings, and $NOCOND leaves
+    some of them out. Keil expands tabs and wraps lines after 'wrap'
+    characters."""
+    text = text.rstrip()
+    for n in range(number + 1, len(source) + 1):
+        src = source[n - 1].rstrip()
+        if wrap:
+            src = src.expandtabs(8)
+        if src == text or (wrap and len(text) >= wrap and src.startswith(text)):
+            return n
+    return number + 1
+
+
+def parse_keil_listing(text, source=()):
+    """'source' holds the expanded source lines; it tells the rows of lines
+    in false IF blocks (listed without a number) from long lines that Keil
+    wraps onto extra rows."""
     lines = {}
     symbols = {}
     last = None
     in_symbols = False
+    body = False
+    number = 0  # last line listed
+    printed = 0  # characters of its source printed so far
     # Lines from include files carry a nesting marker (+1, +2, ...).
     row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
     more = re.compile(r"^[0-9A-F]{8} ([0-9A-F]+)\s*$")
+    unnumbered = re.compile(r" *(?:\+\d+)? *")
     # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
     sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)")
@@ -81,17 +104,37 @@ def parse_keil_listing(text):
             if m and m.group(2) != "----":
                 symbols[m.group(1).upper()] = symbol_value(m.group(3))
             continue
+        if l.startswith("LOC ") and "SOURCE" in l:
+            body = True
+            continue
+        if l.startswith("SYMBOL TABLE"):
+            body = False
         m = diag.match(l)
         if m:
-            lines.setdefault(int(m.group(3)), Line()).diags.append(m.group(2) + m.group(1)[0])
+            # Keil numbers the problems it finds at the end of the file one
+            # line before the last line.
+            at = int(m.group(3)) + (m.group(2) in ("A12", "A89"))
+            lines.setdefault(at, Line()).diags.append(m.group(2) + m.group(1)[0])
             continue
         m = more.match(l)
         if m and last is not None:
             last.code += m.group(1)
             continue
+        if body and len(l) >= 34 and unnumbered.fullmatch(l[:34]):
+            want = len(source[number - 1].rstrip().expandtabs(8)) if 0 < number <= len(source) else 0
+            if printed < want:  # the rest of a long line
+                printed += len(l) - 34
+                continue
+            number = locate(source, number, l[34:], wrap=86)
+            last = lines.setdefault(number, Line())
+            last.skipped = True
+            printed = len(l) - 34
+            continue
         m = row.match(l)
         if m:
-            last = lines.setdefault(int(m.group(3)), Line())
+            number = int(m.group(3))
+            printed = len(l) - 34
+            last = lines.setdefault(number, Line())
             if re.fullmatch(r"[0-9A-F]{8}", m.group(1)) and last.loc is None:
                 last.loc = int(m.group(1), 16)
             if re.fullmatch(r"[0-9A-F]+", m.group(2)):
@@ -99,7 +142,7 @@ def parse_keil_listing(text):
     return lines, symbols
 
 
-def parse_openc166_listing(text):
+def parse_openc166_listing(text, source=()):
     lines = {}
     symbols = {}
     last = None
@@ -129,6 +172,10 @@ def parse_openc166_listing(text):
             last.code += obj
         elif re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last is not None:
             last.code += obj
+        elif len(l) >= 37 and not l[:27].strip() and not number and re.fullmatch(r"(\+\d)? *", l[27:29]):
+            # a line in a false IF block, listed without a number
+            last = lines.setdefault(locate(source, max(lines, default=0), l[37:]), Line())
+            last.skipped = True
     return lines, symbols
 
 
@@ -206,7 +253,7 @@ def run_keil(keil, source, workdir):
     shutil.copy(source, os.path.join(workdir, "t.a66"))
     keil_tool(keil, os.path.basename(keil), ["t.a66"], workdir)
     with open(os.path.join(workdir, "t.LST"), encoding="latin-1") as f:
-        return parse_keil_listing(f.read())
+        return parse_keil_listing(f.read(), expand(source))
 
 
 def run_openc166(tool, source, workdir):
@@ -214,7 +261,7 @@ def run_openc166(tool, source, workdir):
     subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", os.path.join(workdir, "o.bin"), "-l", lst],
                    capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
     with open(lst, encoding="utf-8") as f:
-        return parse_openc166_listing(f.read())
+        return parse_openc166_listing(f.read(), expand(source))
 
 
 def read_hex86(path):
@@ -279,6 +326,8 @@ def compare_image(source, keil, tool, workdir):
 def classify(kl, ol, shift):
     """Return 'ok', 'soft' (only error codes differ) or 'hard'. 'shift' is the
     expected difference between the Keil and openc166 addresses."""
+    if kl.skipped != ol.skipped:
+        return "hard"
     if bool(kl.errors()) != bool(ol.errors()):
         return "hard"
     if kl.errors():
@@ -296,6 +345,10 @@ def definitions(text):
         if m:
             defs.setdefault(m.group(1).upper(), []).append(n)
     return defs
+
+
+def fmt_code(line):
+    return line.code or ("(skipped)" if line.skipped else "-")
 
 
 def fmt_loc(line):
@@ -339,8 +392,8 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
             shift = kl.loc - ol.loc
         if kind == "hard" and not quiet or kind == "soft" and codes:
             print(f"{os.path.basename(source)}:{n}: {src}" + ("  [codes only]" if kind == "soft" else ""))
-            print(f"    keil:     {fmt_loc(kl)}{kl.code or '-':16} {' '.join(sorted(kl.diags))}")
-            print(f"    openc166: {fmt_loc(ol)}{ol.code or '-':16} {' '.join(sorted(ol.diags))}")
+            print(f"    keil:     {fmt_loc(kl)}{fmt_code(kl):16} {' '.join(sorted(kl.diags))}")
+            print(f"    openc166: {fmt_loc(ol)}{fmt_code(ol):16} {' '.join(sorted(ol.diags))}")
     # Symbols are compared like lines: skipped when a defining line has an
     # error or a documented divergence, and addresses allow for the shift
     # caused by earlier divergences.

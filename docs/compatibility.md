@@ -41,6 +41,9 @@ the complete memory image.
   [Register definitions](#register-definitions).
 - **Include files:** `$INCLUDE(file)` (short form `$IC`) and
   `$INCDIR(dir;dir...)` (`$ID`). See [Include files](#include-files).
+- **Conditional assembly:** `$SET`/`$RESET`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF`,
+  the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, and `$COND`/`$NOCOND`. See
+  [Conditional assembly](#conditional-assembly).
 - **Accepted and ignored:** these only matter to a linker or debugger.
   - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `ASSUME`, `REGDEF`, `REGBANK`,
     `SSKDEF`, `PECDEF`, `TYPEDEC`.
@@ -55,7 +58,6 @@ the complete memory image.
 These produce error OC3 (or OC4 for externals), so a missing feature is never
 silently skipped:
 
-- `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF` and `$SET`/`$RESET`
 - `MACRO` and the other macro facilities
 - `EXTERN`/`EXTRN` (a raw image has no linker to resolve them)
 - `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
@@ -150,13 +152,73 @@ ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
 `NOAMAKE`, `SEGMENTED`, `NONSEGMENTED`, `USEDEXTONLY`, `EXTMAC`, `MACRO`,
 `NOMACRO`, `MPL`, `NOMPL`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
 
-General controls, all ignored: `LIST`, `NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`,
-`GEN`, `NOGEN`, `GENONLY`/`GO`, `COND`, `NOCOND`, `SYMLIST`, `NOSYMLIST`,
-`SAVE`, `RESTORE`, `REGUSE`.
+General controls that openc166 uses: `INCLUDE`/`IC`, `SET`, `RESET`, `IF`,
+`ELSEIF`, `ELSE`, `ENDIF`, `COND`, `NOCOND`. Those it ignores: `LIST`,
+`NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`, `GEN`, `NOGEN`, `GENONLY`/`GO`,
+`SYMLIST`, `NOSYMLIST`, `SAVE`, `RESTORE`, `REGUSE`.
 
 These lists come from testing A166 V5.38. The manual calls `TITLE` and
 `NOCOND` primary, but A166 accepts them anywhere. An unknown control is
 A16.
+
+**The end of the source.** As in Keil, the lines after `END` are listed but
+otherwise ignored, even controls and conditionals. Problems found at the end
+(a missing `END`, A89; an unclosed `IF`, A12) are reported on the last line
+of the file; an unclosed `SECTION` or `PROC` (A106) on the `END` line.
+
+## Conditional assembly
+
+Keil has two ways to leave lines out, and openc166 supports both:
+
+```
+$SET (DEBUG, LEVEL = 2)          ; flags for $IF
+$IF (DEBUG AND (LEVEL > 1))      ; parentheses needed, see below
+        CALL    trace
+$ELSEIF (DEBUG)
+        NOP
+$ELSE
+$ENDIF
+
+COUNT   EQU     4                ; ordinary symbols for IF
+        IF      COUNT = 4
+        DW      1
+        ELSEIF  COUNT > 4
+        DW      2
+        ELSE
+        DW      3
+        ENDIF
+```
+
+- **`$IF` sees only `$SET` flags.** `$SET (name [= number], ...)` sets
+  flags; a name without a value is 1, and `$RESET (name, ...)` sets it to
+  0. Any other name in a `$IF` condition, including an `EQU`
+  symbol, counts as 0. Flags are not symbols, so an `IF` statement cannot
+  see them (A71).
+- **`IF` sees `EQU` and `SET` symbols** defined on earlier lines. A
+  symbol defined later is A71. A label, register, SFR or bit is error A11
+  in openc166; Keil silently treats such a condition as false.
+- **Only bit 0 counts.** Keil tests only the lowest bit of a condition, so
+  `IF 2` is false. This keeps `NOT` working on 0/1 flags (`NOT 1` has
+  bit 0 clear, so it is false) but surprises anyone who expects "non-zero
+  is true". openc166 gives warning OC10 for such values, except those
+  ending in `FFFEH` like `NOT 1`.
+- `=` compares, like `EQ`. Comparisons give 1 (true) or 0. Unlike C,
+  `AND` binds tighter than a comparison, so `DEBUG AND LEVEL > 1` means
+  `(DEBUG AND LEVEL) > 1`; see [Expression details](#expression-details).
+- **One stack.** `$IF` blocks and `IF` statements share one nesting stack,
+  so `$ENDIF` can close an `IF` and the other way round. `$IF` allows 9
+  levels (A6 beyond that); `IF` statements have no limit.
+- **Errors.** A condition with an error counts as false. A stray or
+  second `$ELSE` and a stray `$ENDIF` are A17; an `IF` that is still open
+  at the end is A12. Keil accepts odd `IF`-statement structures without a
+  word, such as a stray `ENDIF`, a second `ELSE` (its lines are assembled
+  too when no branch was true) or text after a condition; openc166 accepts
+  them too but warns with OC9.
+- **Listing.** Lines that are left out appear in the listing without a
+  line number, as in Keil. A `$IF`-style line gets a number when the lines
+  after it are assembled, an `IF` statement when the lines before it are.
+  `$NOCOND` leaves out every line after which assembly is off; `$COND`
+  (the default) shows them again.
 
 ## openc166's own messages
 
@@ -172,6 +234,8 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC6 | error | include files nested too deeply; the assembly stops |
 | OC7 | warning | `$INCLUDE` that is not the first control on its line, ignored |
 | OC8 | warning | the last line of an include file was joined to the next line |
+| OC9 | warning | an `IF`-statement structure that Keil accepts but that is probably a mistake |
+| OC10 | warning | a condition that counts as false because only bit 0 is tested (`IF 2`) |
 
 ## Data alignment
 
@@ -236,6 +300,19 @@ Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
 for a near jump or call to a FAR label, A134 for an odd absolute target.
 
 ## Expression details
+
+**Operator precedence**, from tightest to loosest, as in Keil:
+
+1. unary `-`, `NOT`, `HIGH`, `LOW`, `SEG`, `SOF`, `PAG`, `POF`;
+2. `*`, `/`, `MOD`;
+3. `+`, `-`;
+4. `SHL`, `SHR`;
+5. `AND`, `OR`, `XOR` (one level, left to right);
+6. comparisons: `EQ`/`=`, `NE`/`<>`, `LT`/`<`, `LE`/`<=`, `GT`/`>`,
+   `GE`/`>=`, and the unsigned `ULT`, `ULE`, `UGT`, `UGE`.
+
+Unlike C, `A AND B > 1` means `(A AND B) > 1`, and `A OR B AND C` means
+`(A OR B) AND C`. Use parentheses.
 
 Plain numbers are signed 64-bit values. Labels work differently in Keil, and
 openc166 copies that, because the result can change the code.
@@ -302,6 +379,10 @@ follow are unchanged. Other bad items are dropped.
 | error A171 after a bad `$INCLUDE` line | reported on the following line | reported on the `$INCLUDE` line |
 | missing include file | fatal error, no listing | error OC5; the listing stops at that line |
 | `$ABSOLUTE`, `$NOABSOLUTE` | documented, but A16 in V5.38 | accepted and ignored |
+| `IF` condition with a label, register, SFR or bit | silently false | error A11 |
+| stray `ENDIF`, second `ELSE`, `ELSEIF` after `ELSE`, text after a condition | silently accepted | accepted with warning OC9 |
+| two conditional keywords on one line (`ELSE ELSE`, `ENDIF IF 0`) | sometimes A6, sometimes silent; can leave the nesting confused | error A6; the line is ignored |
+| `$INCLUDE` of a missing file after `END` | fatal error | ignored, like every line after `END` |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

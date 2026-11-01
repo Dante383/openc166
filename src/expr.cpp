@@ -377,7 +377,7 @@ private:
     }
     Value comparison() {
         return binary_level(&Evaluator::bitwise, [](const Token& t) {
-            return match_any(t, {{"EQ", Eq}, {"==", Eq}, {"NE", Ne}, {"!=", Ne}, {"<>", Ne}, {"LT", Lt},
+            return match_any(t, {{"EQ", Eq}, {"==", Eq}, {"=", Eq}, {"NE", Ne}, {"!=", Ne}, {"<>", Ne}, {"LT", Lt},
                                  {"<", Lt},  {"LE", Le},  {"<=", Le}, {"GT", Gt}, {">", Gt},   {"GE", Ge},
                                  {">=", Ge}, {"ULT", Ult}, {"ULE", Ule}, {"UGT", Ugt}, {"UGE", Uge}});
         });

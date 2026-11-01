@@ -34,6 +34,9 @@ Early development (version 0.0.x). What works today:
   several passes. Label types (`NEAR`, `FAR`, `WORD`, ...) and the `SHORT`
   and `FAR PTR` operators work as in Keil.
 - `$INCLUDE` and `$INCDIR`, with Keil's search order and listing format.
+- Conditional assembly: `$SET`/`$RESET`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF`
+  and the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, with Keil's quirks (only
+  bit 0 of a condition counts) and listing format.
 - The `$MOD167` and `$CASE` controls, with Keil's rule that these come
   before the first statement. Listing-only controls are accepted and
   ignored.
@@ -42,7 +45,7 @@ Early development (version 0.0.x). What works today:
 
 Not done yet:
 
-- `$IF`/`$SET`, and a bundled register file (`reg167.inc`)
+- a bundled register file (`reg167.inc`)
 - macros
 - relocatable sections and linking, and OMF-166 object files
 - the TASKING assembler dialect

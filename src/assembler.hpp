@@ -49,6 +49,8 @@ struct ListingLine {
     std::string file;   // file the line comes from
     int file_line = 0;  // line number within 'file'
     int level = 0;      // $INCLUDE nesting depth; 0 for the main source
+    bool skipped = false;  // in a false IF block: not assembled, listed without a line number
+    bool hidden = false;   // left out of the printed listing by $NOCOND (assembly is off after it)
     bool has_address = false;
     std::int64_t address = 0;
     std::vector<std::uint8_t> bytes;

@@ -1,0 +1,117 @@
+; Errors in conditional assembly. A condition with an error counts as false.
+$SET (A = 1+2)
+$SET ()
+$SET (B = 'X')
+$SET C
+$RESET (D = 1)
+$SET (OK1, OK2 = 5,)
+$ELSE
+$ENDIF
+$ELSEIF (1)
+$IF (1)
+$ELSE
+$ELSE
+$ELSEIF (1)
+$ENDIF
+$IF
+$ENDIF
+$IF ()
+$ENDIF
+$IF ($)
+$ENDIF
+$IF (1
+$ENDIF
+$IF (1) junk
+$ELSE junk
+$ENDIF junk
+$LIST IF (1)
+$ELSE
+$ENDIF
+
+ONE     EQU     1
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+L0:     NOP
+        IF      FWD
+        NOP
+        ENDIF
+        IF      UNDEFINED
+        NOP
+        ENDIF
+        IF      $
+        NOP
+        ENDIF
+        IF      cc_UC
+        NOP
+        ENDIF
+        IF
+        NOP
+        ENDIF
+        IF      1.0
+        NOP
+        ENDIF
+        IF      1
+        NOP
+        ELSEIF  UNDEFINED
+        NOP
+        ENDIF
+        IF      0
+        ELSE IF 1               ; Keil and openc166: A6, and the line has no effect here
+        NOP
+        ENDIF
+        ENDIF                   ; DIVERGES: Keil's ELSE IF above left an IF open, which this closes; openc166 warns (OC9)
+        IF      0
+        ENDIF ENDIF             ; DIVERGES: Keil ignores the second ENDIF; openc166 reports A6 and ignores the line
+        ENDIF                   ; DIVERGES: a stray ENDIF for Keil, the end of IF 0 for openc166
+        IF      1
+        ELSE ELSE               ; DIVERGES: Keil ignores the second ELSE; openc166 reports A6 and ignores the line
+        ENDIF                   ; DIVERGES: skipped by Keil, which applied the first ELSE
+        IF      L0              ; DIVERGES: Keil silently takes a label as false; openc166 reports A11
+        NOP
+        ENDIF
+        IF      R1              ; DIVERGES: Keil silently takes a register as false; openc166 reports A11
+        NOP
+        ENDIF
+        IF      PSW             ; DIVERGES: Keil silently takes an SFR as false; openc166 reports A11
+        NOP
+        ENDIF
+        ENDIF                   ; DIVERGES: Keil silently ignores a stray ENDIF; openc166 warns (OC9)
+        IF      0
+        ELSEIF  1 IF 0          ; DIVERGES: Keil ignores IF 0; openc166 warns (OC9)
+        NOP
+        ENDIF
+        IF      1 2             ; DIVERGES: Keil ignores the 2; openc166 warns (OC9)
+        NOP
+        ELSE
+        NOP
+        ELSE                    ; DIVERGES: Keil silently accepts a second ELSE; openc166 warns (OC9)
+        NOP
+        ENDIF
+FWD     EQU     1
+
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+        NOP
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+        RET
+P       ENDP
+S       ENDS
+        IF      1
+        END

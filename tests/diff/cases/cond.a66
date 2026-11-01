@@ -1,0 +1,255 @@
+; Conditional assembly: $SET/$RESET with $IF/$ELSEIF/$ELSE/$ENDIF, and the
+; IF/ELSEIF/ELSE/ENDIF statements. Both kinds share one stack of open blocks.
+; Lines in false blocks are listed without a line number.
+$SET (TARGET = 2, FAST)
+$RESET (SLOW)
+$SET (big = 0FFFFFFFFH)
+  $IF (TARGET = 2)
+$MOD167
+  $ENDIF
+	$IF (SLOW)
+$MOD166
+	$ENDIF
+$set (target = 3)
+$if (TARGET == 3 AND FAST)
+$NOLIST
+$LIST
+$endif
+
+ONE     EQU     1
+TWO     EQU     2
+MODE    SET     1
+
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+
+; $IF chains: only the first true branch is assembled
+$IF (TARGET = 1)
+        MOV     R1,#1
+$ELSEIF (TARGET = 3)
+        MOV     R1,#3
+$ELSEIF (FAST)
+        MOV     R1,#4
+$ELSE
+        MOV     R1,#5
+$ENDIF
+$IF 2-1
+        MOV     R2,#1
+$ENDIF
+$IF (NOT SLOW)
+        MOV     R2,#2
+$ENDIF
+$IF (UNKNOWN)
+        MOV     R2,#3
+$ELSE
+        MOV     R2,#4
+$ENDIF
+$IF (BIG = 0FFFFFFFFH)
+        MOV     R2,#5
+$ENDIF
+$IF (HIGH 100H) AND ('AB' = 4142H)
+        MOV     R2,#6
+$ENDIF
+$IF (TARGET > 2)
+  $IF (TARGET < 3)
+        MOV     R3,#1
+  $ELSE
+        MOV     R3,#2
+    $IF (FAST)
+        MOV     R3,#3
+    $ENDIF
+  $ENDIF
+$ELSE
+  $IF (1)
+        MOV     R3,#4
+  $ENDIF
+$ENDIF
+
+; IF statements use EQU and SET symbols
+        IF      ONE
+        MOV     R4,#1
+        ELSE
+        MOV     R4,#2
+        ENDIF
+        IF      TWO EQ 2
+        MOV     R4,#3
+        ENDIF
+        IF      (TWO - ONE) = 1 AND ONE <> TWO
+        MOV     R4,#4
+        ELSEIF  ONE
+        MOV     R4,#5
+        ENDIF
+        IF      MODE EQ 0
+        MOV     R5,#0
+        ELSEIF  MODE EQ 1
+        MOV     R5,#1
+        ELSEIF  MODE EQ 2
+        MOV     R5,#2
+        ELSE
+        MOV     R5,#3
+        ENDIF
+MODE    SET     2
+        IF      MODE EQ 0
+        MOV     R5,#4
+        ELSEIF  MODE EQ 1
+        MOV     R5,#5
+        ELSEIF  MODE EQ 2
+        MOV     R5,#6
+        ELSE
+        MOV     R5,#7
+        ENDIF
+        if      NOT ONE
+        MOV     R6,#1
+        else
+        MOV     R6,#2
+        endif
+IF(ONE)
+        MOV     R6,#3
+ENDIF
+        IF      ONE
+        IF      TWO EQ 3
+        MOV     R6,#4
+        ELSE
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+          IF    1
+        MOV     R6,#5
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+          ENDIF
+        ENDIF
+        ENDIF
+
+; Only bit 0 of a condition counts
+        IF      3
+        MOV     R7,#1
+        ENDIF
+        IF      0FFFFH
+        MOV     R7,#2
+        ENDIF
+        IF      NOT 1
+        MOV     R7,#3
+        ENDIF
+        IF      2               ; DIVERGES: false in both; openc166 warns (OC10)
+        MOV     R7,#4
+        ENDIF
+$IF (4)                         ; DIVERGES: false in both; openc166 warns (OC10)
+        MOV     R7,#5
+$ENDIF
+
+; '=' compares in ordinary expressions too
+        DW      1 = 1, 2 = 1, TWO = 2
+
+; Labels, symbols and jumps in conditional code
+        IF      ONE
+L1:     JMP     cc_UC,L2
+INNER   EQU     11H
+        ELSE
+L1:     NOP
+INNER   EQU     22H
+        ENDIF
+        MOV     R8,#INNER
+L2:     JMP     cc_UC,L1
+
+; False blocks may hold anything: nothing in them is looked at except the
+; first word of each line, so these do not open or close blocks
+        IF      0
+this is not assembly ' "
+$MOD167 garbage
+        END
+LBL:    IF      1
+IFX     EQU     1
+        MOV     R9,#1   ; ENDIF
+        DB      'ENDIF'
+        ELSEIF  0
+        ELSE
+        MOV     R9,#2
+        ENDIF
+$IF (0)
+  $IF (1)
+        MOV     R9,#3
+  $ELSE
+        MOV     R9,#4
+  $ENDIF
+        IF 1
+        ENDIF
+$ELSEIF (1)
+        MOV     R9,#5
+$ENDIF
+
+; $IF blocks and IF statements can close each other
+$IF (1)
+        MOV     R10,#1
+        ELSE
+        MOV     R10,#2
+        ENDIF
+        IF      ONE
+        MOV     R10,#3
+$ELSE
+        MOV     R10,#4
+$ENDIF
+
+; $IF opens up to 9 levels
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+$IF (1)
+        MOV     R11,#9
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+$ENDIF
+
+; $NOCOND leaves false blocks out of the listing
+$NOCOND
+        IF      0
+        MOV     R12,#1
+        ENDIF
+$IF (0)
+        MOV     R12,#2
+$ENDIF
+$COND
+        IF      0
+        MOV     R12,#3
+        ENDIF
+
+        RET
+P       ENDP
+S       ENDS
+
+; Unlike C, AND, OR and XOR bind tighter than comparisons.
+D       SECTION DATA AT 0C400H
+        DW      1 AND 2 > 1             ; (1 AND 2) > 1
+        DW      1 AND (2 > 1)
+        DW      3 AND 2 = 2
+        DW      1 OR 2 = 2
+        DW      2 = 2 AND 1
+        DW      NOT 1 = 0FFFEH          ; NOT 1 is -2, not 0FFFEH
+        DW      1 + 1 = 2
+        DW      1 SHL 2 = 4
+D       ENDS
+        END
