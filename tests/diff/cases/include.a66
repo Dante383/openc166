@@ -1,0 +1,30 @@
+; $INCLUDE and $INCDIR: nested include files, searched in the source
+; directory and in $INCDIR directories, with names in any case.
+$MOD167
+$INCDIR (inc/sub)
+$INCLUDE (INC\REGS.INC)
+$include ( inc/count.inc )      ; lower case, spaces and a comment
+$LIST INCLUDE (inc/ignored.inc) ; DIVERGES: Keil silently ignores an INCLUDE after another control; openc166 warns (OC7)
+CODE1   SECTION CODE AT 0C000H
+MAIN    PROC    NEAR
+        MOV     CONF,#INIT
+        BSET    FLAG
+        CALL    HELPER          ; defined in an include file further down
+        JMP     DONE
+$IC (inc/code.inc)
+DONE:   MOV     R1,#CNT
+        MOV     R1,#LEVEL3
+$INCLUDE (deep.inc)
+        MOV     R2,#DEEPVAL
+$INCLUDE (inc/crlf.inc)
+
+$INCLUDE (inc/noeol.inc)
+        RET                     ; DIVERGES: joined to a comment, as in Keil; openc166 warns (OC8)
+        RET
+MAIN    ENDP
+$IC (inc/count.inc)
+        DW      CNT
+$IC (inc/count.inc)
+        DW      CNT
+CODE1   ENDS
+        END

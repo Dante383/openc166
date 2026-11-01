@@ -27,6 +27,7 @@ options:
       --origin ADDR   address of code outside sections and of sections without AT (default 0)
       --base ADDR     address of the first byte of the binary (default: lowest address used)
       --fill BYTE     value of unused bytes inside the binary (default 0FFh)
+  -I, --incdir DIR    also search DIR for $INCLUDE files (may be repeated)
   -h, --help          show this help
       --version       show the version
 
@@ -119,6 +120,10 @@ int run(int argc, char** argv) {
             opt.origin = parse_number(value(), "origin");
         } else if (is("", "--base")) {
             base = parse_number(value(), "base address");
+        } else if (is("-I", "--incdir")) {
+            opt.include_dirs.emplace_back(value());
+        } else if (a.size() > 2 && a.starts_with("-I")) {
+            opt.include_dirs.emplace_back(a.substr(2));
         } else if (is("", "--fill")) {
             std::int64_t f = parse_number(value(), "fill byte");
             if (f > 0xFF) throw UsageError("fill byte must be 0..255");

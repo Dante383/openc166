@@ -10,7 +10,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <map>
+#include <memory>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -19,6 +23,7 @@ namespace oc166 {
 namespace {
 
 constexpr int kMaxPasses = 32;
+constexpr std::size_t kMaxIncludeDepth = 32;
 constexpr std::int64_t kAddressLimit = 0x1000000;  // 16 MB C167 address space
 
 std::string upper(std::string_view s) {
@@ -84,20 +89,103 @@ constexpr std::string_view kKeywords[] = {
     "TYPEDEC", "NEAR", "FAR", "INTERRUPT", "TASK", "AT", "SHORT", "PTR", "BYTE", "WORD", "DWORD",
 };
 
+std::vector<std::string_view> split_lines(std::string_view text) {
+    std::vector<std::string_view> lines;
+    for (std::size_t pos = 0; pos <= text.size();) {
+        std::size_t nl = text.find('\n', pos);
+        if (nl == std::string_view::npos) nl = text.size();
+        std::string_view line = text.substr(pos, nl - pos);
+        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
+        if (nl < text.size() || !line.empty()) lines.push_back(line);
+        pos = nl + 1;
+    }
+    return lines;
+}
+
+std::string_view trim(std::string_view s) {
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) s.remove_prefix(1);
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.remove_suffix(1);
+    return s;
+}
+
+// Keil sources are written on Windows; '/' works there and everywhere else.
+std::string portable_path(std::string_view path) {
+    std::string p(trim(path));
+    std::replace(p.begin(), p.end(), '\\', '/');
+    return p;
+}
+
+bool is_absolute_path(std::string_view p) {
+    return (!p.empty() && p[0] == '/') ||
+           (p.size() >= 2 && std::isalpha(static_cast<unsigned char>(p[0])) && p[1] == ':');
+}
+
+std::string join_path(const std::string& dir, const std::string& name) {
+    if (dir.empty() || is_absolute_path(name)) return name;
+    return dir.back() == '/' ? dir + name : dir + "/" + name;
+}
+
+std::string directory_of(std::string_view path) {
+    std::size_t slash = path.find_last_of("/\\");
+    return slash == std::string_view::npos ? std::string() : portable_path(path.substr(0, slash + 1));
+}
+
+std::optional<std::string> read_whole_file(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return std::nullopt;
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+// Reads a file, ignoring the case of each path component if the file
+// system does not (Keil sources often spell include names differently from
+// the files on disk).
+std::optional<std::string> read_file_any_case(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path wanted(path);
+    if (fs::is_regular_file(wanted, ec)) return read_whole_file(wanted);
+    fs::path found = wanted.has_root_path() ? wanted.root_path() : fs::path(".");
+    for (const auto& part : wanted.relative_path()) {
+        fs::path next = found / part;
+        if (!fs::exists(next, ec)) {
+            std::string name = upper(part.string());
+            bool matched = false;
+            for (fs::directory_iterator it(found, ec), end; !ec && it != end; it.increment(ec)) {
+                if (upper(it->path().filename().string()) == name) {
+                    next = it->path();
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) return std::nullopt;
+        }
+        found = next;
+    }
+    if (!fs::is_regular_file(found, ec)) return std::nullopt;
+    return read_whole_file(found);
+}
+
 template <std::size_t N>
 bool contains(const std::string_view (&list)[N], std::string_view upper_name) {
     return std::find(std::begin(list), std::end(list), upper_name) != std::end(list);
 }
 
-// Controls that only affect listing or object file details.
+// Controls allowed only before the first statement (Keil's "primary"
+// controls). Those not handled in controls() only affect the listing or
+// object file and are ignored.
+constexpr std::string_view kPrimaryControls[] = {
+    "MOD167", "M167", "MOD166", "M166", "NOMOD166", "NOM166", "MODV2", "CASE", "NOCASE", "INCDIR", "ID",
+    "PAGELENGTH", "PL", "PAGEWIDTH", "PW", "SYMBOLS", "SB", "NOSYMBOLS", "NOSB", "XREF", "XR", "NOXREF",
+    "NOXR", "DEBUG", "DB", "NODEBUG", "NODB", "PRINT", "PR", "NOPRINT", "NOPR", "OBJECT", "OJ", "NOOBJECT",
+    "NOOJ", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP", "PAGING", "NOPAGING", "TABS", "DATE", "LINES",
+    "NOLINES", "TYPE", "NOTYPE", "ABSOLUTE", "NOABSOLUTE", "AMAKE", "NOAMAKE", "SEGMENTED", "NONSEGMENTED",
+    "USEDEXTONLY", "EXTMAC", "MACRO", "NOMACRO", "MPL", "NOMPL", "EXPDECNUM",
+};
+
+// Controls allowed anywhere that only affect the listing.
 constexpr std::string_view kIgnoredControls[] = {
-    "LIST", "NOLIST", "TITLE", "TT", "PAGELENGTH", "PL", "PAGEWIDTH", "PW", "EJECT", "EJ",
-    "SYMBOLS", "SB", "NOSYMBOLS", "NOSB", "XREF", "XR", "NOXREF", "NOXR", "DEBUG", "DB",
-    "NODEBUG", "NODB", "GEN", "NOGEN", "GENONLY", "GO", "PRINT", "PR", "NOPRINT", "NOPR",
-    "OBJECT", "OJ", "NOOBJECT", "NOOJ", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP", "PAGING",
-    "NOPAGING", "TABS", "DATE", "COND", "NOCOND", "LINES", "NOLINES", "SYMLIST", "NOSYMLIST",
-    "TYPE", "NOTYPE", "ABSOLUTE", "NOABSOLUTE", "AMAKE", "NOAMAKE", "SEGMENTED", "NONSEGMENTED",
-    "USEDEXTONLY", "EXTMAC", "MACRO", "NOMACRO", "MPL", "NOMPL", "SAVE", "RESTORE",
+    "LIST", "NOLIST", "TITLE", "TT", "EJECT", "EJ", "GEN", "NOGEN", "GENONLY", "GO", "COND", "NOCOND",
+    "SYMLIST", "NOSYMLIST", "SAVE", "RESTORE", "REGUSE",
 };
 
 enum class ProcKind : std::uint8_t { None, Near, Far, Interrupt };
@@ -131,8 +219,29 @@ private:
         int pass = 0;  // pass of the latest definition
     };
 
+    struct SourceFile {
+        std::string name;
+        std::string text;
+        std::vector<std::string_view> lines;
+        bool newline_at_end = true;
+    };
+    // A file being read: index into files_ and the number of lines read so far.
+    struct Frame {
+        std::size_t file = 0;
+        std::size_t next = 0;
+    };
+
     const AssembleOptions& opt_;
-    std::vector<std::string_view> lines_;
+    std::vector<std::unique_ptr<SourceFile>> files_;  // [0] is the main source
+    std::map<std::string, int> includes_;  // include request -> files_ index, or -1 if not found
+    std::vector<std::string> incdirs_;  // directories from $INCDIR
+    std::vector<Frame> stack_;  // files being read, innermost last
+    std::optional<std::size_t> include_;  // file to read after the current line
+    bool fatal_ = false;  // stops the pass, like Keil's fatal errors
+    bool primary_done_ = false;  // a statement was seen: primary controls are no longer allowed
+    std::size_t file_ = 0;  // files_ index of the current line
+    int level_ = 0;  // include nesting depth of the current line
+    std::string joined_;  // include file whose last line was joined to the current line
     std::unordered_map<std::string, Entry> symbols_;
     std::vector<int> sizes_;  // instruction sizes of the previous pass
     std::set<int> misaligned_;  // lines that were misaligned in some pass
@@ -156,14 +265,17 @@ private:
     bool ext_esfr_ = false;
     bool ended_ = false;
     std::size_t insn_ = 0;
-    int line_no_ = 0;
+    int line_no_ = 0;  // counts lines across all files, as in Keil's listing
+    int file_line_ = 0;  // line number within the current file
 
     AssemblyResult res_;
 
     void run_pass();
     void process_line(std::string_view text);
+    std::size_t add_file(std::string name, std::string text);
     void statement(std::string_view text, Reporter& rep, ListingLine& lst);
     void controls(std::string_view text, Reporter& rep);
+    void include(std::string_view name, int column);
     void named_directive(const Token& name, const std::string& dir, TokenCursor& cur, Reporter& rep,
                          ListingLine& lst);
     void directive(const std::string& kw, const Token& tok, TokenCursor& cur, Reporter& rep, ListingLine& lst);
@@ -296,15 +408,18 @@ void Assembler::emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst)
     advance(static_cast<std::int64_t>(n));
 }
 
+std::size_t Assembler::add_file(std::string name, std::string text) {
+    auto f = std::make_unique<SourceFile>();
+    f->name = std::move(name);
+    f->text = std::move(text);
+    f->lines = split_lines(f->text);
+    f->newline_at_end = f->text.empty() || f->text.back() == '\n';
+    files_.push_back(std::move(f));
+    return files_.size() - 1;
+}
+
 AssemblyResult Assembler::run(std::string_view source) {
-    for (std::size_t pos = 0; pos <= source.size();) {
-        std::size_t nl = source.find('\n', pos);
-        if (nl == std::string_view::npos) nl = source.size();
-        std::string_view line = source.substr(pos, nl - pos);
-        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        if (nl < source.size() || !line.empty()) lines_.push_back(line);
-        pos = nl + 1;
-    }
+    add_file(opt_.file_name, std::string(source));
 
     bool converged = false;
     for (pass_ = 1; pass_ <= kMaxPasses; ++pass_) {
@@ -356,11 +471,55 @@ void Assembler::run_pass() {
     ext_esfr_ = false;
     ended_ = false;
     insn_ = 0;
+    incdirs_.clear();
+    fatal_ = false;
+    primary_done_ = false;
 
-    for (line_no_ = 1; line_no_ <= static_cast<int>(lines_.size()) && !ended_; ++line_no_)
-        process_line(lines_[line_no_ - 1]);
+    stack_.assign(1, Frame{});
+    line_no_ = 0;
+    // Keil joins the last line of an include file that does not end with a
+    // newline to the line read after it.
+    std::string carry;
+    std::size_t carry_file = 0;
+    int carry_line = 0, carry_level = 0;
+    while ((!stack_.empty() || !carry.empty()) && !ended_ && !fatal_) {
+        std::string text;
+        if (stack_.empty()) {
+            text = std::move(carry);
+            file_ = carry_file;
+            file_line_ = carry_line;
+            level_ = carry_level;
+            joined_.clear();
+        } else {
+            Frame& f = stack_.back();
+            const SourceFile& file = *files_[f.file];
+            if (f.next == file.lines.size()) {
+                stack_.pop_back();
+                continue;
+            }
+            std::string_view line = file.lines[f.next++];
+            file_ = f.file;
+            file_line_ = static_cast<int>(f.next);
+            level_ = static_cast<int>(stack_.size()) - 1;
+            if (f.next == file.lines.size() && !file.newline_at_end && level_ > 0) {
+                carry += line;
+                carry_file = file_;
+                carry_line = file_line_;
+                carry_level = level_;
+                continue;
+            }
+            joined_.clear();
+            if (!trim(carry).empty() && !trim(line).empty()) joined_ = files_[carry_file]->name;
+            text = std::move(carry) + std::string(line);
+        }
+        carry.clear();
+        ++line_no_;
+        include_.reset();
+        process_line(text);
+        if (include_) stack_.push_back(Frame{*include_, 0});
+    }
 
-    if (!final_) return;
+    if (!final_ || fatal_) return;
     auto add = [&](Severity sev, const char* code, std::string msg) {
         res_.diagnostics.push_back({sev, code, std::move(msg), opt_.file_name, 0, 0});
     };
@@ -370,11 +529,18 @@ void Assembler::run_pass() {
 }
 
 void Assembler::process_line(std::string_view text) {
+    const std::string& file = files_[file_]->name;
     ListingLine lst;
     lst.line = line_no_;
+    lst.file = file;
+    lst.file_line = file_line_;
+    lst.level = level_;
     lst.source = std::string(text);
     Reporter rep;
     rep_ = &rep;
+    if (!joined_.empty())
+        rep.warning("OC8", "the last line of '" + joined_ +
+                               "' has no newline at the end, so it was joined to this line (as in Keil)");
     try {
         statement(text, rep, lst);
     } catch (const AsmError& e) {
@@ -383,8 +549,9 @@ void Assembler::process_line(std::string_view text) {
     rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
-        d.file = opt_.file_name;
-        d.line = line_no_;
+        d.file = file;
+        d.line = file_line_;
+        lst.diagnostics.push_back(res_.diagnostics.size());
         res_.diagnostics.push_back(std::move(d));
     }
     res_.listing.push_back(std::move(lst));
@@ -398,6 +565,7 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     auto toks = tokenize(text);
     TokenCursor cur(toks);
     if (cur.at_end()) return;
+    primary_done_ = true;
 
     if (cur.peek().kind == TokKind::Ident && cur.peek(1).is_op(":")) {
         const Token& label = cur.next();
@@ -436,29 +604,95 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
 }
 
 void Assembler::controls(std::string_view text, Reporter& rep) {
+    struct Control {
+        std::string name;
+        std::string_view arg;  // text inside the parentheses
+        int column = 0;
+    };
+    std::vector<Control> list;
     std::size_t i = 0;
     auto skip_space = [&] {
         while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i]))) ++i;
     };
     for (;;) {
         skip_space();
-        if (i >= text.size() || text[i] == ';') return;
+        if (i >= text.size() || text[i] == ';') break;
         std::size_t start = i;
         while (i < text.size() && (std::isalnum(static_cast<unsigned char>(text[i])) || text[i] == '_')) ++i;
-        int column = static_cast<int>(start) + 2;
-        if (i == start) throw AsmError("A16", "unknown control or bad argument(s)", column);
-        std::string name = upper(text.substr(start, i - start));
+        Control c{upper(text.substr(start, i - start)), {}, static_cast<int>(start) + 2};
+        if (c.name.empty()) throw AsmError("A16", "unknown control or bad argument(s)", c.column);
         skip_space();
-        if (i < text.size() && text[i] == '(') {
+        bool paren = i < text.size() && text[i] == '(';
+        if (c.name == "INCLUDE" || c.name == "IC") {
+            // The file name runs to the first ')'; Keil takes quotes and
+            // spaces inside it literally.
+            std::size_t close = paren ? text.find(')', i) : std::string_view::npos;
+            if (close == std::string_view::npos) {
+                const char* msg = paren ? "')' expected" : "'(' expected";
+                if (!list.empty()) throw AsmError("A22", msg, c.column);
+                rep.error("A22", msg, c.column);
+                throw AsmError("A171", "error in include directive", c.column);
+            }
+            c.arg = text.substr(i + 1, close - i - 1);
+            i = close + 1;
+        } else if (paren) {
+            std::size_t open = i;
             int depth = 0;
             for (; i < text.size(); ++i) {
                 if (text[i] == '(') ++depth;
                 if (text[i] == ')' && --depth == 0) break;
             }
-            if (i >= text.size()) throw AsmError("A22", "')' expected", column);
+            if (i >= text.size()) throw AsmError("A22", "')' expected", c.column);
+            c.arg = text.substr(open + 1, i - open - 1);
             ++i;
         }
-        if (name == "MOD167" || name == "M167") {
+        list.push_back(std::move(c));
+    }
+
+    auto add_incdirs = [&](std::string_view arg) {
+        for (std::size_t pos = 0; pos <= arg.size();) {
+            std::size_t semi = std::min(arg.find(';', pos), arg.size());
+            if (std::string dir = portable_path(arg.substr(pos, semi - pos)); !dir.empty())
+                incdirs_.push_back(std::move(dir));
+            pos = semi + 1;
+        }
+    };
+    // Primary controls must come before the first statement; otherwise Keil
+    // ignores the whole line (though it still uses INCDIR directories).
+    if (primary_done_) {
+        auto primary = std::find_if(list.begin(), list.end(), [](const Control& c) {
+            return contains(kPrimaryControls, c.name);
+        });
+        if (primary != list.end()) {
+            for (const auto& c : list)
+                if (c.name == "INCDIR" || c.name == "ID") add_incdirs(c.arg);
+            throw AsmError("A8", "misplaced primary control, line ignored: $" + primary->name +
+                                     " must come before the first statement",
+                           primary->column);
+        }
+    }
+
+    for (std::size_t k = 0; k < list.size(); ++k) {
+        const std::string& name = list[k].name;
+        int column = list[k].column;
+        if (name == "INCLUDE" || name == "IC") {
+            if (k > 0) {
+                // Keil silently skips an INCLUDE that follows another control.
+                rep.warning("OC7", "$" + name + " ignored: it must be the first control on the line (as in Keil)",
+                            column);
+                continue;
+            }
+            std::string_view file = trim(list[k].arg);
+            if (file.empty()) {
+                rep.error("A20", "non-null argument expected", column);
+                throw AsmError("A171", "error in include directive", column);
+            }
+            if (list.size() > 1)
+                throw AsmError("A171", "error in include directive: no other control may follow it", column);
+            include(file, column);
+        } else if (name == "INCDIR" || name == "ID") {
+            add_incdirs(list[k].arg);
+        } else if (name == "MOD167" || name == "M167") {
             cpu_ = isa::Cpu::C167;
             sys166_ = false;
         } else if (name == "MOD166" || name == "M166") {
@@ -474,13 +708,50 @@ void Assembler::controls(std::string_view text, Reporter& rep) {
             case_ = true;
         } else if (name == "NOCASE") {
             case_ = false;
-        } else if (name == "INCLUDE" || name == "IC" || name == "IF" || name == "ELSEIF" || name == "ELSE" ||
-                   name == "ENDIF" || name == "SET" || name == "RESET") {
+        } else if (name == "IF" || name == "ELSEIF" || name == "ELSE" || name == "ENDIF" || name == "SET" ||
+                   name == "RESET") {
             throw AsmError("OC3", "control $" + name + " is not supported yet", column);
-        } else if (!contains(kIgnoredControls, name)) {
+        } else if (!contains(kIgnoredControls, name) && !contains(kPrimaryControls, name)) {
             throw AsmError("A16", "unknown control '" + name + "'", column);
         }
     }
+}
+
+// Finds an include file and arranges for it to be read after the current
+// line. Like Keil, a missing file ends the assembly.
+void Assembler::include(std::string_view name, int column) {
+    if (stack_.size() > kMaxIncludeDepth) {
+        fatal_ = true;
+        throw AsmError("OC6", "include files nested too deeply (does a file include itself?)", column);
+    }
+    std::string wanted = portable_path(name);
+    std::string request = wanted;
+    for (const auto& d : incdirs_) request += "\n" + d;
+    auto [it, inserted] = includes_.try_emplace(request, -1);
+    if (inserted) {
+        std::string main_dir = directory_of(opt_.file_name);
+        std::vector<std::string> dirs{"", main_dir};
+        for (const auto& d : opt_.include_dirs) dirs.push_back(portable_path(d));
+        for (const auto& d : incdirs_) {
+            dirs.push_back(d);
+            // Keil takes a relative $INCDIR from the current directory only;
+            // also trying the source directory lets the source be assembled
+            // from anywhere.
+            if (!is_absolute_path(d) && !main_dir.empty()) dirs.push_back(join_path(main_dir, d));
+        }
+        for (const auto& dir : dirs) {
+            std::string path = join_path(dir, wanted);
+            auto text = opt_.read_file ? opt_.read_file(path) : read_file_any_case(path);
+            if (!text) continue;
+            it->second = static_cast<int>(add_file(path, std::move(*text)));
+            break;
+        }
+    }
+    if (it->second < 0) {
+        fatal_ = true;
+        throw AsmError("OC5", "cannot open include file '" + std::string(name) + "'", column);
+    }
+    include_ = static_cast<std::size_t>(it->second);
 }
 
 void Assembler::named_directive(const Token& name, const std::string& dir, TokenCursor& cur, Reporter& rep,
@@ -913,26 +1184,27 @@ std::string format_diagnostic(const Diagnostic& d) {
 }
 
 std::string format_listing(const AssemblyResult& result) {
-    std::multimap<int, const Diagnostic*> by_line;
-    for (const auto& d : result.diagnostics) by_line.emplace(d.line, &d);
-
+    std::vector<bool> shown_diag(result.diagnostics.size());
+    const std::string main_file = result.listing.empty() ? std::string() : result.listing.front().file;
     std::string out = "LOC       OBJ                  LINE  SOURCE\n\n";
-    auto diagnostics_for = [&](int line) {
-        auto [b, e] = by_line.equal_range(line);
-        for (auto it = b; it != e; ++it) {
-            const Diagnostic& d = *it->second;
-            out += "*** ";
-            out += d.severity == Severity::Error ? "ERROR " : "WARNING ";
-            out += d.code + ": " + d.message + "\n";
-        }
+    auto print = [&](std::size_t i) {
+        const Diagnostic& d = result.diagnostics[i];
+        shown_diag[i] = true;
+        out += "*** ";
+        out += d.severity == Severity::Error ? "ERROR " : "WARNING ";
+        out += d.code + ": " + d.message;
+        if (d.line && d.file != main_file) out += " (" + d.file + ", line " + std::to_string(d.line) + ")";
+        out += "\n";
     };
     for (const auto& l : result.listing) {
         std::string loc = l.has_address ? hex(l.address, 8) : l.value ? "=" + value_text(*l.value) : "";
         std::string obj;
         std::size_t shown = 0;
         for (; shown < l.bytes.size() && shown < 8; ++shown) obj += hex(l.bytes[shown], 2);
+        // Lines from include files are marked +1, +2, ... like in Keil's listing.
+        std::string level = l.level ? "+" + std::to_string(std::min(l.level, 9)) : "";
         char head[64];
-        std::snprintf(head, sizeof head, "%-9s %-18s %6d  ", loc.c_str(), obj.c_str(), l.line);
+        std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6d  ", loc.c_str(), obj.c_str(), level.c_str(), l.line);
         out += head + l.source + "\n";
         // Long DB/DW lines continue on extra rows.
         while (shown < l.bytes.size()) {
@@ -943,9 +1215,10 @@ std::string format_listing(const AssemblyResult& result) {
                           more.c_str());
             out += head;
         }
-        diagnostics_for(l.line);
+        for (auto i : l.diagnostics) print(i);
     }
-    diagnostics_for(0);
+    for (std::size_t i = 0; i < result.diagnostics.size(); ++i)
+        if (!shown_diag[i]) print(i);
 
     out += "\nSYMBOLS\n\n";
     for (const auto& s : result.symbols) {

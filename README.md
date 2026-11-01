@@ -33,14 +33,16 @@ Early development (version 0.0.x). What works today:
   instruction that reaches the target and shortens forward jumps over
   several passes. Label types (`NEAR`, `FAR`, `WORD`, ...) and the `SHORT`
   and `FAR PTR` operators work as in Keil.
-- The `$MOD167` and `$CASE` controls. Listing-only controls are accepted
-  and ignored.
+- `$INCLUDE` and `$INCDIR`, with Keil's search order and listing format.
+- The `$MOD167` and `$CASE` controls, with Keil's rule that these come
+  before the first statement. Listing-only controls are accepted and
+  ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
   the Keil manual.
 
 Not done yet:
 
-- `$INCLUDE`, `$IF`/`$SET`, and a bundled register file (`reg167.inc`)
+- `$IF`/`$SET`, and a bundled register file (`reg167.inc`)
 - macros
 - relocatable sections and linking, and OMF-166 object files
 - the TASKING assembler dialect
@@ -76,6 +78,7 @@ The binary starts at the lowest address used. For example, code in
 | `--origin ADDR` | address of code outside sections and of sections without `AT` |
 | `--fill BYTE` | value of gaps between pieces of code (default `0FFh`) |
 | `--cpu c166\|c167` | instruction set (`$MOD167` in the source also selects C167) |
+| `-I DIR` | also search `DIR` for `$INCLUDE` files (may be repeated) |
 
 The exit status is 0 on success, 1 on assembly errors (no binary is
 written), and 2 for usage or file errors. Messages use the format

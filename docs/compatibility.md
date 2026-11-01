@@ -39,20 +39,23 @@ the complete memory image.
 - **Register definitions:** `DEFR`, `DEFA` and `DEFB`, the directives that
   register files such as `reg167.inc` use. See
   [Register definitions](#register-definitions).
+- **Include files:** `$INCLUDE(file)` (short form `$IC`) and
+  `$INCDIR(dir;dir...)` (`$ID`). See [Include files](#include-files).
 - **Accepted and ignored:** these only matter to a linker or debugger.
   - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `ASSUME`, `REGDEF`, `REGBANK`,
     `SSKDEF`, `PECDEF`, `TYPEDEC`.
   - Listing and object-file controls: `$NOLIST`, `$TITLE(...)`, `$DEBUG`,
     `$SEGMENTED`, and similar.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`.
-  `$MODV2` falls back to the C167 set, with warning OC2.
+  `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
+  come before the first statement; see [Controls](#controls).
 
 ## Not supported yet
 
 These produce error OC3 (or OC4 for externals), so a missing feature is never
 silently skipped:
 
-- `$INCLUDE`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF` and `$SET`/`$RESET`
+- `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF` and `$SET`/`$RESET`
 - `MACRO` and the other macro facilities
 - `EXTERN`/`EXTRN` (a raw image has no linker to resolve them)
 - `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
@@ -84,6 +87,91 @@ The access attribute only matters to a debugger and is ignored. As in Keil:
 
 In C166 mode there are no extended SFRs, so a bit address in that area
 fails with A68, as in Keil.
+
+## Include files
+
+`$INCLUDE(file)` reads another file in place of the control line, like
+`#include` in C. Included files may include further files, up to 32 levels
+deep, and the same file may be included more than once. Spaces inside the
+parentheses are ignored; quotes are not removed, so `$INCLUDE("x.inc")`
+looks for a file whose name starts with a quote, as in Keil.
+
+A file is searched for in this order, and the first match wins:
+
+1. the current directory;
+2. the directory of the **main** source file (not of the file that contains
+   the `$INCLUDE`);
+3. directories given with `-I` on the command line, in order;
+4. directories given with `$INCDIR(dir;dir...)`, in order.
+
+Names are matched without regard to upper and lower case, on every
+operating system, because Keil sources written on Windows often mix them.
+A path may use `\` or `/`.
+
+`$INCDIR` adds directories for all `$INCLUDE` lines after it. Keil looks
+for a relative `$INCDIR` directory only from the current directory.
+openc166 also tries it relative to the main source file, so that
+`openc166 project/main.a66` works from any directory.
+
+**Listing.** As in Keil, one line counter runs through all files, and
+lines from an included file are marked `+1`, `+2`, ... by nesting level. A
+message about a line in an included file names that file and the line
+number inside it.
+
+**A last line without a line break.** When an included file does not end
+with a line break, Keil glues its last line to the start of the next line
+it reads. A comment on that last line then hides the next statement.
+openc166 does the same, and warns with OC8 when both parts contain text.
+
+**Errors.** A missing file (OC5) or nesting deeper than 32 levels (OC6)
+stops the assembly; Keil stops too. `$INCLUDE` must be the first control on
+its line: `$INCLUDE(x) MOD167` is A171 and includes nothing, and
+`$NOLIST INCLUDE(x)` is ignored with warning OC7.
+
+## Controls
+
+Keil has two kinds of `$` controls:
+
+- **Primary controls** set up the whole assembly and must come before the
+  first statement. Comments, blank lines and general controls may come
+  first, as may an included file that has only those. A primary control
+  after that is error A8, and the **whole line** is ignored: a late
+  `$MOD167` does not switch to the C167, so a later `EXTR` fails with A108.
+  The one exception, as in Keil, is `$INCDIR`, which still takes effect.
+- **General controls** may appear anywhere.
+
+Primary controls that openc166 uses: `MOD167`/`M167`, `MOD166`/`M166`,
+`NOMOD166`/`NOM166`, `MODV2`, `CASE`, `NOCASE`, `INCDIR`/`ID`. Those it
+ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
+`NOSYMBOLS`/`NOSB`, `XREF`/`XR`, `NOXREF`/`NOXR`, `DEBUG`/`DB`,
+`NODEBUG`/`NODB`, `PRINT`/`PR`, `NOPRINT`/`NOPR`, `OBJECT`/`OJ`,
+`NOOBJECT`/`NOOJ`, `ERRORPRINT`/`EP`, `NOERRORPRINT`/`NOEP`, `PAGING`,
+`NOPAGING`, `TABS`, `DATE`, `LINES`, `NOLINES`, `TYPE`, `NOTYPE`, `AMAKE`,
+`NOAMAKE`, `SEGMENTED`, `NONSEGMENTED`, `USEDEXTONLY`, `EXTMAC`, `MACRO`,
+`NOMACRO`, `MPL`, `NOMPL`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
+
+General controls, all ignored: `LIST`, `NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`,
+`GEN`, `NOGEN`, `GENONLY`/`GO`, `COND`, `NOCOND`, `SYMLIST`, `NOSYMLIST`,
+`SAVE`, `RESTORE`, `REGUSE`.
+
+These lists come from testing A166 V5.38. The manual calls `TITLE` and
+`NOCOND` primary, but A166 accepts them anywhere. An unknown control is
+A16.
+
+## openc166's own messages
+
+Messages that Keil does not have use codes starting with `OC`:
+
+| Code | Kind | Meaning |
+|---|---|---|
+| OC1 | warning | two pieces of code or data overlap in the image |
+| OC2 | warning | `$MODV2`: the XC16x/Super10 extensions are not supported |
+| OC3 | error | a control or directive that openc166 does not support yet |
+| OC4 | error | external symbols, which need a linker |
+| OC5 | error | an include file cannot be opened; the assembly stops |
+| OC6 | error | include files nested too deeply; the assembly stops |
+| OC7 | warning | `$INCLUDE` that is not the first control on its line, ignored |
+| OC8 | warning | the last line of an include file was joined to the next line |
 
 ## Data alignment
 
@@ -209,6 +297,11 @@ follow are unchanged. Other bad items are dropped.
 | instruction or data outside any `SECTION` | error A44 | placed at `--origin` |
 | error inside an instruction | sometimes still emits code | emits nothing (no binary is written anyway) |
 | `JMPR`/`CALLR` to a distant label in another section | resolved by the linker, which fails there | error A82 |
+| relative `$INCDIR` directory | searched from the current directory only | also searched from the main source's directory |
+| `$INCLUDE` after another control on the line (`$NOLIST INCLUDE(x)`) | silently ignored | ignored with warning OC7 |
+| error A171 after a bad `$INCLUDE` line | reported on the following line | reported on the `$INCLUDE` line |
+| missing include file | fatal error, no listing | error OC5; the listing stops at that line |
+| `$ABSOLUTE`, `$NOABSOLUTE` | documented, but A16 in V5.38 | accepted and ignored |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

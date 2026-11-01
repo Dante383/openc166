@@ -14,6 +14,9 @@ linked with Keil L166 and converted with OH166, and the resulting memory
 image is compared byte for byte with the openc166 binary, including which
 addresses are left empty.
 
+Sources may use $INCLUDE and $INCDIR. Lines are numbered across all files
+as in Keil's listing; both assemblers run in the directory of the source.
+
 A source line containing "DIVERGES:" (e.g. "; DIVERGES: reason") marks an
 intentional, documented difference from Keil and is not compared.
 
@@ -63,9 +66,11 @@ def parse_keil_listing(text):
     symbols = {}
     last = None
     in_symbols = False
-    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}) (\S*)\s+(?:[A-Z]\s+)?(\d+) ")
+    # Lines from include files carry a nesting marker (+1, +2, ...).
+    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
     more = re.compile(r"^[0-9A-F]{8} ([0-9A-F]+)\s*$")
-    diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN \d+ \(.*, LINE (\d+)\)")
+    # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
+    diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
     sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)")
     for l in text.splitlines():
         if l.startswith("N A M E"):
@@ -116,7 +121,7 @@ def parse_openc166_listing(text):
                 last.diags.append(m.group(2) + m.group(1)[0])
             continue
         number = l[29:35].strip()
-        obj = l[10:28].strip()
+        obj = l[10:26].strip()
         if number.isdigit():
             last = lines.setdefault(int(number), Line())
             if obj and re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last.loc is None:
@@ -136,7 +141,68 @@ def keil_tool(keil, name, args, workdir):
     return p.stdout.decode("latin-1") + p.stderr.decode("latin-1")
 
 
+INCLUDE = re.compile(r"\$\s*(?:INCLUDE|IC)\s*\(([^)]*)\)\s*(?:;.*)?$", re.I)
+INCDIR = re.compile(r"\b(?:INCDIR|ID)\s*\(([^)]*)\)", re.I)
+
+
+def find_file(directory, name):
+    """Path of 'name' below 'directory', ignoring case as Windows does."""
+    path = directory
+    for part in name.replace("\\", "/").split("/"):
+        if part in ("", "."):
+            continue
+        if not os.path.exists(os.path.join(path, part)):
+            match = [e for e in os.listdir(path) if e.lower() == part.lower()] if os.path.isdir(path) else []
+            if not match:
+                return None
+            part = match[0]
+        path = os.path.join(path, part)
+    return path if os.path.isfile(path) else None
+
+
+def expand(source):
+    """Source lines with include files expanded in place, so that line n is
+    line n of the listings. Like Keil, include files are searched in the
+    source directory and then in $INCDIR directories."""
+    root = os.path.dirname(os.path.abspath(source))
+    dirs = [root]
+    out = []
+    carry = []  # last line of an include file without a final newline
+
+    def read(path, depth):
+        with open(path, encoding="latin-1") as f:
+            data = f.read()
+        lines = data.splitlines()
+        for i, l in enumerate(lines):
+            # Keil joins it to the next line read.
+            if depth > 0 and i == len(lines) - 1 and not data.endswith("\n"):
+                carry.append(l)
+                continue
+            l = "".join(carry) + l
+            carry.clear()
+            out.append(l)
+            if l.startswith("$"):
+                for d in INCDIR.findall(l):
+                    dirs.extend(os.path.join(root, x.strip()) for x in d.split(";") if x.strip())
+            m = INCLUDE.match(l)
+            if m and depth < 32:
+                for d in dirs:
+                    found = find_file(d, m.group(1).strip())
+                    if found:
+                        read(found, depth + 1)
+                        break
+
+    read(source, 0)
+    if carry:
+        out.append("".join(carry))
+    return out
+
+
 def run_keil(keil, source, workdir):
+    # Include files are looked up relative to the source, so the whole source
+    # directory goes along.
+    if any(INCLUDE.match(l) for l in expand(source)):
+        shutil.copytree(os.path.dirname(os.path.abspath(source)), workdir, dirs_exist_ok=True)
     shutil.copy(source, os.path.join(workdir, "t.a66"))
     keil_tool(keil, os.path.basename(keil), ["t.a66"], workdir)
     with open(os.path.join(workdir, "t.LST"), encoding="latin-1") as f:
@@ -145,8 +211,8 @@ def run_keil(keil, source, workdir):
 
 def run_openc166(tool, source, workdir):
     lst = os.path.join(workdir, "o.lst")
-    subprocess.run([tool, source, "-o", os.path.join(workdir, "o.bin"), "-l", lst],
-                   capture_output=True, timeout=TIMEOUT)
+    subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", os.path.join(workdir, "o.bin"), "-l", lst],
+                   capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
     with open(lst, encoding="utf-8") as f:
         return parse_openc166_listing(f.read())
 
@@ -178,8 +244,8 @@ def openc166_image(tool, source, workdir):
     images = []
     for fill in ("0", "0FFH"):
         out = os.path.join(workdir, "img.bin")
-        p = subprocess.run([tool, source, "-o", out, "--base", "0", "--fill", fill],
-                           capture_output=True, timeout=TIMEOUT)
+        p = subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", out, "--base", "0", "--fill", fill],
+                           capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
         if p.returncode != 0:
             return None
         with open(out, "rb") as f:
@@ -237,8 +303,7 @@ def fmt_loc(line):
 
 
 def compare(source, keil, tool, quiet=False, codes=False, image=False):
-    with open(source, encoding="latin-1") as f:
-        text = f.read().splitlines()
+    text = expand(source)
     counts = {"ok": 0, "soft": 0, "hard": 0, "diverges": 0, "symbols": 0, "image": None}
     with tempfile.TemporaryDirectory() as work:
         k, ksym = run_keil(keil, source, work)

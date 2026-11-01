@@ -8,6 +8,7 @@
 #include "value.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -15,7 +16,12 @@
 
 namespace oc166 {
 
+// Reads a file, or returns std::nullopt if it cannot be read.
+using FileReader = std::function<std::optional<std::string>(const std::string& path)>;
+
 struct AssembleOptions {
+    // Name of the source file, used in diagnostics. $INCLUDE also searches
+    // the directory of this file.
     std::string file_name = "<input>";
     // CPU selected before the source is read; $MOD167 in the source also
     // selects the C167.
@@ -23,6 +29,13 @@ struct AssembleOptions {
     // Address of code outside any section, and of the first section that has
     // no AT address.
     std::int64_t origin = 0;
+    // Directories searched by $INCLUDE. The order is: the current directory,
+    // the directory of file_name, these directories, then the directories
+    // given by $INCDIR in the source.
+    std::vector<std::string> include_dirs;
+    // Reads include files. The default reads from the file system and, like
+    // Windows, ignores the case of file names.
+    FileReader read_file;
 };
 
 // Bytes emitted at consecutive addresses.
@@ -32,12 +45,16 @@ struct Chunk {
 };
 
 struct ListingLine {
-    int line = 0;
+    int line = 0;       // counts the lines of all files, as Keil's listing does
+    std::string file;   // file the line comes from
+    int file_line = 0;  // line number within 'file'
+    int level = 0;      // $INCLUDE nesting depth; 0 for the main source
     bool has_address = false;
     std::int64_t address = 0;
     std::vector<std::uint8_t> bytes;
     std::optional<Value> value;  // value assigned by EQU, SET or BIT
     std::string source;
+    std::vector<std::size_t> diagnostics;  // indices into AssemblyResult::diagnostics
 };
 
 enum class SymbolKind : std::uint8_t { Label, Equ, Set, Bit };
@@ -46,7 +63,7 @@ struct Symbol {
     std::string name;
     SymbolKind kind = SymbolKind::Label;
     Value value;
-    int line = 0;
+    int line = 0;  // listing line (ListingLine::line) of the definition
 };
 
 struct AssemblyResult {

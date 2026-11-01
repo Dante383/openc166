@@ -1,0 +1,29 @@
+; Primary controls ($MOD167, $CASE, $INCDIR, ...) must come before the first
+; statement. Keil ignores a line with a misplaced one (error A8). Comment
+; lines, blank lines, general controls and include files without statements
+; do not count as statements.
+$NOLIST
+$LIST
+; a comment
+
+$INCLUDE (inc/comments.inc)
+$MOD167 SYMBOLS
+X       EQU     1
+$MOD166
+$CASE
+abc     EQU     1
+ABC     EQU     2
+$NOLIST MOD167
+$LIST
+$EJECT
+$GEN NOGEN
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+        EXTR    #1
+$INCDIR (inc/sub)
+$INCLUDE (deep.inc)
+        MOV     R1,#DEEPVAL
+        RET
+P       ENDP
+S       ENDS
+        END
