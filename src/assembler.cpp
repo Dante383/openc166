@@ -11,6 +11,7 @@
 #include <cctype>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -40,13 +41,16 @@ std::string value_text(const Value& v) {
     return hex(word, 4) + "H." + std::to_string(v.bit);
 }
 
-// Value of a label: an address, which Keil treats as relocatable.
-Value address(std::int64_t a, bool fixed) {
-    Value v = Value::number(a);
-    v.rel = Rel::Addr;
-    v.unsig = true;
-    v.fixed = fixed;
-    return v;
+// Type of a label in front of data, or of a data directive's name.
+LType data_type(std::string_view upper_dir) {
+    if (upper_dir == "DW" || upper_dir == "DSW") return LType::Word;
+    if (upper_dir == "DD" || upper_dir == "DSD") return LType::Dword;
+    return LType::Byte;
+}
+
+const char* type_name(LType t) {
+    static constexpr const char* kNames[] = {"", "NEAR", "FAR", "BYTE", "WORD", "DWORD"};
+    return kNames[static_cast<int>(t)];
 }
 
 bool same_value(const Value& a, const Value& b) {
@@ -56,7 +60,6 @@ bool same_value(const Value& a, const Value& b) {
 // Directives written as "name DIRECTIVE ...".
 constexpr std::string_view kNamedDirectives[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW", "DSD",
-    // Recognized but not supported yet.
     "DEFR", "DEFB", "DEFA", "LIT", "REGDEF", "REGBANK", "COMREG", "DBIT", "DGROUP", "CGROUP", "MACRO", "TYPEDEC",
 };
 
@@ -78,7 +81,7 @@ constexpr std::string_view kKeywords[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW",
     "DSD", "ORG", "EVEN", "END", "NAME", "PUBLIC", "GLOBAL", "EXTERN", "EXTRN", "ASSUME", "REGDEF",
     "REGBANK", "SSKDEF", "PECDEF", "DEFR", "DEFB", "DEFA", "LIT", "DBIT", "DGROUP", "CGROUP", "MACRO",
-    "TYPEDEC", "NEAR", "FAR", "INTERRUPT", "TASK", "AT",
+    "TYPEDEC", "NEAR", "FAR", "INTERRUPT", "TASK", "AT", "SHORT", "PTR", "BYTE", "WORD", "DWORD",
 };
 
 template <std::size_t N>
@@ -116,6 +119,10 @@ public:
     std::optional<Value> lookup(std::string_view name) override;
     std::int64_t location() const override { return sections_[cur_].loc; }
     bool location_fixed() const override { return sections_[cur_].absolute; }
+    std::uint16_t section_index() const override { return static_cast<std::uint16_t>(cur_); }
+    bool has_esfr() const override { return cpu_ == isa::Cpu::C167; }
+    unsigned forward_references() const override { return forward_count_; }
+    void soft_error(const AsmError& e) override { rep_->error(e.code(), e.message(), e.column()); }
     bool final_pass() const override { return final_; }
 
 private:
@@ -128,11 +135,14 @@ private:
     std::vector<std::string_view> lines_;
     std::unordered_map<std::string, Entry> symbols_;
     std::vector<int> sizes_;  // instruction sizes of the previous pass
+    std::set<int> misaligned_;  // lines that were misaligned in some pass
 
     int pass_ = 0;
     bool final_ = false;
     bool changed_ = false;
     bool forward_ref_ = false;
+    unsigned forward_count_ = 0;
+    Reporter* rep_ = nullptr;  // diagnostics of the current line
     isa::Cpu cpu_ = isa::Cpu::C166;
     bool sys166_ = true;
     bool case_ = false;
@@ -158,18 +168,24 @@ private:
                          ListingLine& lst);
     void directive(const std::string& kw, const Token& tok, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void instruction(const std::string& mnemonic, TokenCursor& cur, Reporter& rep, ListingLine& lst);
+    void branch(std::string& mnemonic, std::vector<Operand>& ops, std::int64_t pc, Reporter& rep);
+    void check_branch_target(const std::string& mnemonic, const std::vector<Operand>& ops, Reporter& rep) const;
     void data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void section_start(const Token& name, TokenCursor& cur);
     void section_end(const Token& name);
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
     void define(const Token& name, SymbolKind kind, const Value& v);
+    void undefine(const Token& name);
+    Value here(LType type) const;
     Value expression(TokenCursor& cur);
     std::int64_t absolute(TokenCursor& cur, const char* what);
     void expect_end(TokenCursor& cur);
+    void access_attribute(TokenCursor& cur);
     void emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst);
     void advance(std::int64_t n);
     void align(int n);
+    void check_alignment(int need, const Token& name, Reporter& rep);
     Section& section() { return sections_[cur_]; }
 };
 
@@ -177,7 +193,10 @@ std::optional<Value> Assembler::lookup(std::string_view name) {
     if (auto p = predefined(name, cpu_, sys166_)) return p;
     auto it = symbols_.find(key(name));
     if (it == symbols_.end()) return std::nullopt;
-    if (it->second.pass != pass_) forward_ref_ = true;
+    if (it->second.pass != pass_) {
+        forward_ref_ = true;
+        ++forward_count_;
+    }
     return it->second.sym.value;
 }
 
@@ -195,6 +214,27 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v) {
     e.pass = pass_;
 }
 
+// Drops a symbol that an earlier pass defined on this line, for definitions
+// that Keil leaves undefined when they fail.
+void Assembler::undefine(const Token& name) {
+    auto it = symbols_.find(key(name.text));
+    if (it == symbols_.end() || it->second.sym.line != line_no_) return;
+    symbols_.erase(it);
+    changed_ = true;
+}
+
+// Value of a label at the current location: an address, which Keil treats as
+// relocatable.
+Value Assembler::here(LType type) const {
+    Value v = Value::number(location());
+    v.rel = Rel::Addr;
+    v.unsig = true;
+    v.fixed = location_fixed();
+    v.section = section_index();
+    v.ltype = type;
+    return v;
+}
+
 Value Assembler::expression(TokenCursor& cur) { return evaluate(cur, *this); }
 
 // Evaluates an expression that must be a number known at this point.
@@ -205,6 +245,18 @@ std::int64_t Assembler::absolute(TokenCursor& cur, const char* what) {
     if (forward_ref_) throw AsmError("A71", std::string("expression with forward reference not permitted in ") + what, column);
     if (v.type != VType::Number) throw AsmError("A72", "absolute expression required", column);
     return v.num;
+}
+
+// DEFR, DEFB and DEFA take an optional access attribute (R, RW or W). Only a
+// debugger uses it.
+void Assembler::access_attribute(TokenCursor& cur) {
+    if (!cur.accept_op(",")) return;
+    const Token& t = cur.peek();
+    if (t.kind == TokKind::Ident && (ieq(t.text, "R") || ieq(t.text, "RW") || ieq(t.text, "W"))) {
+        cur.next();
+        return;
+    }
+    throw AsmError("A6", "syntax error: access attribute R, RW or W expected", t.column);
 }
 
 void Assembler::expect_end(TokenCursor& cur) {
@@ -220,6 +272,13 @@ void Assembler::advance(std::int64_t n) {
 
 void Assembler::align(int n) {
     if (std::int64_t r = location() % n) advance(n - r);
+}
+
+// Keil warns when a label was misaligned in any pass, even if shortening
+// jumps in a later pass moved it to a good address.
+void Assembler::check_alignment(int need, const Token& name, Reporter& rep) {
+    if (location() % need) misaligned_.insert(line_no_);
+    if (final_ && misaligned_.count(line_no_)) rep.warning("A48", "insufficient alignment", name.column);
 }
 
 void Assembler::emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst) {
@@ -315,11 +374,13 @@ void Assembler::process_line(std::string_view text) {
     lst.line = line_no_;
     lst.source = std::string(text);
     Reporter rep;
+    rep_ = &rep;
     try {
         statement(text, rep, lst);
     } catch (const AsmError& e) {
         rep.error(e.code(), e.message(), e.column());
     }
+    rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
         d.file = opt_.file_name;
@@ -343,13 +404,15 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         cur.next();
         // A label in front of data takes the type and alignment of the data;
         // otherwise it is a NEAR label in code sections and needs an even address.
-        bool data_follows = cur.peek().kind == TokKind::Ident && contains(kDataDirectives, upper(cur.peek().text));
-        if (data_follows) align(data_alignment(upper(cur.peek().text)));
+        std::string next = cur.peek().kind == TokKind::Ident ? upper(cur.peek().text) : std::string();
+        bool data_follows = contains(kDataDirectives, next);
+        if (data_follows) align(data_alignment(next));
         lst.has_address = true;
         lst.address = location();
-        define(label, SymbolKind::Label, address(location(), location_fixed()));
-        if (!data_follows && section().code && (location() & 1))
-            rep.warning("A48", "insufficient alignment", label.column);
+        // Keil gives plain labels outside CODE sections the type BYTE.
+        LType type = data_follows ? data_type(next) : section().code ? LType::Near : LType::Byte;
+        define(label, SymbolKind::Label, here(type));
+        if (!data_follows && section().code) check_alignment(2, label, rep);
         if (cur.at_end()) return;
     }
 
@@ -441,15 +504,18 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         if (v.known) lst.value = v;
     } else if (dir == "LABEL") {
         int need = 1;
+        LType type = section().code ? LType::Near : LType::Byte;
         if (!cur.at_end()) {
-            std::string type = upper(cur.next().text);
-            need = type == "DWORD" ? 4 : type == "WORD" || type == "NEAR" || type == "FAR" ? 2 : 1;
+            std::string t = upper(cur.next().text);
+            need = t == "DWORD" ? 4 : t == "WORD" || t == "NEAR" || t == "FAR" ? 2 : 1;
+            type = t == "NEAR" ? LType::Near : t == "FAR" ? LType::Far : t == "BYTE" ? LType::Byte
+                 : t == "WORD" ? LType::Word : t == "DWORD" ? LType::Dword : type;
         }
         expect_end(cur);
         lst.has_address = true;
         lst.address = location();
-        define(name, SymbolKind::Label, address(location(), location_fixed()));
-        if (location() % need) rep.warning("A48", "insufficient alignment", name.column);
+        define(name, SymbolKind::Label, here(type));
+        check_alignment(need, name, rep);
     } else if (dir == "SECTION") {
         section_start(name, cur);
     } else if (dir == "ENDS") {
@@ -467,8 +533,8 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         // Interrupt names, numbers and USING clauses only matter to the linker.
         lst.has_address = true;
         lst.address = location();
-        define(name, SymbolKind::Label, address(location(), location_fixed()));
-        if (location() & 1) rep.warning("A48", "insufficient alignment", name.column);
+        define(name, SymbolKind::Label, here(kind == ProcKind::Far ? LType::Far : LType::Near));
+        check_alignment(2, name, rep);
         proc_ = kind;
         proc_name_ = std::string(name.text);
     } else if (dir == "ENDP") {
@@ -477,11 +543,71 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A29", "unmatched ENDS/ENDP", name.column);
         proc_ = ProcKind::None;
         proc_name_.clear();
+    } else if (dir == "DEFR" || dir == "DEFA") {
+        // DEFR names an SFR (FE00H..FFDEH, or an extended SFR at F000H..F1DEH
+        // on the C167); DEFA names a word of internal RAM (FA00H..FDFEH).
+        const bool sfr = dir == "DEFR";
+        const char* code = sfr ? "A101" : "A102";
+        const std::string what = sfr ? "invalid system address" : "invalid internal RAM address";
+        int column = cur.peek().column;
+        forward_ref_ = false;
+        Value v;
+        try {
+            v = expression(cur);
+        } catch (const AsmError&) {
+            undefine(name);
+            throw;
+        }
+        const std::int64_t a = v.num;
+        if (v.known && (v.type != VType::Number || (a & 1) ||
+                        !(sfr ? (a >= 0xFE00 && a <= 0xFFDE) || (cpu_ == isa::Cpu::C167 && a >= 0xF000 && a <= 0xF1DE)
+                              : a >= 0xFA00 && a <= 0xFDFE))) {
+            undefine(name);
+            throw AsmError(code, what + (sfr ? ": expected an even SFR address" : ": expected an even address in FA00H..FDFEH"),
+                           column);
+        }
+        Value d = Value::number(a);
+        d.known = v.known;
+        if (sfr)
+            d.type = VType::Sfr;
+        else
+            d.ltype = LType::Word;
+        if (sfr && d.known) lst.value = d;
+        // Keil reports a forward reference; it still defines a DEFA symbol but
+        // not a DEFR one.
+        if (forward_ref_) rep.error(code, what + ": forward reference not permitted", column);
+        if (sfr && forward_ref_)
+            undefine(name);
+        else
+            define(name, SymbolKind::Equ, d);
+        access_attribute(cur);
+        expect_end(cur);
+    } else if (dir == "DEFB") {
+        int column = cur.peek().column;
+        forward_ref_ = false;
+        std::optional<Value> v;
+        try {
+            v = evaluate_bit_select(cur, *this);
+            if (!v || !(cur.at_end() || cur.peek().is_op(",")))
+                throw AsmError("A103", "invalid bit address: DEFB expects word.bit", column);
+            if (v->known && bit_word_address(*v) < 0)
+                throw AsmError("A70", "invalid type of expression: DEFB cannot name a GPR bit", column);
+        } catch (const AsmError&) {
+            undefine(name);
+            throw;
+        }
+        define(name, SymbolKind::Bit, *v);
+        if (v->known) lst.value = *v;
+        if (forward_ref_) rep.error("A103", "invalid bit address: forward reference not permitted", column);
+        access_attribute(cur);
+        expect_end(cur);
+    } else if (dir == "LIT") {
+        throw AsmError("A6", "syntax error: LIT is only supported by Keil AX51, not A166", name.column);
     } else if (contains(kDataDirectives, dir)) {
         align(data_alignment(dir));
         lst.has_address = true;
         lst.address = location();
-        define(name, SymbolKind::Label, address(location(), location_fixed()));
+        define(name, SymbolKind::Label, here(data_type(dir)));
         data(dir, cur, rep, lst);
     } else if (contains(kIgnoredDirectives, dir)) {
         // REGDEF and REGBANK name register banks for the linker.
@@ -631,6 +757,8 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
 
         // Keil translates RET according to the enclosing procedure.
         std::string m = mnemonic;
+        if (isa::is_branch(m)) branch(m, ops, pc, rep);
+        check_branch_target(m, ops, rep);
         if (m == "RET") {
             m = proc_ == ProcKind::Far ? "RETS" : proc_ == ProcKind::Interrupt ? "RETI" : "RET";
         } else if (m == "RETS" && proc_ != ProcKind::Far) {
@@ -659,6 +787,84 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         advance(sizes_[index]);
         throw;
     }
+}
+
+// Resolves Keil's JMP and CALL to a hardware branch:
+//   [Rw] target                          JMPI / CALLI
+//   FAR label, no condition              JMPS / CALLS
+//   SHORT, or a known target in range    JMPR / CALLR (CALLR has no condition)
+//   anything else                        JMPA / CALLA
+// A forward reference starts out absolute; later passes shrink it to the
+// relative form once the target is known to be close. Like Keil, the range
+// check uses the target address from the previous pass.
+void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t pc, Reporter& rep) {
+    const bool call = m == "CALL";
+    if (ops.size() != 1 && ops.size() != 2) throw AsmError("A73", "number of operands does not match instruction");
+    Operand cc;
+    cc.value.type = VType::Cc;  // cc_UC
+    const bool has_cc = ops.size() == 2;
+    if (has_cc) {
+        cc = ops[0];
+        if (cc.value.short_jump) {
+            rep.error("A73", "number of operands does not match instruction", cc.column);
+            throw AsmError("A6", "syntax error: SHORT belongs in front of the target", cc.column);
+        }
+        if (cc.mode != OpMode::Direct || cc.value.type != VType::Cc)
+            throw AsmError("A74", "operand type mismatch: condition code expected", cc.column);
+    }
+    const Operand target = ops.back();
+    if (target.mode == OpMode::Ind) {
+        m = call ? "CALLI" : "JMPI";
+        ops = {cc, target};
+        return;
+    }
+    const Value& v = target.value;
+    if (target.mode != OpMode::Direct) throw AsmError("A74", "operand type mismatch", target.column);
+    if (v.type == VType::Bit) throw AsmError("A70", "invalid type of expression", target.column);
+    if (v.type != VType::Number) throw AsmError("A74", "operand type mismatch", target.column);
+
+    if (!has_cc && v.ltype == LType::Far && !v.short_jump) {
+        m = call ? "CALLS" : "JMPS";
+        Operand seg = target, off = target;
+        seg.value = Value::number((v.num >> 16) & 0xFF);
+        off.value = Value::number(v.num & 0xFFFF);
+        seg.value.known = off.value.known = v.known;
+        ops = {seg, off};
+        return;
+    }
+    const bool unconditional = cc.value.num == 0;
+    bool relative = v.short_jump;
+    if (!relative && v.known && v.ltype != LType::Far) {
+        // Keil only measures the distance when it does not depend on the
+        // linker: numbers, the same section, or two sections with AT addresses.
+        bool measurable = v.rel != Rel::Addr || v.section == cur_ || (v.fixed && location_fixed());
+        std::int64_t disp = v.num - (pc + 2);
+        relative = measurable && !(disp & 1) && disp >= -256 && disp <= 254;
+    }
+    if (call && !unconditional) relative = false;
+    if (relative) {
+        m = call ? "CALLR" : "JMPR";
+        ops = call ? std::vector<Operand>{target} : std::vector<Operand>{cc, target};
+    } else {
+        m = call ? "CALLA" : "JMPA";
+        ops = {cc, target};
+        // Keil silently keeps the low 16 bits of a number.
+        if (v.rel != Rel::Addr) ops.back().value.num &= 0xFFFF;
+    }
+}
+
+// Keil warns when a near branch goes to a FAR label and when any branch goes
+// to a data label.
+void Assembler::check_branch_target(const std::string& m, const std::vector<Operand>& ops, Reporter& rep) const {
+    const bool near_branch = m == "JMPA" || m == "JMPR" || m == "CALLA" || m == "CALLR";
+    if (!near_branch && m != "JMPS" && m != "CALLS") return;
+    if (ops.empty() || ops.back().mode != OpMode::Direct) return;
+    const Operand& t = ops.back();
+    if (near_branch && t.value.ltype == LType::Far && !t.value.short_jump)
+        rep.warning("A84", "near reference to far location", t.column);
+    if (is_data_type(t.value.ltype)) rep.warning("A74", "operand type mismatch: branch to a data label", t.column);
+    if (m != "JMPR" && m != "CALLR" && t.value.known && (t.value.num & 1))
+        rep.warning("A134", "address alignment not sufficient: branch target is odd", t.column);
 }
 
 }  // namespace
@@ -753,6 +959,7 @@ std::string format_listing(const AssemblyResult& result) {
         case VType::Sfr: value = "SFR " + hex(s.value.num, 4) + "H"; break;
         case VType::Cc: value = "cc " + std::to_string(s.value.num); break;
         }
+        if (s.value.ltype != LType::None) value += std::string(" ") + type_name(s.value.ltype);
         char row[160];
         std::snprintf(row, sizeof row, "%-32s %-6s %s\n", s.name.c_str(), kKinds[static_cast<int>(s.kind)], value.c_str());
         out += row;

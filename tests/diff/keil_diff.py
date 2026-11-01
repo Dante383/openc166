@@ -100,7 +100,7 @@ def parse_openc166_listing(text):
     last = None
     in_symbols = False
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) (\w+):")
-    sym = re.compile(r"^(\S+)\s+(LABEL|EQU|SET|BIT)\s+(\S+)")
+    sym = re.compile(r"^(\S+)\s+(LABEL|EQU|SET|BIT)\s+(?:SFR\s+)?(\S+)")
     for l in text.splitlines():
         if l.startswith("SYMBOLS"):
             in_symbols = True
@@ -226,7 +226,7 @@ def definitions(text):
     """{symbol name: [numbers of the lines defining it]}"""
     defs = {}
     for n, l in enumerate(text, 1):
-        m = re.match(r"\s*([A-Za-z_?@][\w?@]*)\s*(?::|\s+(?:EQU|SET|BIT|LABEL|PROC)\b)", l, re.I)
+        m = re.match(r"\s*([A-Za-z_?@][\w?@]*)\s*(?::|\s+(?:EQU|SET|BIT|LABEL|PROC|DEFR|DEFA|DEFB)\b)", l, re.I)
         if m:
             defs.setdefault(m.group(1).upper(), []).append(n)
     return defs

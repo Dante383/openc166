@@ -16,7 +16,7 @@ Operand parse_operand(TokenCursor& cur, SymbolContext& ctx) {
     op.column = cur.peek().column;
     if (cur.accept_op("#")) {
         op.mode = OpMode::Imm;
-        op.value = evaluate(cur, ctx);
+        op.value = evaluate_immediate(cur, ctx);
         return op;
     }
     if (cur.accept_op("[")) {
@@ -28,7 +28,7 @@ Operand parse_operand(TokenCursor& cur, SymbolContext& ctx) {
             if (cur.accept_op("+")) {
                 if (cur.accept_op("#")) {
                     op.mode = OpMode::IndDisp;
-                    op.value = evaluate(cur, ctx);
+                    op.value = evaluate_immediate(cur, ctx);
                     if (!cur.accept_op("]")) throw AsmError("A58", "']' expected", cur.peek().column);
                     return op;
                 } else {

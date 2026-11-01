@@ -25,6 +25,13 @@ enum class Rel : std::uint8_t {
     Diff,  // label - label, or a fixed address plus or minus a number
 };
 
+// Type of a label as Keil records it. JMP and CALL use it to choose between
+// near and segmented (far) branches and to warn about jumps to data.
+// Arithmetic on a label drops the type; "type PTR label" changes it.
+enum class LType : std::uint8_t { None, Near, Far, Byte, Word, Dword };
+
+constexpr bool is_data_type(LType t) { return t == LType::Byte || t == LType::Word || t == LType::Dword; }
+
 struct Value {
     VType type = VType::Number;
     bool known = true;     // false while a forward reference is unresolved
@@ -34,6 +41,9 @@ struct Value {
     Rel rel = Rel::None;
     bool unsig = false;  // range checks treat num as unsigned
     bool fixed = false;  // Addr: in a section with a fixed (AT) address
+    LType ltype = LType::None;
+    bool short_jump = false;  // SHORT operator: JMP/CALL must use the relative form
+    std::uint16_t section = 0;  // Addr: index of the section that holds the address
 
     bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg; }
 

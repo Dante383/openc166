@@ -29,8 +29,11 @@ const GenericEntry* generic(std::string_view mnemonic) {
     return nullptr;
 }
 
+bool is_branch(std::string_view mnemonic) { return mnemonic == "JMP" || mnemonic == "CALL"; }
+
 bool is_mnemonic(std::string_view mnemonic) {
-    return !forms(mnemonic).empty() || !alias_target(mnemonic).empty() || generic(mnemonic) != nullptr;
+    return !forms(mnemonic).empty() || !alias_target(mnemonic).empty() || generic(mnemonic) != nullptr ||
+           is_branch(mnemonic);
 }
 
 }  // namespace oc166::isa

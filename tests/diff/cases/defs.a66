@@ -1,0 +1,132 @@
+; DEFR, DEFA and DEFB, the directives register files use to name SFRs, words
+; of internal RAM and bits; and register names used as immediates.
+$MOD167
+N1      EQU     0FF10H
+CONFIG  DEFR    0FF0CH, RW
+ZREG    DEFR    0FF1CH, R
+WREG    DEFR    0FF1EH, w
+LOREG   DEFR    0FE00H
+EREG    DEFR    0F000H
+EREG2   DEFR    0F1DEH
+NREG    DEFR    N1
+NREG2   DEFR    N1+2
+PREG    DEFR    PSW+2
+XFA00   DEFA    0FA00H
+XFA02   DEFA    0FA02H, R
+XFDFE   DEFA    0FDFEH
+XA2     DEFA    0FA00H+4
+P0P1    DEFB    0FF00H.1, RW
+BZ0     DEFB    ZREG.0
+XBIT    DEFB    CONFIG.3
+XB2     DEFB    0FD00H.4
+XB4     DEFB    EREG2.1
+XB5     DEFB    0FF00H.16
+XB6     DEFB    (0FF00H).2
+XB7     DEFB    0FF00H.(1+1)
+XB8     DEFB    CONFIG.15
+XB9     DEFB    0FD10H.15
+FA      DEFA    FWDA
+FWDA    EQU     0FA06H
+DEFS    SECTION CODE AT 0C000H
+DEFSP   PROC NEAR
+        MOV     CONFIG, R1
+        MOV     R1, ZREG
+        MOV     WREG, R1
+        MOV     R1, LOREG
+        ADD     CONFIG, #1
+        MOVB    RL1, CONFIG
+        MOV     R1, CONFIG+2
+        MOV     R2, EREG
+        MOV     EREG2, R1
+        MOV     R1, NREG
+        MOV     R1, NREG2
+        MOV     R1, PREG
+        MOV     R1, XFA00
+        MOV     XFA00, R1
+        MOV     R1, XFA02
+        MOV     R1, XFA00+2
+        MOV     R1, XFDFE
+        MOV     R1, XA2
+        MOV     R1, FA
+        MOVB    RL1, XFA02
+        MOV     R1, [R2+#XFA00]
+        BSET    P0P1
+        BSET    BZ0
+        BSET    XBIT
+        BCLR    XB2
+        BSET    XB4
+        BSET    XB5
+        BSET    XB6
+        BSET    XB7
+        BSET    XB8
+        BSET    XB9
+        BSET    CONFIG.4
+        BMOV    XBIT, P0P1
+        JMP     XFA00
+; Register names in immediates and displacements stand for their address.
+        MOV     R1, #CONFIG
+        MOV     R1, #XFA00
+        MOV     R1, #FA+1
+        MOV     R1, #PSW
+        MOV     R1, #DPP0
+        MOV     R1, #ZEROS
+        MOV     R1, #ZEROS-1
+        ADD     R1, #ONES
+        CMP     R1, #CP
+        MOV     R1, #R0
+        MOV     R1, #R1+0
+        MOV     R1, #R15
+        MOV     R1, #RL1
+        MOV     R1, #RH7
+        MOV     R1, #EREG
+        MOV     [R1+#PSW], R2
+        MOV     [R1+#R2], R2
+        MOVB    RL1, [R1+#CONFIG]
+        MOVB    RL1, #PSW
+        TRAP    #PSW
+        MOV     R1, #SOF PSW
+        MOV     R1, #HIGH PSW
+        MOV     R1, #LOW CONFIG
+        RET
+DEFSP   ENDP
+        DW      CONFIG
+        DB      CONFIG
+        DW      XFA00
+DEFS    ENDS
+
+; Errors. Each definition that fails leaves its name undefined.
+ODDREG  DEFR    0FF1DH
+LOWREG  DEFR    0FDFEH
+HIREG   DEFR    0FFE0H
+EREG3   DEFR    0F1E0H
+SREG    DEFR    PSW
+SREG2   DEFR    DPP0
+DA1     DEFA    0F9FEH
+DA2     DEFA    0FA01H
+DA3     DEFA    0FE00H
+XB10    DEFB    R1.2
+XB11    DEFB    PSW.3+1
+XB12    DEFB    C
+XB13    DEFB    0FF00H.1+1
+XB14    DEFB    P0P1
+XB15    DEFB    0FF00H
+; Keil silently makes these FD00H.0; openc166 reports A103.
+XB16    DEFB    0FE00H.1        ; DIVERGES: A103
+XB17    DEFB    XFA02.1         ; DIVERGES: A103
+BADATT  DEFR    0FF14H, X
+FR      DEFR    FWD
+FWD     EQU     0FF16H
+FB      DEFB    FWDB.2
+FWDB    DEFR    0FF12H
+LT      LIT     'R1'
+DEFE    SECTION CODE AT 0D000H
+DEFEP   PROC NEAR
+        MOV     R1, BADATT
+        MOV     R1, #PSW.1
+        MOV     R1, #C
+        MOV     [R1+#PSW.1], R2
+        BSET    FB
+        MOV     R1, FR
+DEFEP   ENDP
+DEFE    ENDS
+        END

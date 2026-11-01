@@ -23,9 +23,39 @@ int byte_word_index(std::string_view t, std::string_view prefix) {
 
 class Evaluator {
 public:
-    Evaluator(TokenCursor& cur, SymbolContext& ctx) : cur_(cur), ctx_(ctx) {}
+    Evaluator(TokenCursor& cur, SymbolContext& ctx, bool immediate = false)
+        : cur_(cur), ctx_(ctx), immediate_(immediate) {}
 
-    Value expression() { return comparison(); }
+    Value expression() {
+        // SHORT and "type PTR" apply to everything after them.
+        const Token& t = cur_.peek();
+        if (t.kind == TokKind::Ident && ieq(t.text, "SHORT")) {
+            cur_.next();
+            Value v = expression();
+            v.short_jump = true;
+            return v;
+        }
+        if (t.kind == TokKind::Ident && cur_.peek(1).kind == TokKind::Ident && ieq(cur_.peek(1).text, "PTR")) {
+            LType type = ptr_type(t.text);
+            if (type == LType::None) throw AsmError("A6", "syntax error: unknown type before PTR", t.column);
+            cur_.next();
+            cur_.next();
+            Value v = expression();
+            // Keil ignores the type of plain numbers.
+            if (v.rel == Rel::Addr) v.ltype = type;
+            return v;
+        }
+        return comparison();
+    }
+
+    static LType ptr_type(std::string_view s) {
+        if (ieq(s, "NEAR")) return LType::Near;
+        if (ieq(s, "FAR")) return LType::Far;
+        if (ieq(s, "BYTE")) return LType::Byte;
+        if (ieq(s, "WORD")) return LType::Word;
+        if (ieq(s, "DWORD")) return LType::Dword;
+        return LType::None;
+    }
 
     Value primary() {
         const Token& t = cur_.peek();
@@ -45,7 +75,14 @@ public:
         case TokKind::Ident: {
             cur_.next();
             if (is_operator_keyword(t.text)) throw AsmError("A6", "syntax error: unexpected operator", t.column);
-            if (auto v = ctx_.lookup(t.text)) return *v;
+            if (auto v = ctx_.lookup(t.text)) {
+                // A GPR's address is that of its short register number F0H + n.
+                if (immediate_ && (v->type == VType::Gpr || v->type == VType::GprB)) {
+                    v->num = 0xFE00 + 2 * (0xF0 + v->num);
+                    v->type = VType::Sfr;
+                }
+                return *v;
+            }
             if (ctx_.final_pass())
                 throw AsmError("A42", "undefined identifier '" + std::string(t.text) + "'", t.column);
             return Value::unknown();
@@ -57,6 +94,7 @@ public:
                 v.rel = Rel::Addr;
                 v.unsig = true;
                 v.fixed = ctx_.location_fixed();
+                v.section = ctx_.section_index();
                 return v;
             }
             if (t.text == "(") {
@@ -72,9 +110,17 @@ public:
         throw AsmError("A6", "syntax error: expected an operand", t.column);
     }
 
+    // base.bit with nothing else; nullopt if there is no '.'.
+    std::optional<Value> explicit_bit() {
+        Value base = primary();
+        if (!cur_.peek().is_op(".")) return std::nullopt;
+        return select_bit(base);
+    }
+
 private:
     TokenCursor& cur_;
     SymbolContext& ctx_;
+    bool immediate_;
 
     static Value num(const Value& a, const Value& b, U r) {
         Value v = Value::number(static_cast<std::int64_t>(r));
@@ -98,21 +144,30 @@ private:
     // Level 1: base.bit
     Value bit_select() {
         Value base = primary();
-        const Token& dot = cur_.peek();
-        if (!dot.is_op(".")) return base;
-        cur_.next();
+        if (!cur_.peek().is_op(".")) return base;
+        return select_bit(base);
+    }
+
+    Value select_bit(const Value& base) {
+        const Token& dot = cur_.next();
         int pos_column = cur_.peek().column;
         // Keil accepts a signed position such as 0FE00H.-1.
         bool negative = cur_.peek().is_op("-");
         if (negative || cur_.peek().is_op("+")) cur_.next();
+        const unsigned forward = ctx_.forward_references();
         Value pos = primary();
         if (negative) pos.num = -pos.num;
         if (pos.type != VType::Number) throw AsmError("A67", "absolute value (0-15) expected for bit position", pos_column);
+        if (ctx_.forward_references() != forward)
+            ctx_.soft_error(AsmError("A67", "absolute value (0-15) expected for bit position: forward reference", pos_column));
         Value r;
         r.type = VType::Bit;
         r.known = base.known && pos.known;
         if (!r.known) return r;
-        return bit_value(oc166::bit_select(base, pos.num, dot.column, pos_column));
+        BitAddr b = oc166::bit_select(base, pos.num, dot.column, pos_column);
+        if (b.ext && !ctx_.has_esfr())
+            throw AsmError("A68", "invalid base in bit address: extended SFRs need $MOD167", dot.column);
+        return bit_value(b);
     }
 
     static Value bit_value(const BitAddr& b) {
@@ -239,7 +294,10 @@ private:
         const bool zero = b.known && b.num == 0;
         auto addr = [&](const Value& l, const Value& n) {
             v.fixed = l.fixed;
+            v.section = l.section;
             const bool offset = (n.rel == Rel::None || n.rel == Rel::Diff) && !(n.known && n.num == 0);
+            if (n.known && n.num == 0 && (n.rel == Rel::None || n.rel == Rel::Diff))
+                v.ltype = l.ltype;  // "label + 0" is still the label
             return rel(l.fixed && offset ? Rel::Diff : Rel::Addr);
         };
         if (a.rel == Rel::Addr) return op == Sub && b.rel == Rel::Addr ? rel(Rel::Diff) : addr(a, b);
@@ -336,6 +394,19 @@ bool is_operator_keyword(std::string_view name) {
 
 Value evaluate(TokenCursor& cur, SymbolContext& ctx) { return Evaluator(cur, ctx).expression(); }
 
+Value evaluate_immediate(TokenCursor& cur, SymbolContext& ctx) {
+    int column = cur.peek().column;
+    Value v = Evaluator(cur, ctx, true).expression();
+    if (v.type == VType::Sfr) v.type = VType::Number;
+    if (v.type == VType::Cc) throw AsmError("A6", "syntax error: a condition code is not a value", column);
+    if (v.type != VType::Number) throw AsmError("A70", "invalid type of expression", column);
+    return v;
+}
+
 Value evaluate_primary(TokenCursor& cur, SymbolContext& ctx) { return Evaluator(cur, ctx).primary(); }
+
+std::optional<Value> evaluate_bit_select(TokenCursor& cur, SymbolContext& ctx) {
+    return Evaluator(cur, ctx).explicit_bit();
+}
 
 }  // namespace oc166

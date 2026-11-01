@@ -3,6 +3,7 @@
 //   ()  >  .  >  SEG PAG SOF POF  >  HIGH LOW BYTEn WORDn NOT unary+-
 //   >  * / MOD  >  + -  >  SHL SHR << >>  >  AND OR XOR & | ^
 //   >  EQ NE LT LE GT GE ULT ULE UGT UGE == != < <= > >=
+//   >  SHORT, type PTR (prefixes that apply to the whole rest)
 // Arithmetic is 64-bit; comparisons yield 1 (true) or 0 (false).
 #pragma once
 
@@ -27,6 +28,15 @@ public:
     virtual std::int64_t location() const = 0;
     // True if the current section has a fixed (AT) address.
     virtual bool location_fixed() const = 0;
+    // Index of the current section; addresses remember where they lie.
+    virtual std::uint16_t section_index() const { return 0; }
+    // True if extended SFRs exist (C167); the C166 has none.
+    virtual bool has_esfr() const { return true; }
+    // Number of lookups so far that found a symbol defined later in the source.
+    virtual unsigned forward_references() const { return 0; }
+    // Reports an error after which evaluation goes on, as Keil does; contexts
+    // without a diagnostics sink make it fatal.
+    virtual void soft_error(const AsmError& e) { throw e; }
     // In the final pass undefined symbols are errors; before it they are
     // unknown values that later passes resolve.
     virtual bool final_pass() const = 0;
@@ -71,9 +81,18 @@ private:
 // Parses and evaluates one expression. Throws AsmError on errors.
 Value evaluate(TokenCursor& cur, SymbolContext& ctx);
 
+// Evaluates the expression of an immediate (#expr) or a displacement
+// ([Rw+#expr]). Like Keil, register names stand for their 16-bit address here.
+Value evaluate_immediate(TokenCursor& cur, SymbolContext& ctx);
+
 // Evaluates a single register name or symbol (no operators), as used inside
 // indirect operands such as [R1+].
 Value evaluate_primary(TokenCursor& cur, SymbolContext& ctx);
+
+// Evaluates a bit address written as base.bit, without further operators,
+// as DEFB requires. Returns nullopt (consuming only the base) if there is no
+// '.'.
+std::optional<Value> evaluate_bit_select(TokenCursor& cur, SymbolContext& ctx);
 
 // True if the identifier is an expression operator keyword (AND, SHL, ...).
 bool is_operator_keyword(std::string_view name);

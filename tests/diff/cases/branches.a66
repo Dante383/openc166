@@ -1,0 +1,129 @@
+; Generic JMP and CALL: Keil picks the shortest instruction that can reach
+; the target (JMPR/CALLR, JMPA/CALLA, JMPS/CALLS or JMPI/CALLI) from the
+; target's type, the condition code and the distance. Forward jumps start
+; long and are shortened in later passes once the distance is known.
+$MOD167
+NUM     EQU     0D000H
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+B0:     NOP
+        JMP     B0
+        CALL    B0
+        JMP     cc_Z, B0
+        JMP     cc_UC, B0
+        CALL    cc_Z, B0
+        CALL    cc_UC, B0
+        JMP     F1
+        CALL    F1
+        JMP     cc_NZ, F1
+        CALL    cc_NZ, F1
+        JMP     [R1]
+        JMP     cc_Z, [R1]
+        CALL    [R1]
+        CALL    cc_NZ, [R1]
+        JMP     0C100H          ; DIVERGES: Keil leaves this to the linker
+        JMP     0D000H
+        JMP     NUM
+        JMP     12345H
+        CALL    0D000H
+        CALL    12345H
+        JMP     SHORT F1
+        JMP     FN
+        CALL    FN
+        JMP     FP
+        CALL    FP
+        JMP     cc_Z, FP
+        CALL    cc_UC, FP
+        JMP     SHORT FP
+        CALL    cc_Z, SHORT B0
+        JMP     SHORT cc_Z, B0
+        JMP     FAR PTR B0
+        CALL    FAR PTR B0
+        JMP     NEAR PTR FP
+        JMP     WORD PTR B0
+        JMP     FAR PTR 1234H
+        JMP     LF
+        JMP     LW
+        JMP     LB
+        JMP     FP+2
+        JMP     LW+0
+        JMP     0+LW
+        JMP     LF-0
+        JMP     LW+(2-2)
+        JMP     LW*1            ; DIVERGES: Keil leaves this to the linker
+        JMPR    cc_UC, LW
+        JMPA    cc_UC, FP
+        CALLA   cc_UC, LF
+        JMPS    SEG B0, B0
+        CALLS   SEG FP, FP
+        DS      300
+F1:     NOP
+FN:     NOP
+P       ENDP
+Q       PROC    FAR
+FP:     NOP
+LF      LABEL   FAR
+LW      LABEL   WORD
+LB      LABEL   BYTE
+        RET
+Q       ENDP
+
+; Relaxation: these only fit in the short form once the jumps before them
+; have been shortened too.
+R1P     PROC    NEAR
+        JMP     T
+        JMP     X
+        JMP     X
+        JMP     X
+        JMP     X
+X:      DS      244
+T:      NOP
+A:      JMP     B
+        DS      252
+        JMP     A
+B:      NOP
+        JMP     T1
+        DS      254
+T1:     JMP     T2
+        DS      256
+T2:     NOP
+BB1:    DS      254
+        JMP     BB1
+BB2:    DS      256
+        JMP     BB2
+        CALL    BB2
+        CALL    cc_Z, T3
+        CALL    T3
+T3:     NOP
+        RET
+; Invalid targets (kept last: Keil still reserves space for some of them).
+        JMP     R1
+        JMP     #B0
+        JMP     PSW
+        JMP     C
+R1P     ENDP
+S       ENDS
+
+; A label is reported as misaligned if it was misaligned in any pass, here
+; before the forward jumps were shortened.
+S2      SECTION CODE AT 0D000H
+P2      PROC    NEAR
+        JMP     M1
+M1:     NOP
+D1      LABEL   DWORD
+        NOP
+D2      LABEL   DWORD
+        NOP
+D3      LABEL   DWORD
+        DD      1
+        JMP     M1
+        JMP     M2
+        NOP
+D4      LABEL   DWORD
+        NOP
+D5      LABEL   DWORD
+M2:     NOP
+        JMP     D1
+P2      ENDP
+S2      ENDS
+        END

@@ -22,6 +22,10 @@ std::string_view alias_target(std::string_view mnemonic);
 // Keil software instruction (e.g. MOV selecting MOV/MOVB/BMOV), or nullptr.
 const GenericEntry* generic(std::string_view mnemonic);
 
+// Keil's JMP and CALL software instructions, which the assembler resolves to
+// a relative, absolute, indirect or segmented branch.
+bool is_branch(std::string_view mnemonic);
+
 // True for hardware mnemonics, aliases and software instructions.
 bool is_mnemonic(std::string_view mnemonic);
 

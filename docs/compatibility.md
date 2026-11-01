@@ -27,13 +27,18 @@ the complete memory image.
   automatic form selection is reproduced, including:
   - short `#data3`/`#data4` forms;
   - `RET` becoming `RETS`/`RETI` inside `FAR`/`INTERRUPT` procedures;
+  - generic `JMP` and `CALL`, see [Jumps and calls](#jumps-and-calls);
   - bit, bit-field and extended-SFR addressing.
 - **Expressions:** `+ - * / MOD SHL SHR AND OR XOR NOT`, comparisons,
   `HIGH LOW SOF SEG PAG POF`, `$`, character constants, and bit selection
-  (`base.n`). See [Expression details](#expression-details).
+  (`base.n`), and the `SHORT` and `type PTR` operators. See
+  [Expression details](#expression-details).
 - **Directives:** `SECTION ... [AT addr]` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
   / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DB`, `DW`, `DD`, `DS`, `DSB`, `DSW`,
   `DSD`, `ORG`, `EVEN` and `END`.
+- **Register definitions:** `DEFR`, `DEFA` and `DEFB`, the directives that
+  register files such as `reg167.inc` use. See
+  [Register definitions](#register-definitions).
 - **Accepted and ignored:** these only matter to a linker or debugger.
   - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `ASSUME`, `REGDEF`, `REGBANK`,
     `SSKDEF`, `PECDEF`, `TYPEDEC`.
@@ -50,8 +55,35 @@ silently skipped:
 - `$INCLUDE`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF` and `$SET`/`$RESET`
 - `MACRO` and the other macro facilities
 - `EXTERN`/`EXTRN` (a raw image has no linker to resolve them)
-- `DEFR`, `DEFB`, `DEFA`, `LIT`, `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
+- `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
 - the XC16x/Super10 extended instruction set
+
+`LIT` belongs to Keil's AX51 assembler. A166 rejects it with A6, and so does
+openc166.
+
+## Register definitions
+
+- **`name DEFR addr [, R|RW|W]`** names an SFR. It works exactly like a
+  built-in SFR such as `PSW`, including the short register forms. The
+  address must be even and in `0FE00H..0FFDEH`, or in `0F000H..0F1DEH` (the
+  extended SFRs, C167 only). Otherwise the error is A101. A name that is
+  already an SFR (`DEFR PSW`) is also A101, but `PSW+2` works.
+- **`name DEFA addr [, ...]`** names a word of internal RAM, an even address
+  in `0FA00H..0FDFEH`. It acts like a `WORD` variable, so `JMP` to it warns
+  with A74. A bad address gives A102.
+- **`name DEFB word.bit [, ...]`** names a bit. It must be exactly
+  `word.bit`; parentheses are fine. `PSW.3+1` or a bit name such as `C`
+  gives A103, and a GPR bit (`R1.2`) gives A70.
+
+The access attribute only matters to a debugger and is ignored. As in Keil:
+
+- when a definition fails, its name stays undefined;
+- a forward reference gives the error but keeps a `DEFA` or `DEFB` name
+  usable;
+- a `DEFR` name defined by a forward reference cannot be used (A42).
+
+In C166 mode there are no extended SFRs, so a bit address in that area
+fails with A68, as in Keil.
 
 ## Data alignment
 
@@ -76,6 +108,44 @@ alignment") when one of these is at an odd address, and openc166 does too:
 - `LABEL WORD`, `LABEL NEAR` or `LABEL FAR` at an odd address
 - `LABEL DWORD` at an address that is not a multiple of 4
 - `PROC`
+
+Keil checks this in every pass, so a label that only lines up after
+forward jumps were shortened still gets the warning. openc166 does the same.
+
+## Jumps and calls
+
+Labels have a type, shown in the symbol table of the listing:
+
+| Label | Type |
+|---|---|
+| `name:` in a `CODE` section, `LABEL NEAR`, `PROC NEAR` | NEAR |
+| `PROC FAR`, `LABEL FAR` | FAR |
+| `name:` outside `CODE` sections, `DB`/`DS`/`DSB`, `LABEL BYTE` | BYTE |
+| `DW`/`DSW`, `LABEL WORD` | WORD |
+| `DD`/`DSD`, `LABEL DWORD` | DWORD |
+
+A colon label in front of data (`T: DW 1`) takes the type of the data. A
+colon label inside a `FAR` procedure is still NEAR. `FAR PTR x`,
+`NEAR PTR x`, `WORD PTR x` and so on change the type of an address.
+Arithmetic removes the type (`label + 2` is untyped), except plus or minus
+zero.
+
+`JMP` and `CALL` pick an instruction the way Keil does:
+
+1. `[Rw]` gives `JMPI`/`CALLI`.
+2. A FAR target without a condition gives `JMPS`/`CALLS`. With a
+   condition (even `cc_UC`) it gives `JMPA`/`CALLA` and warning A84.
+3. `SHORT target` forces `JMPR`/`CALLR`.
+4. Otherwise the relative form is used when the target is in range
+   (−256 to +254 bytes), and `JMPA`/`CALLA` when it is not. `CALL` only
+   uses `CALLR` without a condition or with `cc_UC`.
+
+Forward jumps start long and are shortened in later passes, using the
+target address of the previous pass. That is why a forward jump that would
+reach exactly +254 bytes once shortened stays long, as in Keil.
+
+Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
+for a near jump or call to a FAR label, A134 for an odd absolute target.
 
 ## Expression details
 
@@ -109,6 +179,12 @@ with no warning. `*`, `/`, `MOD`, shifts, `AND`, `OR` and `XOR` are unsigned
 if either side is. Unary `-`, `NOT`, `HIGH`, `LOW` and similar give a signed
 number.
 
+**Registers as numbers.** In an immediate (`#PSW`) or a displacement
+(`[R1+#PSW]`), Keil reads a register name as its address: an SFR as
+itself, a GPR as the SFR-area word that matches its short register number
+(`#R1` is `0FFE2H`, `#RL1` is `0FFE4H`). openc166 does the same. Elsewhere,
+for example in `DW R1`, a GPR is an error (A70).
+
 ## Error recovery
 
 As in Keil, a bad item in a `DB`/`DW`/`DD` list does not stop the rest of
@@ -123,7 +199,7 @@ follow are unchanged. Other bad items are dropped.
 | a bit address that is not bit-addressable (`0FE00H.0`, `10H.2`, `7FH.3`) | silently encodes bit offset 0 | error A103 |
 | a plain number used as a bit (`BSET 0FD02H`) | sometimes accepted with an odd meaning | error A103 |
 | `n + bit` (`1+0FD00H.3`) | gives bit `0FD00H.9` | error A61; `bit + n` works as in Keil |
-| `BIT` naming a non-bit-addressable address | silently defines `0FD00H.0` | error A103 |
+| `BIT` or `DEFB` naming a non-bit-addressable address | silently defines `0FD00H.0` | error A103 |
 | `-label`, `NOT label`, `-$` | wrong value (`-L` gives `0FFF0H` instead of `0FFFEH` when `L` is 2) | error A63 |
 | `-(L1 - L0)`, `NOT (L1 - L0)`, `-(L1 - 1)` | wrong value, no warning | error A63 |
 | `number - label` (`10H - L1`) | wrong value | error A63 |
@@ -132,12 +208,20 @@ follow are unchanged. Other bad items are dropped.
 | instruction outside a `PROC` | error A45 | accepted |
 | instruction or data outside any `SECTION` | error A44 | placed at `--origin` |
 | error inside an instruction | sometimes still emits code | emits nothing (no binary is written anyway) |
+| `JMPR`/`CALLR` to a distant label in another section | resolved by the linker, which fails there | error A82 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to
 multiply the address by 8 before negating it. `-(L1 - L0)` can be written
 as `0 - (L1 - L0)`, which both assemblers compute correctly.
 
-Keil leaves some branch targets, such as `JMPR cc_UC, $+4` or
-`JMPR cc_UC, label+2`, for its linker to fill in. openc166 resolves them
-directly, because the target address is known.
+Keil leaves some branch targets, such as `JMPR cc_UC, $+4`,
+`JMPR cc_UC, label+2`, `JMP label*1`, a label in another section, or a
+plain number in a section with `AT`, for its linker to fill in. openc166
+resolves them directly, because the target address is known, and picks
+the jump form from that address. Keil may pick a different form for these
+lines, so the test corpus marks them with `; DIVERGES:`.
+
+In a section without `AT`, Keil compares a plain-number jump target with
+the offset inside the section, not with the final address. openc166 always
+uses the final address.

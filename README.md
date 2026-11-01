@@ -25,8 +25,14 @@ Early development (version 0.0.x). What works today:
 - Absolute sections (`SECTION CODE AT 0E000H`), `PROC`/`ENDP`, `ORG`, `EVEN`,
   `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`, and `DS`/`DSB`/`DSW`/`DSD`, including
   Keil's automatic alignment of word data.
+- `DEFR`/`DEFA`/`DEFB`, the register-definition directives that Keil's
+  `reg167.inc` uses.
 - Keil's rules for label arithmetic, which decide between short and long
   instruction forms.
+- Generic `JMP` and `CALL`: like Keil, openc166 picks the shortest
+  instruction that reaches the target and shortens forward jumps over
+  several passes. Label types (`NEAR`, `FAR`, `WORD`, ...) and the `SHORT`
+  and `FAR PTR` operators work as in Keil.
 - The `$MOD167` and `$CASE` controls. Listing-only controls are accepted
   and ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
@@ -34,7 +40,7 @@ Early development (version 0.0.x). What works today:
 
 Not done yet:
 
-- `$INCLUDE`, `$IF`/`$SET`, and Keil register-definition files (`reg167.inc`)
+- `$INCLUDE`, `$IF`/`$SET`, and a bundled register file (`reg167.inc`)
 - macros
 - relocatable sections and linking, and OMF-166 object files
 - the TASKING assembler dialect
