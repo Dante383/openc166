@@ -1,0 +1,83 @@
+; Data alignment and label alignment checks (A48).
+; Word data goes on even addresses, double words on multiples of 4. Padding
+; bytes are gaps, not data. Instructions are never moved.
+$MOD167
+ALC     SECTION CODE AT 0C000H
+ALP     PROC NEAR
+        DB      1
+        DW      2
+        DB      3
+        DD      4
+        DB      5
+        DSW     1
+        DB      6
+        DSD     1
+        DB      7
+        DS      1
+        DSB     1
+        DW      8
+        DB      9
+T1:     DW      10
+        DB      11
+T2:     DD      12
+        DB      13
+T3:     DB      14
+T4:     DSW     2
+        DB      15
+T5:     DSD     1
+        DB      16
+T6:
+        DW      17
+        DB      18
+        EVEN
+        DB      19
+T7:     NOP             ; DIVERGES: instruction at an odd address (A134)
+        DB      20
+T8:
+        NOP
+        DB      21
+        DD      1, 2
+        DW      3, 4, 5
+        DB      22
+L1      LABEL   BYTE
+L2      LABEL   WORD
+L3      LABEL   NEAR
+L4      LABEL   FAR
+L5      LABEL   DWORD
+        DB      23
+L6      LABEL   BYTE
+L7      LABEL   WORD
+L8      LABEL   NEAR
+L9      LABEL   FAR
+L10     LABEL   DWORD
+        DW      24
+L11     LABEL   DWORD
+        DB      25
+        ORG     0C101H
+        DW      26
+        ORG     0C201H
+        DD      27
+        ORG     0C302H
+        DD      28
+        ORG     0C400H
+        DB      1, 2, 3, 4
+        RET
+ALP     ENDP
+        DB      29
+ALQ     PROC NEAR
+        RET                     ; DIVERGES: instruction at an odd address (A134)
+ALQ     ENDP
+        DB      30
+ALF     PROC FAR
+        RET
+ALF     ENDP
+ALC     ENDS
+
+ALD     SECTION DATA AT 0E001H
+D1:
+        DS      1
+D2:     DW      1
+D3:     DB      1
+D4:     DD      1
+ALD     ENDS
+        END

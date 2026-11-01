@@ -1,0 +1,5 @@
+if(NOT OPENC166_ISAGEN_EXECUTABLE)
+    add_executable(isagen isagen.cpp)
+    target_include_directories(isagen PRIVATE ${PROJECT_SOURCE_DIR}/src)
+    target_link_libraries(isagen PRIVATE openc166_options)
+endif()

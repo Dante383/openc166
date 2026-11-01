@@ -1,0 +1,368 @@
+# openc166 instruction table for the Infineon C166 family (C166 and C167 cores).
+#
+# Encodings follow the Infineon "C166 Family Instruction Set Manual" V2.0.
+# isagen turns this file into the encoder's constexpr table and into isa.json.
+#
+# Form lines have four columns separated by '|':
+#
+#   MNEMONIC | operands | encoding | flags
+#
+# operands  Comma-separated list of "<class> <field>" pairs, in source order.
+#           Classes:
+#             Rw Rb            word / byte GPR (4-bit number)
+#             [Rw] [Rw+] [-Rw] indirect, post-increment, pre-decrement (4-bit)
+#             [Ri] [Ri+]       indirect / post-increment through R0..R3 (2-bit)
+#             [Rw+#d16]        indirect with 16-bit displacement
+#             reg regb         word / byte register, 8-bit short address
+#             mem              16-bit direct memory address
+#             bitoff           bit-addressable word, 8-bit
+#             bitaddr          bitoff plus bit position
+#             #d3 #d4 #d8 #d16 #m8 #trap7 #irang2 #pag10 #seg8
+#                              immediates
+#             cc rel caddr seg condition code, relative word displacement,
+#                              16-bit code address, code segment number
+# encoding  One token per byte. A token is either two hex digits (a literal
+#           byte) or parts joined by ':' and packed from the most significant
+#           bit down. A part is a single hex digit (4 bits), a binary literal
+#           such as %10, or a field reference. A bare field has the class's
+#           natural width; sub-fields are:
+#             .lo .hi    bits 7..0 / 15..8 of a 16-bit (or 10-bit) value
+#             .off .bit  bitoff byte / bit position of a bitaddr
+#             .reg       pointer register of [Rw+#d16] (its .lo/.hi are the
+#                        displacement)
+# flags     c167: instruction exists on the C167 core only.
+#
+# Within one mnemonic, forms are listed in order of preference: the encoder
+# picks the first form whose operand classes all match. Short forms therefore
+# come first.
+#
+# Directive lines:
+#   @alias   NAME TARGET               NAME assembles exactly like TARGET
+#   @generic NAME WORD BYTE [BIT]      Keil software instruction: the operand
+#                                      types select the word, byte or bit
+#                                      instruction
+
+# ---------------------------------------------------------------------------
+# Arithmetic and logic, word
+# ---------------------------------------------------------------------------
+ADD    | Rw n, Rw m         | 00 n:m          |
+ADD    | Rw n, [Ri] i       | 08 n:%10:i      |
+ADD    | Rw n, [Ri+] i      | 08 n:%11:i      |
+ADD    | Rw n, #d3 v        | 08 n:%0:v       |
+ADD    | reg r, #d16 v      | 06 r v.lo v.hi  |
+ADD    | reg r, mem a       | 02 r a.lo a.hi  |
+ADD    | mem a, reg r       | 04 r a.lo a.hi  |
+
+ADDC   | Rw n, Rw m         | 10 n:m          |
+ADDC   | Rw n, [Ri] i       | 18 n:%10:i      |
+ADDC   | Rw n, [Ri+] i      | 18 n:%11:i      |
+ADDC   | Rw n, #d3 v        | 18 n:%0:v       |
+ADDC   | reg r, #d16 v      | 16 r v.lo v.hi  |
+ADDC   | reg r, mem a       | 12 r a.lo a.hi  |
+ADDC   | mem a, reg r       | 14 r a.lo a.hi  |
+
+SUB    | Rw n, Rw m         | 20 n:m          |
+SUB    | Rw n, [Ri] i       | 28 n:%10:i      |
+SUB    | Rw n, [Ri+] i      | 28 n:%11:i      |
+SUB    | Rw n, #d3 v        | 28 n:%0:v       |
+SUB    | reg r, #d16 v      | 26 r v.lo v.hi  |
+SUB    | reg r, mem a       | 22 r a.lo a.hi  |
+SUB    | mem a, reg r       | 24 r a.lo a.hi  |
+
+SUBC   | Rw n, Rw m         | 30 n:m          |
+SUBC   | Rw n, [Ri] i       | 38 n:%10:i      |
+SUBC   | Rw n, [Ri+] i      | 38 n:%11:i      |
+SUBC   | Rw n, #d3 v        | 38 n:%0:v       |
+SUBC   | reg r, #d16 v      | 36 r v.lo v.hi  |
+SUBC   | reg r, mem a       | 32 r a.lo a.hi  |
+SUBC   | mem a, reg r       | 34 r a.lo a.hi  |
+
+CMP    | Rw n, Rw m         | 40 n:m          |
+CMP    | Rw n, [Ri] i       | 48 n:%10:i      |
+CMP    | Rw n, [Ri+] i      | 48 n:%11:i      |
+CMP    | Rw n, #d3 v        | 48 n:%0:v       |
+CMP    | reg r, #d16 v      | 46 r v.lo v.hi  |
+CMP    | reg r, mem a       | 42 r a.lo a.hi  |
+
+XOR    | Rw n, Rw m         | 50 n:m          |
+XOR    | Rw n, [Ri] i       | 58 n:%10:i      |
+XOR    | Rw n, [Ri+] i      | 58 n:%11:i      |
+XOR    | Rw n, #d3 v        | 58 n:%0:v       |
+XOR    | reg r, #d16 v      | 56 r v.lo v.hi  |
+XOR    | reg r, mem a       | 52 r a.lo a.hi  |
+XOR    | mem a, reg r       | 54 r a.lo a.hi  |
+
+AND    | Rw n, Rw m         | 60 n:m          |
+AND    | Rw n, [Ri] i       | 68 n:%10:i      |
+AND    | Rw n, [Ri+] i      | 68 n:%11:i      |
+AND    | Rw n, #d3 v        | 68 n:%0:v       |
+AND    | reg r, #d16 v      | 66 r v.lo v.hi  |
+AND    | reg r, mem a       | 62 r a.lo a.hi  |
+AND    | mem a, reg r       | 64 r a.lo a.hi  |
+
+OR     | Rw n, Rw m         | 70 n:m          |
+OR     | Rw n, [Ri] i       | 78 n:%10:i      |
+OR     | Rw n, [Ri+] i      | 78 n:%11:i      |
+OR     | Rw n, #d3 v        | 78 n:%0:v       |
+OR     | reg r, #d16 v      | 76 r v.lo v.hi  |
+OR     | reg r, mem a       | 72 r a.lo a.hi  |
+OR     | mem a, reg r       | 74 r a.lo a.hi  |
+
+# ---------------------------------------------------------------------------
+# Arithmetic and logic, byte
+# ---------------------------------------------------------------------------
+ADDB   | Rb n, Rb m         | 01 n:m          |
+ADDB   | Rb n, [Ri] i       | 09 n:%10:i      |
+ADDB   | Rb n, [Ri+] i      | 09 n:%11:i      |
+ADDB   | Rb n, #d3 v        | 09 n:%0:v       |
+ADDB   | regb r, #d8 v      | 07 r v 00       |
+ADDB   | regb r, mem a      | 03 r a.lo a.hi  |
+ADDB   | mem a, regb r      | 05 r a.lo a.hi  |
+
+ADDCB  | Rb n, Rb m         | 11 n:m          |
+ADDCB  | Rb n, [Ri] i       | 19 n:%10:i      |
+ADDCB  | Rb n, [Ri+] i      | 19 n:%11:i      |
+ADDCB  | Rb n, #d3 v        | 19 n:%0:v       |
+ADDCB  | regb r, #d8 v      | 17 r v 00       |
+ADDCB  | regb r, mem a      | 13 r a.lo a.hi  |
+ADDCB  | mem a, regb r      | 15 r a.lo a.hi  |
+
+SUBB   | Rb n, Rb m         | 21 n:m          |
+SUBB   | Rb n, [Ri] i       | 29 n:%10:i      |
+SUBB   | Rb n, [Ri+] i      | 29 n:%11:i      |
+SUBB   | Rb n, #d3 v        | 29 n:%0:v       |
+SUBB   | regb r, #d8 v      | 27 r v 00       |
+SUBB   | regb r, mem a      | 23 r a.lo a.hi  |
+SUBB   | mem a, regb r      | 25 r a.lo a.hi  |
+
+SUBCB  | Rb n, Rb m         | 31 n:m          |
+SUBCB  | Rb n, [Ri] i       | 39 n:%10:i      |
+SUBCB  | Rb n, [Ri+] i      | 39 n:%11:i      |
+SUBCB  | Rb n, #d3 v        | 39 n:%0:v       |
+SUBCB  | regb r, #d8 v      | 37 r v 00       |
+SUBCB  | regb r, mem a      | 33 r a.lo a.hi  |
+SUBCB  | mem a, regb r      | 35 r a.lo a.hi  |
+
+CMPB   | Rb n, Rb m         | 41 n:m          |
+CMPB   | Rb n, [Ri] i       | 49 n:%10:i      |
+CMPB   | Rb n, [Ri+] i      | 49 n:%11:i      |
+CMPB   | Rb n, #d3 v        | 49 n:%0:v       |
+CMPB   | regb r, #d8 v      | 47 r v 00       |
+CMPB   | regb r, mem a      | 43 r a.lo a.hi  |
+
+XORB   | Rb n, Rb m         | 51 n:m          |
+XORB   | Rb n, [Ri] i       | 59 n:%10:i      |
+XORB   | Rb n, [Ri+] i      | 59 n:%11:i      |
+XORB   | Rb n, #d3 v        | 59 n:%0:v       |
+XORB   | regb r, #d8 v      | 57 r v 00       |
+XORB   | regb r, mem a      | 53 r a.lo a.hi  |
+XORB   | mem a, regb r      | 55 r a.lo a.hi  |
+
+ANDB   | Rb n, Rb m         | 61 n:m          |
+ANDB   | Rb n, [Ri] i       | 69 n:%10:i      |
+ANDB   | Rb n, [Ri+] i      | 69 n:%11:i      |
+ANDB   | Rb n, #d3 v        | 69 n:%0:v       |
+ANDB   | regb r, #d8 v      | 67 r v 00       |
+ANDB   | regb r, mem a      | 63 r a.lo a.hi  |
+ANDB   | mem a, regb r      | 65 r a.lo a.hi  |
+
+ORB    | Rb n, Rb m         | 71 n:m          |
+ORB    | Rb n, [Ri] i       | 79 n:%10:i      |
+ORB    | Rb n, [Ri+] i      | 79 n:%11:i      |
+ORB    | Rb n, #d3 v        | 79 n:%0:v       |
+ORB    | regb r, #d8 v      | 77 r v 00       |
+ORB    | regb r, mem a      | 73 r a.lo a.hi  |
+ORB    | mem a, regb r      | 75 r a.lo a.hi  |
+
+# ---------------------------------------------------------------------------
+# Compare and loop control
+# ---------------------------------------------------------------------------
+CMPI1  | Rw n, #d4 v        | 80 v:n          |
+CMPI1  | Rw n, #d16 v       | 86 F:n v.lo v.hi |
+CMPI1  | Rw n, mem a        | 82 F:n a.lo a.hi |
+
+CMPI2  | Rw n, #d4 v        | 90 v:n          |
+CMPI2  | Rw n, #d16 v       | 96 F:n v.lo v.hi |
+CMPI2  | Rw n, mem a        | 92 F:n a.lo a.hi |
+
+CMPD1  | Rw n, #d4 v        | A0 v:n          |
+CMPD1  | Rw n, #d16 v       | A6 F:n v.lo v.hi |
+CMPD1  | Rw n, mem a        | A2 F:n a.lo a.hi |
+
+CMPD2  | Rw n, #d4 v        | B0 v:n          |
+CMPD2  | Rw n, #d16 v       | B6 F:n v.lo v.hi |
+CMPD2  | Rw n, mem a        | B2 F:n a.lo a.hi |
+
+# ---------------------------------------------------------------------------
+# Multiply, divide, complement, negate, prioritize
+# ---------------------------------------------------------------------------
+MUL    | Rw n, Rw m         | 0B n:m          |
+MULU   | Rw n, Rw m         | 1B n:m          |
+PRIOR  | Rw n, Rw m         | 2B n:m          |
+DIV    | Rw n               | 4B n:n          |
+DIVU   | Rw n               | 5B n:n          |
+DIVL   | Rw n               | 6B n:n          |
+DIVLU  | Rw n               | 7B n:n          |
+NEG    | Rw n               | 81 n:0          |
+CPL    | Rw n               | 91 n:0          |
+NEGB   | Rb n               | A1 n:0          |
+CPLB   | Rb n               | B1 n:0          |
+
+# ---------------------------------------------------------------------------
+# Shifts and rotates
+# ---------------------------------------------------------------------------
+ROL    | Rw n, Rw m         | 0C n:m          |
+ROL    | Rw n, #d4 v        | 1C v:n          |
+ROR    | Rw n, Rw m         | 2C n:m          |
+ROR    | Rw n, #d4 v        | 3C v:n          |
+SHL    | Rw n, Rw m         | 4C n:m          |
+SHL    | Rw n, #d4 v        | 5C v:n          |
+SHR    | Rw n, Rw m         | 6C n:m          |
+SHR    | Rw n, #d4 v        | 7C v:n          |
+ASHR   | Rw n, Rw m         | AC n:m          |
+ASHR   | Rw n, #d4 v        | BC v:n          |
+
+# ---------------------------------------------------------------------------
+# Bit manipulation
+# ---------------------------------------------------------------------------
+BCLR   | bitaddr q          | q.bit:E q.off   |
+BSET   | bitaddr q          | q.bit:F q.off   |
+BMOV   | bitaddr z, bitaddr q | 4A q.off z.off q.bit:z.bit |
+BMOVN  | bitaddr z, bitaddr q | 3A q.off z.off q.bit:z.bit |
+BAND   | bitaddr z, bitaddr q | 6A q.off z.off q.bit:z.bit |
+BOR    | bitaddr z, bitaddr q | 5A q.off z.off q.bit:z.bit |
+BXOR   | bitaddr z, bitaddr q | 7A q.off z.off q.bit:z.bit |
+BCMP   | bitaddr z, bitaddr q | 2A q.off z.off q.bit:z.bit |
+BFLDL  | bitoff q, #m8 k, #d8 d | 0A q k d      |
+BFLDH  | bitoff q, #m8 k, #d8 d | 1A q d k      |
+
+# ---------------------------------------------------------------------------
+# Data movement, word
+# ---------------------------------------------------------------------------
+MOV    | Rw n, Rw m         | F0 n:m          |
+MOV    | Rw n, #d4 v        | E0 v:n          |
+MOV    | Rw n, [Rw] m       | A8 n:m          |
+MOV    | Rw n, [Rw+] m      | 98 n:m          |
+MOV    | [Rw] m, Rw n       | B8 n:m          |
+MOV    | [-Rw] m, Rw n      | 88 n:m          |
+MOV    | [Rw] n, [Rw] m     | C8 n:m          |
+MOV    | [Rw+] n, [Rw] m    | D8 n:m          |
+MOV    | [Rw] n, [Rw+] m    | E8 n:m          |
+MOV    | reg r, #d16 v      | E6 r v.lo v.hi  |
+MOV    | Rw n, [Rw+#d16] m  | D4 n:m.reg m.lo m.hi |
+MOV    | [Rw+#d16] m, Rw n  | C4 n:m.reg m.lo m.hi |
+MOV    | [Rw] n, mem a      | 84 0:n a.lo a.hi |
+MOV    | mem a, [Rw] n      | 94 0:n a.lo a.hi |
+MOV    | reg r, mem a       | F2 r a.lo a.hi  |
+MOV    | mem a, reg r       | F6 r a.lo a.hi  |
+
+# ---------------------------------------------------------------------------
+# Data movement, byte
+# ---------------------------------------------------------------------------
+MOVB   | Rb n, Rb m         | F1 n:m          |
+MOVB   | Rb n, #d4 v        | E1 v:n          |
+MOVB   | Rb n, [Rw] m       | A9 n:m          |
+MOVB   | Rb n, [Rw+] m      | 99 n:m          |
+MOVB   | [Rw] m, Rb n       | B9 n:m          |
+MOVB   | [-Rw] m, Rb n      | 89 n:m          |
+MOVB   | [Rw] n, [Rw] m     | C9 n:m          |
+MOVB   | [Rw+] n, [Rw] m    | D9 n:m          |
+MOVB   | [Rw] n, [Rw+] m    | E9 n:m          |
+MOVB   | regb r, #d8 v      | E7 r v 00       |
+MOVB   | Rb n, [Rw+#d16] m  | F4 n:m.reg m.lo m.hi |
+MOVB   | [Rw+#d16] m, Rb n  | E4 n:m.reg m.lo m.hi |
+MOVB   | [Rw] n, mem a      | A4 0:n a.lo a.hi |
+MOVB   | mem a, [Rw] n      | B4 0:n a.lo a.hi |
+MOVB   | regb r, mem a      | F3 r a.lo a.hi  |
+MOVB   | mem a, regb r      | F7 r a.lo a.hi  |
+
+# Zero / sign extension: the destination is a word, the source a byte.
+MOVBZ  | Rw n, Rb m         | C0 m:n          |
+MOVBZ  | reg r, mem a       | C2 r a.lo a.hi  |
+MOVBZ  | mem a, regb r      | C5 r a.lo a.hi  |
+MOVBS  | Rw n, Rb m         | D0 m:n          |
+MOVBS  | reg r, mem a       | D2 r a.lo a.hi  |
+MOVBS  | mem a, regb r      | D5 r a.lo a.hi  |
+
+# ---------------------------------------------------------------------------
+# Jumps and calls
+# ---------------------------------------------------------------------------
+JMPA   | cc c, caddr a      | EA c:0 a.lo a.hi |
+JMPI   | cc c, [Rw] n       | 9C c:n          |
+JMPR   | cc c, rel r        | c:D r           |
+JMPR   | rel r              | 0D r            |
+JMPS   | seg s, caddr a     | FA s a.lo a.hi  |
+JB     | bitaddr q, rel r   | 8A q.off r q.bit:0 |
+JNB    | bitaddr q, rel r   | 9A q.off r q.bit:0 |
+JBC    | bitaddr q, rel r   | AA q.off r q.bit:0 |
+JNBS   | bitaddr q, rel r   | BA q.off r q.bit:0 |
+CALLA  | cc c, caddr a      | CA c:0 a.lo a.hi |
+CALLI  | cc c, [Rw] n       | AB c:n          |
+CALLR  | rel r              | BB r            |
+CALLS  | seg s, caddr a     | DA s a.lo a.hi  |
+PCALL  | reg r, caddr a     | E2 r a.lo a.hi  |
+TRAP   | #trap7 t           | 9B t:%0         |
+
+# ---------------------------------------------------------------------------
+# Returns, stack, context switch
+# ---------------------------------------------------------------------------
+RET    |                    | CB 00           |
+RETS   |                    | DB 00           |
+RETI   |                    | FB 88           |
+RETP   | reg r              | EB r            |
+PUSH   | reg r              | EC r            |
+POP    | reg r              | FC r            |
+SCXT   | reg r, #d16 v      | C6 r v.lo v.hi  |
+SCXT   | reg r, mem a       | D6 r a.lo a.hi  |
+
+# ---------------------------------------------------------------------------
+# System control (protected instructions carry their own check bytes)
+# ---------------------------------------------------------------------------
+NOP    |                    | CC 00           |
+SRST   |                    | B7 48 B7 B7     |
+IDLE   |                    | 87 78 87 87     |
+PWRDN  |                    | 97 68 97 97     |
+SRVWDT |                    | A7 58 A7 A7     |
+DISWDT |                    | A5 5A A5 A5     |
+EINIT  |                    | B5 4A B5 B5     |
+
+# ---------------------------------------------------------------------------
+# Atomic and extended sequences (C167 core)
+# ---------------------------------------------------------------------------
+ATOMIC | #irang2 k          | D1 %00:k:0      | c167
+EXTR   | #irang2 k          | D1 %10:k:0      | c167
+EXTP   | Rw m, #irang2 k    | DC %01:k:m      | c167
+EXTP   | #pag10 p, #irang2 k | D7 %01:k:0 p.lo p.hi | c167
+EXTPR  | Rw m, #irang2 k    | DC %11:k:m      | c167
+EXTPR  | #pag10 p, #irang2 k | D7 %11:k:0 p.lo p.hi | c167
+EXTS   | Rw m, #irang2 k    | DC %00:k:m      | c167
+EXTS   | #seg8 s, #irang2 k | D7 %00:k:0 s 00 | c167
+EXTSR  | Rw m, #irang2 k    | DC %10:k:m      | c167
+EXTSR  | #seg8 s, #irang2 k | D7 %10:k:0 s 00 | c167
+
+# ---------------------------------------------------------------------------
+# Keil A166 mnemonic aliases and software (generic) instructions
+# ---------------------------------------------------------------------------
+@alias   ADDW   ADD
+@alias   ADDCW  ADDC
+@alias   SUBW   SUB
+@alias   SUBCW  SUBC
+@alias   CMPW   CMP
+@alias   ANDW   AND
+@alias   ORW    OR
+@alias   XORW   XOR
+@alias   MOVW   MOV
+@alias   CPLW   CPL
+@alias   NEGW   NEG
+
+@generic ADD    ADD   ADDB
+@generic ADDC   ADDC  ADDCB
+@generic SUB    SUB   SUBB
+@generic SUBC   SUBC  SUBCB
+@generic CPL    CPL   CPLB
+@generic NEG    NEG   NEGB
+@generic AND    AND   ANDB   BAND
+@generic OR     OR    ORB    BOR
+@generic XOR    XOR   XORB   BXOR
+@generic CMP    CMP   CMPB   BCMP
+@generic MOV    MOV   MOVB   BMOV

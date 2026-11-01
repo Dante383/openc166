@@ -1,0 +1,22 @@
+# Build trees
+/build*/
+/cmake-build-*/
+/out/
+
+# IDEs
+/.idea/
+/.vscode/
+/.vs/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+/.pytest_cache/
+
+# Local test corpora and tool outputs that must never be committed
+# (third-party sources such as Infineon MiniMon, Keil-generated files)
+/tests/local/
+*.LST
+*.lst
+*.OBJ

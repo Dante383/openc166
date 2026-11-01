@@ -1,0 +1,5 @@
+add_executable(openc166_cli main.cpp)
+set_target_properties(openc166_cli PROPERTIES OUTPUT_NAME openc166)
+target_link_libraries(openc166_cli PRIVATE openc166::core openc166_options)
+target_compile_definitions(openc166_cli PRIVATE OPENC166_VERSION="${PROJECT_VERSION}")
+install(TARGETS openc166_cli RUNTIME DESTINATION bin)

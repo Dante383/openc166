@@ -1,0 +1,26 @@
+; Minimal C167 payload: copies a block of words and returns to the caller.
+; Assemble with:  openc166 examples/payload.a66 -l payload.lst
+; The result is payload.bin, a raw image that runs at 0E000H.
+
+$MOD167
+
+COUNT   EQU     8               ; number of words to copy
+
+PAYLOAD SECTION CODE AT 0E000H
+
+Copy    PROC    NEAR
+        MOV     R2, #SOF Source ; R2 = read pointer
+        MOV     R3, #0F600H     ; R3 = write pointer (internal RAM)
+        MOV     R4, #COUNT      ; R4 = words left
+Next:   MOV     [R3], [R2+]     ; copy one word, advance the read pointer
+        ADD     R3, #2          ; advance the write pointer
+        SUB     R4, #1
+        JMPR    cc_NZ, Next
+        RET
+Copy    ENDP
+
+Source: DW      1234H, 5678H, 9ABCH, 0DEF0H
+        DW      'AB', 'CD', 0, 0FFFFH
+
+PAYLOAD ENDS
+        END

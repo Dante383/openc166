@@ -1,0 +1,88 @@
+; Expression semantics: 64-bit arithmetic, precedence, operators, literals.
+$MOD167
+EXPR    SECTION CODE AT 0C000H
+EXPRP   PROC NEAR
+        DW      1 SHL 32
+        DW      (1 SHL 32) SHR 32
+        DW      NOT 0
+        DW      -7 / 2
+        DW      -7 MOD 4
+        DW      7 MOD -4
+        DW      -1 GT 0
+        DW      -1 UGT 0
+        DW      -1 LT 0
+        DW      -1 ULT 0
+        DW      2 + 3 SHL 1
+        DW      1 OR 2 AND 3
+        DW      1 AND 2 OR 3
+        DW      NOT 1 + 1
+        DW      LOW 1234H + 1
+        DW      HIGH 1234H
+        DW      HIGH (1234H + 100H)
+        DW      'AB'
+        DW      'A'
+        DW      "AB"
+        DW      '''A'
+        DW      0x10
+        DW      1$000B
+        DW      0FFFFH + 1
+        DW      $
+        DW      $ - 2
+        DW      3 * 4 + 5
+        DW      3 + 4 * 5
+        DW      (3 + 4) * 5
+        DW      10 / 3
+        DW      10 MOD 3
+        DW      1 EQ 1
+        DW      1 NE 1
+        DW      2 GE 2
+        DW      2 LE 1
+        DW      1 == 1
+        DW      1 != 2
+        DW      1 <> 2
+        DW      5 > 3
+        DW      5 < 3
+        DW      5 >= 5
+        DW      5 <= 4
+        DW      1 << 4
+        DW      100H >> 4
+        DW      0F0H & 3CH
+        DW      0F0H | 0FH
+        DW      0FFH ^ 0AAH
+        DW      0FFH XOR 0AAH
+        DW      SEG 12345H
+        DW      PAG 12345H
+        DW      SOF 12345H
+        DW      POF 12345H
+        DW      BYTE1 12345678H
+        DW      WORD2 12345678H
+        DW      -(-3)
+        DW      +5
+        DW      1 / 0
+        DW      1 MOD 0
+        DW      1 + 2.3
+        DW      'ABC'
+        DW      UNDEFINED_THING
+        DB      256
+        DB      -1
+        DB      -129
+        DB      -256
+        DW      10000H
+        DW      -1
+        DW      -32768
+        DW      -32769
+        DD      12345678H
+        DD      -1
+        DD      100000000H
+        DB      'ABC', 0
+        DB      'A' + 1
+        EVEN
+; Unbalanced brackets
+        DW      (1+2
+        DW      ((1)
+        MOV     R1, #(2
+        MOV     R1, [R2
+        MOV     R1, [R2+#2
+EXPRP   ENDP
+EXPR    ENDS
+        END

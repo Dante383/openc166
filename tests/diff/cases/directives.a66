@@ -1,0 +1,109 @@
+; Symbols, sections, procedures, data and EXT sequences.
+$MOD167
+CONST1  EQU     1234H
+CONST2  EQU     CONST1 + 1
+COUNT   SET     1
+COUNT   SET     COUNT + 1
+FWDUSE  EQU     LATER - 2
+LATER   EQU     100H
+FLAG    BIT     0FD10H.4
+
+CODE1   SECTION CODE AT 0C000H
+MAIN    PROC    NEAR
+        MOV     R1, #CONST1
+        MOV     R2, #CONST2
+        MOV     R3, #COUNT
+        MOV     R4, #FWDUSE
+        MOV     R5, #FWD
+        MOV     R6, #FWD + 2
+        JMPR    cc_UC, AHEAD
+        NOP
+AHEAD:  JB      FLAG, BACK
+BACK:   JNB     FLAG, AHEAD
+        CALLR   SUB1
+        CALLA   cc_UC, SUB1
+        CALLS   SEG FARP, SOF FARP
+        MOV     R7, #POF TABLE
+        MOV     R8, #PAG TABLE
+        MOV     R9, #SOF TABLE
+        MOV     R10, #SEG TABLE
+        MOV     R11, #HIGH TABLE
+        MOV     R12, #LOW TABLE
+        EXTR    #2
+        MOV     R1, 0F100H
+        MOV     R2, 0FE00H
+        MOV     R3, 0F100H
+        EXTS    #1, #1
+        MOV     R1, 0F100H
+        EXTP    #3, #1
+        MOV     R1, 0FE00H
+        RET
+MAIN    ENDP
+
+SUB1    PROC
+        RET
+SUB1    ENDP
+
+FARP    PROC    FAR
+        RET
+FARP    ENDP
+
+ISR     PROC    TASK INTNO = 20H
+        RET
+ISR     ENDP
+
+WARNP   PROC    NEAR
+        RETS
+        RETI
+        RETP    R1
+        RET
+WARNP   ENDP
+
+TABLE:  DW      1, 2, 3
+        DW      MAIN, SUB1, FARP
+        DB      1, 2, 3
+        EVEN
+        DB      'Hello', 0
+        EVEN
+        DW      'AB', 'C', 0
+        DD      12345678H, MAIN
+        DSB     3
+        EVEN
+        DSW     2
+        DS      4
+        DSD     1
+FWD:    DW      0FFFFH
+        ORG     0C200H
+ORGED:  DW      ORGED
+CODE1   ENDS
+
+DATA1   SECTION DATA AT 0D000H
+VAR1    DSW     1
+VAR2    DSB     2
+VAR3    DSW     1
+DATA1   ENDS
+
+CODE2   SECTION CODE AT 0E000H
+P2      PROC    NEAR
+        MOV     R1, VAR1
+        MOV     VAR3, R1
+        MOVB    RL1, VAR2
+        MOV     R2, #VAR3
+        MOV     R3, #$
+        RET
+P2      ENDP
+CODE2   ENDS
+
+; Errors.
+CONST1  EQU     5
+R1:     NOP
+PSW     EQU     5
+CODE3   SECTION CODE AT 0F000H
+P3      PROC    NEAR
+P4      PROC    NEAR
+P4      ENDP
+P3      ENDP
+        ORG     0E000H
+        MOV     R1, #UNDEF
+CODE3   ENDS
+        END

@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: MIT
+// A166 expression evaluation with Keil operator precedence:
+//   ()  >  .  >  SEG PAG SOF POF  >  HIGH LOW BYTEn WORDn NOT unary+-
+//   >  * / MOD  >  + -  >  SHL SHR << >>  >  AND OR XOR & | ^
+//   >  EQ NE LT LE GT GE ULT ULE UGT UGE == != < <= > >=
+// Arithmetic is 64-bit; comparisons yield 1 (true) or 0 (false).
+#pragma once
+
+#include "diag.hpp"
+#include "lexer.hpp"
+#include "value.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <string_view>
+#include <vector>
+
+namespace oc166 {
+
+// Symbol environment seen by expressions.
+class SymbolContext {
+public:
+    virtual ~SymbolContext() = default;
+    // Value of a symbol, or nullopt if it is (not yet) defined.
+    virtual std::optional<Value> lookup(std::string_view name) = 0;
+    // Value of '$', the current location counter.
+    virtual std::int64_t location() const = 0;
+    // True if the current section has a fixed (AT) address.
+    virtual bool location_fixed() const = 0;
+    // In the final pass undefined symbols are errors; before it they are
+    // unknown values that later passes resolve.
+    virtual bool final_pass() const = 0;
+};
+
+// Cursor over the tokens of one line.
+class TokenCursor {
+public:
+    explicit TokenCursor(const std::vector<Token>& tokens, std::size_t pos = 0) : toks_(tokens), pos_(pos) {}
+    const Token& peek(std::size_t ahead = 0) const {
+        std::size_t i = pos_ + ahead;
+        return i < toks_.size() ? toks_[i] : toks_.back();
+    }
+    const Token& next() {
+        const Token& t = peek();
+        if (pos_ < toks_.size() - 1) ++pos_;
+        return t;
+    }
+    bool at_end() const { return peek().kind == TokKind::End; }
+    bool accept_op(std::string_view op) {
+        if (!peek().is_op(op)) return false;
+        next();
+        return true;
+    }
+    bool accept_keyword(std::string_view upper) {
+        if (peek().kind != TokKind::Ident || !ieq(peek().text, upper)) return false;
+        next();
+        return true;
+    }
+    void expect_op(std::string_view op) {
+        if (accept_op(op)) return;
+        if (op == ")") throw AsmError("A22", "')' expected", peek().column);
+        throw AsmError("A6", "syntax error: expected '" + std::string(op) + "'", peek().column);
+    }
+    std::size_t position() const { return pos_; }
+
+private:
+    const std::vector<Token>& toks_;
+    std::size_t pos_;
+};
+
+// Parses and evaluates one expression. Throws AsmError on errors.
+Value evaluate(TokenCursor& cur, SymbolContext& ctx);
+
+// Evaluates a single register name or symbol (no operators), as used inside
+// indirect operands such as [R1+].
+Value evaluate_primary(TokenCursor& cur, SymbolContext& ctx);
+
+// True if the identifier is an expression operator keyword (AND, SHL, ...).
+bool is_operator_keyword(std::string_view name);
+
+}  // namespace oc166

@@ -1,0 +1,157 @@
+; Keil treats labels, '$' and SEG values as relocatable: immediates built
+; from them always use the long 16-bit form, even if the value is small.
+; In a section with a fixed address, "label + n" (n not zero) is not.
+$MOD167
+NUM     EQU     5
+S0      SECTION CODE AT 0
+P0      PROC    NEAR
+L0:     NOP
+L2:     NOP
+P0      ENDP
+S0      ENDS
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+        MOV     R1, #L0
+        MOV     R1, #L2
+        MOV     R1, #SEG L0
+        MOV     R1, #SEG NUM
+        MOV     R1, #L2-L0
+        MOV     R1, #(L2-L0)/2
+        MOV     R1, #LOW L2
+        MOV     R1, #HIGH L2
+        MOV     R1, #PAG L2
+        MOV     R1, #POF L2
+        MOV     R1, #SOF L2
+        MOV     R1, #L2+0
+        MOV     R1, #L2*1
+        MOV     R1, #L2 AND 0FH
+        MOV     R1, #L2 SHR 1
+        MOV     R1, #NUM
+        MOV     R1, #$-$
+        ADD     R1, #L2
+        ADD     R1, #SEG L0
+        ADDB    RL1, #L2
+        MOVB    RL1, #L2
+        MOVB    RL1, #LOW L2
+        CMP     R1, #L2
+        SHL     R1, #L2
+        EXTP    #PAG L2, #1
+        EXTS    #SEG L2, #1
+        BFLDL   R1, #L2, #L2
+        TRAP    #L2
+        JMPS    SEG L2, L2
+        MOV     R1, [R2+#L2]
+        SCXT    R1, #L2
+        MOV     R1, #LT2
+X1      EQU     L2
+        MOV     R1, #X1
+X2      EQU     L2-L0
+        MOV     R1, #X2
+        DB      L2
+        DB      L2-L0
+LT2     EQU     2
+; SEG stays relocatable unless something non-zero is added to it.
+        MOV     R1, #SEG L2 + 0
+        MOV     R1, #SEG L2 - 0
+        MOV     R1, #+SEG L2
+        MOV     R1, #(SEG L2)
+        MOV     R1, #SEG L2 + 1
+        MOV     R1, #1 + SEG L2
+        MOV     R1, #0 + SEG L2
+        MOV     R1, #0 - SEG L2
+        MOV     R1, #-SEG L2
+        MOV     R1, #NOT SEG L2
+        MOV     R1, #SEG L2 OR 0
+        MOV     R1, #SEG L2 * 1
+        MOV     R1, #L2 - SEG L2
+; Label differences are unsigned numbers modulo 2^61. In "a + b" and "a - b"
+; the left operand decides whether the result is unsigned.
+D       EQU     L0-L2
+        DW      L0-L2
+        DW      D
+        DW      D+2
+        DW      L0-L2+2
+        DW      (L0-L2)+10000H
+        DW      (L0-L2)+100000000H
+        DW      (L0-L2) AND 0FFFFH
+        DW      LOW (L0-L2), HIGH (L0-L2)
+        DW      (L0-L2) SHR 48
+        DW      (L0-L2) SHR 16
+        DW      (L0-L2) / 4
+        DW      (L0-L2) MOD 7
+        DW      (L0-L2) GT 0
+        DW      (L0-L2) LT 1
+        DW      (L0-L2) ULT 1
+        DW      1+(L0-L2)
+        DW      1-(L2-L0)
+        DW      (L2-L0)-3
+        DW      ((L0-L2)+2)-3
+        DW      3*(L0-L2)
+        DW      (L0-L2)*2
+        DW      0-(L2-L0)
+        DW      -((L2-L0)/1)
+        DW      NOT ((L2-L0)/1)
+        DW      -(1+(L2-L0))
+        DW      (0-(L2-L0))/2
+        DW      ((L2-L0)-3)/2
+        DW      (L2-L0)-L2
+        DW      (L0-L2)-L2
+        DW      L2+(L0-L2)
+        DW      (L0-L2)+L2
+        DW      L2-(L2-L0)
+        DW      L2-0D000H
+        DW      L2+L2+0FFFFH
+        DD      L0-L2
+        DB      L0-L2, 0
+        MOV     R1, #L0-L2
+        MOV     R1, #L0-L2+2
+        ADD     R1, #L0-L2
+        ADD     R1, #L0-L2+2
+        ROL     R1, #L0-L2
+        ROL     R1, #L0-L2+2
+        MOV     R1, #L2-0D000H
+        MOV     R1, [R2+#(L0-L2)]
+; Fixed-address sections: adding a non-zero number or label difference to a
+; label gives an unsigned number like a label difference.
+        MOV     R1, #L2-1
+        MOV     R1, #L2+1
+        MOV     R1, #1+L2
+        MOV     R1, #L2+NUM
+        MOV     R1, #L2+1-1
+        MOV     R1, #L2+(1-1)
+        MOV     R1, #0+L2
+        MOV     R1, #L2+(L2-L0)
+        MOV     R1, #(L2-L0)+L2
+        MOV     R1, #L2-(L2-L0)
+        MOV     R1, #L0+(L0-L0)
+        MOV     R1, #(L2+1)-(L0+1)
+        MOV     R1, #(L2+1)-L0
+        MOV     R1, #L2+FWD-2
+        MOV     R1, #L2+FWD0
+        ADD     R1, #L2-1
+        MOVB    RL1, #L2+1
+        SHL     R1, #L2+1
+        MOV     R1, [R2+#L2-1]
+        DW      L2-3
+        DW      (L2-3) GT 0
+        DW      (L2-3)/2
+        DW      (L2+1) SHR 1
+; Keil computes these wrongly, also in the linked program: "-L2" gives
+; 0FFF0H instead of 0FFFEH. openc166 refuses them with A63.
+        MOV     R1, #-L2                ; DIVERGES: Keil miscomputes a negated address
+        DW      NOT L2                  ; DIVERGES: Keil miscomputes a negated address
+        DW      -$                      ; DIVERGES: Keil miscomputes a negated address
+        DW      0-L2                    ; DIVERGES: Keil miscomputes number - address
+        DW      10H-L2                  ; DIVERGES: Keil miscomputes number - address
+        DW      -(L2-L0)                ; DIVERGES: Keil miscomputes a negated difference
+        DW      -D                      ; DIVERGES: Keil miscomputes a negated difference
+        DW      -((L2-L0)-3)            ; DIVERGES: Keil miscomputes a negated difference
+        DW      -(L2-1)                 ; DIVERGES: Keil miscomputes a negated address
+        DW      NOT (L2+1)              ; DIVERGES: Keil miscomputes a negated address
+; Errors last: Keil still emits code for some of them.
+        EXTR    #L2
+P       ENDP
+S       ENDS
+FWD     EQU     2
+FWD0    EQU     0
+        END

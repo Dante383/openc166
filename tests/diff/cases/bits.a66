@@ -1,0 +1,102 @@
+; Bit addresses. Keil counts bit positions linearly from a numeric base,
+; so a position past 15 (or below 0) carries into the neighbouring word.
+$MOD167
+BITS    SECTION CODE AT 0C000H
+BITSP   PROC NEAR
+        BSET    0FD00H.0
+        BSET    0FD00H.15
+        BSET    0FD00H.16
+        BSET    0FD00H.31
+        BSET    0FD00H.255
+        BSET    0FD00H.256
+        BSET    0FD01H.0
+        BSET    0FD01H.7
+        BSET    0FD01H.8
+        BSET    0FD01H.15
+        BSET    0FCFFH.8
+        BSET    0FE00H.-1
+        BSET    0FD02H.-1
+        BSET    0FDFEH.15
+        BSET    0FF00H.0
+        BSET    0FFDEH.15
+        BSET    0FF01H.3
+        BSET    0F0FEH.16
+        BSET    0F0FFH.8
+        EXTR    #1
+        BSET    0F1DEH.15
+        BSET    80H.0
+        BSET    81H.5
+        BSET    80H.16
+        BSET    7FH.16
+        BSET    0EFH.15
+        BSET    R0.0
+        BSET    R15.15
+        BSET    PSW.15
+        BSET    0FD00H.1+1
+        BSET    0FD00H.(1+1)
+        BSET    0FD00H.15+1
+        BSET    1+0FD00H.3      ; DIVERGES: Keil encodes this as 0FD00H.9
+        BSET    0FD02H.3-4
+        BSET    C+1
+        BMOV    0FD00H.0, 0FD00H.17
+        BAND    C, 0FD01H.9
+        JB      0FD00H.17, J1
+J1:     JNB     0FF00H.31, J2
+J2:     BFLDL   0FD00H, #1, #2
+        BFLDL   0FD01H, #1, #2
+        BFLDL   0FDFFH, #1, #2
+        BFLDH   0FF00H, #3, #4
+        BFLDH   0FFDEH, #3, #4
+        BFLDL   R3, #3, #4
+        BFLDL   PSW, #3, #4
+        EXTR    #1
+        BFLDL   0F101H, #5, #6
+F1      BIT     0FD00H.3
+F2      BIT     0FD00H.19
+F3      BIT     F2 + 1
+F4      BIT     R2.7
+F5      BIT     PSW.0
+        BSET    F1
+        BSET    F2
+        BSET    F3
+        BSET    F4
+        BSET    F5
+        BCLR    F1 + 16
+; Errors in both assemblers.
+        BSET    R1.16
+        BSET    PSW.16
+        BSET    0F0H.0
+        BSET    100H.0
+        BSET    1000H.0
+        BSET    10000H.0
+        BSET    DPP0.1
+        BSET    1.0
+        BSET    0
+        BSET    80H
+        BSET    0FE00H
+        BFLDL   7FH, #1, #1
+        BFLDL   80H, #1, #1
+        BFLDL   0F0H, #1, #1
+        BFLDL   0FE00H, #1, #1
+        BFLDL   0FFE0H, #1, #1
+        BFLDL   1000H, #1, #1
+        BMOV    C, 7FH
+F6      BIT     1000H.0
+F7      BIT     R1.16
+F8      BIT     0FD01H
+; Keil assembles these without an error but the code is wrong (bitoff 0
+; or a bit unrelated to the operand), so openc166 rejects them.
+        BSET    0H.0            ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    10H.2           ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0EFH.16         ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0FE00H.0        ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0FC00H.0        ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0F1E0H.0        ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0FD00H.-1       ; DIVERGES: Keil silently encodes bitoff 0
+        BSET    0FD00H          ; DIVERGES: Keil accepts a plain number as a bit
+        BSET    0FD02H          ; DIVERGES: Keil encodes this as 0FD02H.2
+        BCLR    0FD01H          ; DIVERGES: Keil encodes this as 0FD00H.9
+F9      BIT     0FE00H.0        ; DIVERGES: Keil silently defines 0FD00H.0
+BITSP   ENDP
+BITS    ENDS
+        END
