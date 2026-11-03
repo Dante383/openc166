@@ -1,0 +1,129 @@
+; Data page features in the default nonsegmented mode: DPPn: prefixes and
+; ASSUME (both ignored with a warning), the DATAn and BOF operators, the
+; DPPTR, DSPTR and DBPTR directives, section names as values, alignment
+; warnings for word operands, and the limits of nonsegmented sections.
+$MOD167
+DS1     SECTION DATA AT 0E000H
+V1      DSW     2
+VB      DSB     2
+V2      DSW     1
+DS1     ENDS
+B1      BIT     0FD10H.8
+B2      BIT     PSW.3
+CSEC    SECTION CODE AT 0C000H
+P       PROC NEAR
+        ASSUME  DPP2:DS1
+        MOV     R1,DPP2:1234H
+        MOV     R1,DPP2:12345H
+        MOV     R1,DPP1:V1+1
+        MOV     R1,1+DPP1:V1
+        MOV     R1,(DPP1:V1+1)
+        MOV     R1,#DPP2:12345H
+        MOV     R1,[R2+#DPP2:1234H]
+; Word operands at odd addresses
+        MOV     R1,V1+1
+        MOV     V1+1,R1
+        MOVB    RL1,VB+1
+        MOVBZ   R1,VB+1
+        MOVBS   V1+1,RL1
+        SUB     R1,V1+1
+        SUBB    RL1,VB+1
+        MOV     R1,12345H
+        MOV     R1,0E001H
+        MOV     R1,[R2+#0E001H]
+        MOV     R1,#0E001H
+        CMP     R1,0FE01H
+        ADD     R1,PSW+1
+; DATAn picks the shortest form that holds n bits
+        MOV     R1,#DATA3 5
+        MOV     R1,#DATA4 3
+        ADD     R1,#DATA4 3
+        ADD     R1,#DATA3 3
+        MOVB    RL1,#DATA16 3
+        SHL     R1,#DATA16 3
+        CMPB    RL1,#DATA4 3
+        MOV     R1,#DATA3 -1
+        MOV     R1,#DATA4 -1+20
+        MOV     R1,#DATA4 HIGH 1234H
+        MOV     R1,#(DATA3 9)
+        MOV     R1,#DATA8 1234H
+        MOV     R1,#DATA16 -32769
+        MOV     R1,#DATA16 PSW
+        MOV     R1,DATA16 1234H
+        MOV     R1,#DATA16 V1
+        MOV     R1,#DATA8 V1
+        MOV     R1,#DATA4 FWD4
+; BOF: the bit number of a bit address
+        MOV     R4,#BOF B1
+        ADD     R4,#BOF B2
+        MOV     R4,#BOF B1+1
+        MOV     R4,#BOF FWDB
+        MOV     R4,#BOF 5
+; Section names stand for their start address
+        MOV     R1,DS1
+        MOV     R1,#DS1+2
+        ADD     R1,#DS3
+        MOV     R1,#PAG DS1
+        MOV     R1,#POF DS1
+        MOV     R1,#SOF CSEC
+        MOV     R1,#X
+        MOV     R1,#DPP2:DS1
+P       ENDP
+        DW      DATA3 12, DATA4 -1, DPP2:1234H, DPP1:V1
+        DW      DPP2:12345H, 1+DPP2:12345H
+        DB      DATA3 -1, DPP1:300H, DPP1 : 300H
+        EVEN
+        DPPTR   12345H, V1, $
+        DSPTR   23456H, SEG 23456H, V2
+        DBPTR   B1, B2, PSW.3, 0FD10H.8
+        DPPTR   DPP2:V1
+PT      DPPTR   V2
+PS      DSPTR   V2
+PB      DBPTR   B1
+        DW      PT, PS, PB
+P2      PROC NEAR
+        MOV     R1,PT
+        MOVB    RL1,PT
+        MOV     R1,PB
+P2      ENDP
+CSEC    ENDS
+; Errors, in a section of their own because Keil and openc166 differ in
+; the size they leave for a line in error.
+ERRS    SECTION CODE AT 0D000H
+PE      PROC NEAR
+        MOV     R1,DATA16 V1
+        MOV     R1,#DATA32 7
+        MOV     R1,#DATA4 B1
+        MOV     R4,#BOF V1
+        MOV     R4,#BOF PSW.15
+        MOV     R4,#BOF R3.4
+        MOV     R4,#BOF 0FD10H
+PE      ENDP
+        DPPTR   B1
+        DBPTR   V1
+        DBPTR   R1.3
+        DPPTR
+ERRS    ENDS
+X       EQU     DS1
+FWD4    EQU     3
+FWDB    BIT     0FD12H.2
+DS3     SECTION DATA AT 2
+U3      DSW     1
+DS3     ENDS
+; Without $SEGMENTED, AT must stay below 10000H.
+HS      SECTION DATA AT 12340H
+U4      DSW     1
+HS      ENDS
+; A DATA section must fit in one 16 KB page.
+DP      SECTION DATA AT 0F000H
+        DSW     800H
+        DSB     1
+DP      ENDS
+DR      SECTION DATA
+        DS      4000H
+        DS      1
+DR      ENDS
+DH      SECTION HDATA AT 0F000H
+        DS      2000H
+DH      ENDS
+        END

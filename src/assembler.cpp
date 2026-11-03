@@ -9,6 +9,7 @@
 #include "predef.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
@@ -51,7 +52,8 @@ std::string value_text(const Value& v) {
 
 // Type of a label in front of data, or of a data directive's name.
 LType data_type(std::string_view upper_dir) {
-    if (upper_dir == "DW" || upper_dir == "DSW") return LType::Word;
+    if (upper_dir == "DW" || upper_dir == "DSW" || upper_dir == "DPPTR" || upper_dir == "DSPTR" || upper_dir == "DBPTR")
+        return LType::Word;
     if (upper_dir == "DD" || upper_dir == "DSD") return LType::Dword;
     return LType::Byte;
 }
@@ -69,18 +71,23 @@ bool same_value(const Value& a, const Value& b) {
 constexpr std::string_view kNamedDirectives[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW", "DSD",
     "DEFR", "DEFB", "DEFA", "LIT", "REGDEF", "REGBANK", "COMREG", "DBIT", "DGROUP", "CGROUP", "MACRO", "TYPEDEC",
+    "DPPTR", "DSPTR", "DBPTR",
 };
 
 // Directives that only matter to a linker or debugger; a raw image ignores them.
 constexpr std::string_view kIgnoredDirectives[] = {
-    "NAME", "PUBLIC", "GLOBAL", "ASSUME", "REGDEF", "REGBANK", "SSKDEF", "PECDEF", "TYPEDEC",
+    "NAME", "PUBLIC", "GLOBAL", "REGDEF", "REGBANK", "SSKDEF", "PECDEF", "TYPEDEC",
 };
 
-constexpr std::string_view kDataDirectives[] = {"DB", "DW", "DD", "DS", "DSB", "DSW", "DSD"};
+constexpr std::string_view kDataDirectives[] = {"DB", "DW", "DD", "DS", "DSB", "DSW", "DSD", "DPPTR", "DSPTR", "DBPTR"};
+
+bool is_pointer_directive(std::string_view upper_dir) {
+    return upper_dir == "DPPTR" || upper_dir == "DSPTR" || upper_dir == "DBPTR";
+}
 
 // Keil places word data on even and double-word data on 4-byte boundaries.
 int data_alignment(std::string_view upper_dir) {
-    if (upper_dir == "DW" || upper_dir == "DSW") return 2;
+    if (upper_dir == "DW" || upper_dir == "DSW" || is_pointer_directive(upper_dir)) return 2;
     if (upper_dir == "DD" || upper_dir == "DSD") return 4;
     return 1;
 }
@@ -90,6 +97,7 @@ constexpr std::string_view kKeywords[] = {
     "DSD", "ORG", "EVEN", "END", "NAME", "PUBLIC", "GLOBAL", "EXTERN", "EXTRN", "ASSUME", "REGDEF",
     "REGBANK", "SSKDEF", "PECDEF", "DEFR", "DEFB", "DEFA", "LIT", "DBIT", "DGROUP", "CGROUP", "MACRO",
     "TYPEDEC", "NEAR", "FAR", "INTERRUPT", "TASK", "AT", "SHORT", "PTR", "BYTE", "WORD", "DWORD",
+    "DPPTR", "DSPTR", "DBPTR",
 };
 
 std::vector<std::string_view> split_lines(std::string_view text) {
@@ -252,6 +260,8 @@ public:
     std::uint16_t section_index() const override { return outer_.section_index(); }
     bool has_esfr() const override { return outer_.has_esfr(); }
     unsigned forward_references() const override { return outer_.forward_references(); }
+    void warning(const AsmError& w) override { outer_.warning(w); }
+    bool segmented() const override { return outer_.segmented(); }
     bool final_pass() const override { return true; }
 
     bool forward = false;
@@ -293,7 +303,7 @@ constexpr std::string_view kPrimaryControls[] = {
     "PAGELENGTH", "PL", "PAGEWIDTH", "PW", "SYMBOLS", "SB", "NOSYMBOLS", "NOSB", "XREF", "XR", "NOXREF",
     "NOXR", "DEBUG", "DB", "NODEBUG", "NODB", "PRINT", "PR", "NOPRINT", "NOPR", "OBJECT", "OJ", "NOOBJECT",
     "NOOJ", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP", "PAGING", "NOPAGING", "TABS", "DATE", "LINES",
-    "NOLINES", "TYPE", "NOTYPE", "ABSOLUTE", "NOABSOLUTE", "AMAKE", "NOAMAKE", "SEGMENTED", "NONSEGMENTED",
+    "NOLINES", "TYPE", "NOTYPE", "ABSOLUTE", "NOABSOLUTE", "AMAKE", "NOAMAKE", "SEGMENTED", "SG", "NONSEGMENTED", "NOSG",
     "USEDEXTONLY", "EXTMAC", "MACRO", "NOMACRO", "MPL", "NOMPL", "EXPDECNUM",
 };
 
@@ -311,6 +321,7 @@ struct Section {
     std::int64_t loc = 0;
     bool absolute = false;
     bool code = true;  // CODE section: plain labels are NEAR and must be even
+    bool data = false;  // DATA section: DS must stay within one data page
 };
 
 class Assembler final : public SymbolContext {
@@ -320,12 +331,14 @@ public:
     AssemblyResult run(std::string_view source);
 
     std::optional<Value> lookup(std::string_view name) override;
-    std::int64_t location() const override { return sections_[cur_].loc; }
+    std::int64_t location() const override { return sections_[cur_].loc + item_offset_; }
     bool location_fixed() const override { return sections_[cur_].absolute; }
     std::uint16_t section_index() const override { return static_cast<std::uint16_t>(cur_); }
     bool has_esfr() const override { return cpu_ == isa::Cpu::C167; }
     unsigned forward_references() const override { return forward_count_; }
     void soft_error(const AsmError& e) override { rep_->error(e.code(), e.message(), e.column()); }
+    void warning(const AsmError& w) override { rep_->warning(w.code(), w.message(), w.column()); }
+    bool segmented() const override { return segmented_; }
     bool final_pass() const override { return final_; }
 
 private:
@@ -372,13 +385,18 @@ private:
     bool sys166_ = true;
     bool case_ = false;
     std::vector<Section> sections_;  // [0] holds code outside any section
+    std::vector<Section> prev_sections_;  // sections_ of the previous pass, for forward section names
     std::size_t cur_ = 0;
+    bool segmented_ = false;  // $SEGMENTED: DPPn: prefixes and ASSUME take effect
+    std::array<int, 4> assume_{};  // per DPP: a section index, kAssumeSystem or -1 (ASSUME)
     std::vector<std::size_t> open_;
     std::int64_t free_ = 0;  // first address after everything placed so far
     ProcKind proc_ = ProcKind::None;
     std::string proc_name_;
+    std::int64_t item_offset_ = 0;  // offset of the data item being evaluated: '$' is its address
     int ext_left_ = 0;
     bool ext_esfr_ = false;
+    bool ext_page_ = false;  // the EXT sequence is EXTP or EXTPR: no DPP needed
     bool ended_ = false;
     std::size_t end_line_ = 0;  // index of the END line in res_.listing
     std::size_t insn_ = 0;
@@ -421,7 +439,11 @@ private:
     void branch(std::string& mnemonic, std::vector<Operand>& ops, std::int64_t pc, Reporter& rep);
     void check_branch_target(const std::string& mnemonic, const std::vector<Operand>& ops, Reporter& rep) const;
     void data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
-    void section_start(const Token& name, TokenCursor& cur);
+    void pointer_data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
+    void assume(TokenCursor& cur, Reporter& rep);
+    std::optional<Value> section_value(std::string_view name);
+    void assumed_section_page(Value& v) const;
+    void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
     void section_end(const Token& name);
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
@@ -442,7 +464,7 @@ private:
 std::optional<Value> Assembler::lookup(std::string_view name) {
     if (auto p = predefined(name, cpu_, sys166_)) return p;
     auto it = symbols_.find(key(name));
-    if (it == symbols_.end()) return std::nullopt;
+    if (it == symbols_.end()) return section_value(name);
     // expand_lits() leaves a LIT name in place when the LIT line comes later
     // or the text leads back to the name. Keil reports both as A60.
     if (it->second.sym.kind == SymbolKind::Lit) {
@@ -509,7 +531,7 @@ std::int64_t Assembler::absolute(TokenCursor& cur, const char* what) {
     Value v = expression(cur);
     if (forward_ref_) throw AsmError("A71", std::string("expression with forward reference not permitted in ") + what, column);
     if (v.type != VType::Number) throw AsmError("A72", "absolute expression required", column);
-    return v.num;
+    return v.dpp >= 0 ? v.num | (std::int64_t{v.dpp} << 14) : v.num;
 }
 
 // DEFR, DEFB and DEFA take an optional access attribute (R, RW or W). Only a
@@ -622,6 +644,9 @@ void Assembler::run_pass() {
     proc_name_.clear();
     ext_left_ = 0;
     ext_esfr_ = false;
+    ext_page_ = false;
+    segmented_ = false;
+    assume_.fill(-1);
     ended_ = false;
     insn_ = 0;
     incdirs_.clear();
@@ -674,6 +699,14 @@ void Assembler::run_pass() {
         process_line(text);
         if (include_) stack_.push_back(Frame{*include_, 0});
     }
+
+    // ASSUME and expressions may name a section before it starts; they see
+    // where the previous pass put it.
+    auto same = [](const Section& a, const Section& b) { return a.name == b.name && a.base == b.base; };
+    if (sections_.size() != prev_sections_.size() ||
+        !std::equal(sections_.begin(), sections_.end(), prev_sections_.begin(), same))
+        changed_ |= sections_.size() > 1;
+    prev_sections_ = sections_;
 
     if (!final_ || fatal_) return;
     // Like Keil, report problems found at the end on the last line of the
@@ -1033,6 +1066,10 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             sys166_ = false;
             rep.warning("OC2", "MODV2: the extended XC16x/Super10 instructions are not supported; using the C167 set",
                         column);
+        } else if (name == "SEGMENTED" || name == "SG") {
+            segmented_ = true;
+        } else if (name == "NONSEGMENTED" || name == "NOSG") {
+            segmented_ = false;
         } else if (name == "CASE") {
             case_ = true;
         } else if (name == "NOCASE") {
@@ -1294,6 +1331,16 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A70", "invalid type of expression: bit address expected", column);
         if (kind != SymbolKind::Bit && v.type == VType::Bit)
             throw AsmError("A70", "invalid type of expression: use BIT for bit addresses", column);
+        // A DPPn: prefix stays with a label; a number takes the DPP number
+        // into bits 14 and up (without clearing them first, as Keil does).
+        if (v.dpp >= 0 && v.rel != Rel::Addr) {
+            v.num |= std::int64_t{v.dpp} << 14;
+            v.dpp = -1;
+        }
+        // Only a plain label keeps its section for ASSUME; a section name or
+        // "label + n" becomes a plain number.
+        if (v.rel != Rel::Addr) v.section = 0;
+        v.data_bits = 0;
         define(name, kind, v, kind == SymbolKind::Bit);
         if (v.known) lst.value = v;
     } else if (dir == "LABEL") {
@@ -1311,7 +1358,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         define(name, SymbolKind::Label, here(type));
         check_alignment(need, name, rep);
     } else if (dir == "SECTION") {
-        section_start(name, cur);
+        section_start(name, cur, rep);
     } else if (dir == "ENDS") {
         expect_end(cur);
         section_end(name);
@@ -1445,6 +1492,8 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         lst.has_address = true;
         lst.address = location();
         data(kw, cur, rep, lst);
+    } else if (kw == "ASSUME") {
+        assume(cur, rep);
     } else if (kw == "EXTERN" || kw == "EXTRN") {
         throw AsmError("OC4", "external symbols need a linker, which openc166 does not use", tok.column);
     } else if (contains(kIgnoredDirectives, kw)) {
@@ -1458,12 +1507,19 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
 }
 
 void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
+    if (is_pointer_directive(dir)) return pointer_data(dir, cur, rep, lst);
     if (dir == "DS" || dir == "DSB" || dir == "DSW" || dir == "DSD") {
         int column = cur.peek().column;
         std::int64_t n = absolute(cur, dir.c_str());
         expect_end(cur);
         if (n < 0) throw AsmError("A19", "numeric value out of range", column);
         advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1));
+        // A DATA section at a fixed address must stay in the 16 KB data page
+        // it starts in, which one DPP register selects.
+        const Section& s = section();
+        const std::int64_t page_end = (s.base & ~std::int64_t{0x3FFF}) + 0x4000;
+        if (s.data && s.absolute && s.loc > page_end)
+            rep.error("A86", "section length overflow: a DATA section must fit in one 16 KB page", column);
         return;
     }
     const int width = dir == "DB" ? 1 : dir == "DW" ? 2 : 4;
@@ -1479,11 +1535,18 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
             // undefined name keeps its place so later addresses stay put.
             std::int64_t num = 0;
             bool keep = true;
+            item_offset_ = static_cast<std::int64_t>(out.size());
             try {
+                // Keil skips the range check of an item that starts with an
+                // (ignored) DPPn: prefix in nonsegmented mode.
+                const bool unchecked = !segmented_ && dpp_prefix_at(cur) >= 0;
                 Value v = expression(cur);
                 if (v.type != VType::Number && v.type != VType::Sfr)
                     throw AsmError("A70", "invalid type of expression", t.column);
-                if (v.known && !fits_width(v, 8 * width)) rep.warning("A62", "value truncation", t.column);
+                // Data keeps the address of a label even with a DPPn: prefix.
+                if (v.dpp >= 0 && v.rel != Rel::Addr) v.num = v.dpp_address();
+                assumed_section_page(v);
+                if (v.known && !unchecked && !fits_width(v, 8 * width)) rep.warning("A62", "value truncation", t.column);
                 num = v.num;
             } catch (const AsmError& e) {
                 rep.error(e.code(), e.message(), e.column());
@@ -1494,6 +1557,7 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
                     else if (skipped.is_op(")") && depth > 0) --depth;
                 }
             }
+            item_offset_ = 0;
             if (keep)
                 for (int b = 0; b < width; ++b) out.push_back(static_cast<std::uint8_t>(num >> (8 * b)));
         }
@@ -1503,20 +1567,169 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
     emit(out.data(), out.size(), lst);
 }
 
-void Assembler::section_start(const Token& name, TokenCursor& cur) {
+// DPPTR, DSPTR and DBPTR store an address in two or three words, for code
+// that loads a DPP or segment register from a table:
+//   DPPTR addr   page offset (addr & 3FFFH), page number (addr >> 14)
+//   DSPTR addr   segment offset (addr & 0FFFFH), segment number (addr >> 16)
+//   DBPTR bit    bit number, then the DPPTR words of the bit's word address
+void Assembler::pointer_data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
+    if (cur.at_end()) throw AsmError("A6", "syntax error: " + dir + " expects an expression", cur.peek().column);
+    const bool bit = dir == "DBPTR";
+    const int words = bit ? 3 : 2;
+    std::vector<std::uint8_t> out;
+    auto word = [&](std::int64_t w) {
+        out.push_back(static_cast<std::uint8_t>(w));
+        out.push_back(static_cast<std::uint8_t>(w >> 8));
+    };
+    for (;;) {
+        const Token& t = cur.peek();
+        item_offset_ = static_cast<std::int64_t>(out.size());
+        try {
+            Value v = expression(cur);
+            item_offset_ = 0;
+            if (v.known && (bit ? v.type != VType::Bit || bit_word_address(v) < 0
+                                : v.type != VType::Number && v.type != VType::Sfr))
+                throw AsmError("A70", std::string("invalid type of expression: ") +
+                                          (bit ? "DBPTR needs a bit address" : dir + " needs an address"),
+                               t.column);
+            if (v.dpp >= 0 && v.rel != Rel::Addr) v.num = v.dpp_address();
+            if (!bit) assumed_section_page(v);
+            std::int64_t a = bit ? (v.known ? bit_word_address(v) : 0) : v.num;
+            if (bit) word(v.bit);
+            if (dir == "DSPTR") {
+                word(a & 0xFFFF);
+                word(a >> 16);
+            } else {
+                word(a & 0x3FFF);
+                word(a >> 14);
+            }
+        } catch (const AsmError& e) {
+            item_offset_ = 0;
+            rep.error(e.code(), e.message(), e.column());
+            if (e.code() == "A42") out.resize(out.size() + 2 * words);
+            for (int depth = 0; !cur.at_end() && !(depth == 0 && cur.peek().is_op(","));) {
+                const Token& skipped = cur.next();
+                if (skipped.is_op("(")) ++depth;
+                else if (skipped.is_op(")") && depth > 0) --depth;
+            }
+        }
+        if (cur.at_end()) break;
+        cur.expect_op(",");
+    }
+    emit(out.data(), out.size(), lst);
+}
+
+// A section name stands for the section's start address. Keil applies the
+// DPP that ASSUME ties to a data section to it, but not to a code section.
+std::optional<Value> Assembler::section_value(std::string_view name) {
+    const std::string k = key(name);
+    for (const auto* list : {&sections_, &prev_sections_}) {
+        for (std::size_t i = 1; i < list->size(); ++i) {
+            const Section& s = (*list)[i];
+            if (key(s.name) != k) continue;
+            if (list == &prev_sections_) {
+                forward_ref_ = true;
+                ++forward_count_;
+            }
+            Value v = Value::number(s.base);
+            v.rel = s.absolute ? Rel::None : Rel::Addr;
+            v.unsig = true;
+            v.fixed = s.absolute;
+            v.section = s.code ? 0 : static_cast<std::uint16_t>(i);
+            return v;
+        }
+    }
+    return std::nullopt;
+}
+
+// In segmented mode, data directives store the name of a data section with a
+// fixed address (alone, in parentheses, or plus or minus a number) as the DPP
+// address that ASSUME gives the section. Labels keep their plain address.
+void Assembler::assumed_section_page(Value& v) const {
+    if (!segmented_ || !v.known || v.rel != Rel::None || v.section == 0 || v.dpp >= 0) return;
+    for (int d = 0; d < 4; ++d) {
+        if (assume_[d] != v.section) continue;
+        v.num = (std::int64_t{d} << 14) | (v.num & 0x3FFF);
+        return;
+    }
+}
+
+// ASSUME DPPn:target, ... tells the assembler which data page a DPP register
+// will select at run time, so that it can turn an address into the DPP
+// number and the offset in that page. The target is a section, a label in
+// one, SYSTEM (the page of the SFRs) or NOTHING. Each section, and SYSTEM,
+// can have only one DPP. "ASSUME NOTHING" forgets all of them.
+void Assembler::assume(TokenCursor& cur, Reporter& rep) {
+    if (!segmented_) {
+        rep.warning("A54", "'ASSUME' in nonsegmented mode ignored", cur.peek().column);
+        while (!cur.at_end()) cur.next();
+        return;
+    }
+    if (cur.accept_keyword("NOTHING")) {
+        expect_end(cur);
+        assume_.fill(-1);
+        return;
+    }
+    do {
+        const Token& reg = cur.next();
+        const int n = reg.kind == TokKind::Ident ? dpp_number(reg.text) : -1;
+        if (n < 0) throw AsmError("A35", "'DPPn' expected", reg.column);
+        if (!cur.accept_op(":")) throw AsmError("A36", "':' expected", cur.peek().column);
+        const Token& t = cur.next();
+        if (t.kind != TokKind::Ident)
+            throw AsmError("A6", "syntax error: section, label, SYSTEM or NOTHING expected", t.column);
+        std::optional<int> target;
+        if (ieq(t.text, "NOTHING")) {
+            target = -1;
+        } else if (ieq(t.text, "SYSTEM")) {
+            target = kAssumeSystem;
+        } else {
+            const std::string k = key(t.text);
+            for (std::size_t i = 1; i < sections_.size() && !target; ++i)
+                if (key(sections_[i].name) == k) target = static_cast<int>(i);
+            if (auto it = symbols_.find(k); !target && it != symbols_.end()) {
+                const Value& v = it->second.sym.value;
+                if (it->second.sym.kind == SymbolKind::Label && v.section) target = v.section;
+            }
+            for (std::size_t i = 1; i < prev_sections_.size() && !target; ++i)
+                if (key(prev_sections_[i].name) == k) target = static_cast<int>(i);
+            // Keil quietly ignores a name it does not know.
+            if (!target && pass_ == 1) changed_ = true;
+        }
+        if (target) {
+            bool taken = false;
+            for (int d = 0; d < 4; ++d) taken |= d != n && *target != -1 && assume_[d] == *target;
+            if (taken)
+                rep.error("A94", "multiple DPP assume for one section or group", t.column);
+            else
+                assume_[n] = *target;
+        }
+        if (!cur.at_end() && !cur.peek().is_op(","))
+            throw AsmError("A6", "syntax error: unexpected '" + std::string(cur.peek().text) + "'", cur.peek().column);
+    } while (cur.accept_op(","));
+}
+
+void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep) {
     static constexpr std::string_view kTypes[] = {"CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA", "XCONST", "BIT"};
     const Token& type = cur.peek();
     if (type.kind != TokKind::Ident || !contains(kTypes, upper(type.text)))
         throw AsmError("A34", "illegal section type", type.column);
     if (ieq(type.text, "BIT")) throw AsmError("OC3", "BIT sections are not supported yet", type.column);
     const bool code = ieq(type.text, "CODE");
+    const bool data = ieq(type.text, "DATA");
     cur.next();
     std::optional<std::int64_t> at;
     while (!cur.at_end()) {
         const Token& t = cur.peek();
         if (t.kind == TokKind::Ident && ieq(t.text, "AT")) {
             cur.next();
+            int column = cur.peek().column;
             at = absolute(cur, "AT");
+            // Without $SEGMENTED, everything lives in the first 64 KB.
+            if (!segmented_ && *at > 0xFFFF) {
+                rep.error("A19", "numeric value out of range: AT above 0FFFFH needs $SEGMENTED", column);
+                at = 0;
+            }
         } else if (t.kind == TokKind::Ident || t.kind == TokKind::String) {
             cur.next();  // alignment, combine type or class name: linker information
         } else {
@@ -1539,6 +1752,7 @@ void Assembler::section_start(const Token& name, TokenCursor& cur) {
     s.name = std::string(name.text);
     s.absolute = at.has_value();
     s.code = code;
+    s.data = data;
     s.base = s.loc = at ? *at : (free_ + 1) & ~std::int64_t{1};
     sections_.push_back(s);
     cur_ = sections_.size() - 1;
@@ -1578,6 +1792,9 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         ctx.cpu = cpu_;
         ctx.pc = pc;
         ctx.ext_sfr = ext_left_ > 0 && ext_esfr_;
+        ctx.segmented = segmented_;
+        ctx.assume = assume_;
+        ctx.ext_page = ext_left_ > 0 && ext_page_;
         Encoding e = encode(m, ops, ctx, rep);
         if (pc & 1) rep.error("A134", "improper address alignment: instruction at an odd address");
 
@@ -1585,6 +1802,7 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         if (ExtSequence seq = ext_sequence(e); seq.count) {
             ext_left_ = seq.count;
             ext_esfr_ = seq.esfr;
+            ext_page_ = seq.page;
         }
         sizes_[index] = e.size;
         emit(e.bytes.data(), e.size, lst);
@@ -1618,6 +1836,10 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
         }
         if (cc.mode != OpMode::Direct || cc.value.type != VType::Cc)
             throw AsmError("A74", "operand type mismatch: condition code expected", cc.column);
+    }
+    if (Value& t = ops.back().value; t.dpp >= 0) {
+        t.num = t.dpp_address();
+        t.dpp = -1;
     }
     const Operand target = ops.back();
     if (target.mode == OpMode::Ind) {
@@ -1669,7 +1891,8 @@ void Assembler::check_branch_target(const std::string& m, const std::vector<Oper
     const Operand& t = ops.back();
     if (near_branch && t.value.ltype == LType::Far && !t.value.short_jump)
         rep.warning("A84", "near reference to far location", t.column);
-    if (is_data_type(t.value.ltype)) rep.warning("A74", "operand type mismatch: branch to a data label", t.column);
+    if (near_branch && is_data_type(t.value.ltype))
+        rep.warning("A74", "operand type mismatch: branch to a data label", t.column);
     if (m != "JMPR" && m != "CALLR" && t.value.known && (t.value.num & 1))
         rep.warning("A134", "address alignment not sufficient: branch target is odd", t.column);
 }

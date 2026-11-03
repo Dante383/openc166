@@ -30,12 +30,14 @@ the complete memory image.
   - generic `JMP` and `CALL`, see [Jumps and calls](#jumps-and-calls);
   - bit, bit-field and extended-SFR addressing.
 - **Expressions:** `+ - * / MOD SHL SHR AND OR XOR NOT`, comparisons,
-  `HIGH LOW SOF SEG PAG POF`, `$`, character constants, and bit selection
-  (`base.n`), and the `SHORT` and `type PTR` operators. See
-  [Expression details](#expression-details).
+  `HIGH LOW SOF SEG PAG POF BOF`, `DATA3 DATA4 DATA8 DATA16`, `$`, section
+  names, character constants, bit selection (`base.n`), `DPPn:` prefixes,
+  and the `SHORT` and `type PTR` operators. See
+  [Expression details](#expression-details) and
+  [Segmented mode and DPPs](#segmented-mode-and-dpps).
 - **Directives:** `SECTION ... [AT addr]` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
   / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DB`, `DW`, `DD`, `DS`, `DSB`, `DSW`,
-  `DSD`, `ORG`, `EVEN` and `END`.
+  `DSD`, `DPPTR`, `DSPTR`, `DBPTR`, `ASSUME`, `ORG`, `EVEN` and `END`.
 - **Register definitions:** `DEFR`, `DEFA` and `DEFB`, the directives that
   register files such as `reg167.inc` use. See
   [Register definitions](#register-definitions).
@@ -46,11 +48,12 @@ the complete memory image.
   [Conditional assembly](#conditional-assembly).
 - **Text replacement:** `name LIT 'text'`. See [LIT](#lit).
 - **Accepted and ignored:** these only matter to a linker or debugger.
-  - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `ASSUME`, `REGDEF`, `REGBANK`,
-    `SSKDEF`, `PECDEF`, `TYPEDEC`.
+  - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `REGDEF`, `REGBANK`, `SSKDEF`,
+    `PECDEF`, `TYPEDEC`.
   - Listing and object-file controls: `$NOLIST`, `$TITLE(...)`, `$DEBUG`,
-    `$SEGMENTED`, and similar.
-- **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`.
+    and similar.
+- **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
+  `$SEGMENTED`/`$NONSEGMENTED`.
   `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
   come before the first statement; see [Controls](#controls).
 
@@ -201,13 +204,13 @@ Keil has two kinds of `$` controls:
 - **General controls** may appear anywhere.
 
 Primary controls that openc166 uses: `MOD167`/`M167`, `MOD166`/`M166`,
-`NOMOD166`/`NOM166`, `MODV2`, `CASE`, `NOCASE`, `INCDIR`/`ID`. Those it
-ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
+`NOMOD166`/`NOM166`, `MODV2`, `CASE`, `NOCASE`, `INCDIR`/`ID`,
+`SEGMENTED`/`SG`, `NONSEGMENTED`/`NOSG`. Those it ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
 `NOSYMBOLS`/`NOSB`, `XREF`/`XR`, `NOXREF`/`NOXR`, `DEBUG`/`DB`,
 `NODEBUG`/`NODB`, `PRINT`/`PR`, `NOPRINT`/`NOPR`, `OBJECT`/`OJ`,
 `NOOBJECT`/`NOOJ`, `ERRORPRINT`/`EP`, `NOERRORPRINT`/`NOEP`, `PAGING`,
 `NOPAGING`, `TABS`, `DATE`, `LINES`, `NOLINES`, `TYPE`, `NOTYPE`, `AMAKE`,
-`NOAMAKE`, `SEGMENTED`, `NONSEGMENTED`, `USEDEXTONLY`, `EXTMAC`, `MACRO`,
+`NOAMAKE`, `USEDEXTONLY`, `EXTMAC`, `MACRO`,
 `NOMACRO`, `MPL`, `NOMPL`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
 
 General controls that openc166 uses: `INCLUDE`/`IC`, `SET`, `RESET`, `IF`,
@@ -395,11 +398,72 @@ reach exactly +254 bytes once shortened stays long, as in Keil.
 Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
 for a near jump or call to a FAR label, A134 for an odd absolute target.
 
+## Segmented mode and DPPs
+
+**Background.** An instruction such as `MOV R1, mem` holds a 16-bit data
+address. On the C166 the top two bits of that address choose one of four
+*data page pointer* registers, `DPP0` to `DPP3`, and the other 14 bits are
+an offset inside the 16 KB page that the register points to. So the bytes
+of the instruction depend on which DPP the program will have pointed at
+the variable's page when the instruction runs.
+
+**Nonsegmented mode** (the default) uses the low 16 bits of an address as
+they are. Keil warns about the leftovers and openc166 does the same:
+
+- a `DPPn:` prefix is ignored with warning A55;
+- `ASSUME` is ignored with warning A54;
+- `SECTION ... AT` above `0FFFFH` is error A19.
+
+**Segmented mode** (`$SEGMENTED`, short `$SG`) lets the source say which
+DPP to use:
+
+- **`DPPn:address`** gives the DPP number in bits 15–14 and the offset
+  (`address AND 3FFFH`) below it: `MOV R1, DPP2:1234H` reads `9234H`.
+- **`ASSUME DPPn:target, ...`** says that DPP *n* will point to the page of
+  `target`: a section, a label in a section, `SYSTEM` (the SFR page) or
+  `NOTHING`. Memory operands, immediates and `[Rw+#x]` displacements that
+  name a label of that section (or an SFR, for `SYSTEM`) then use DPP *n*.
+  With `DS2` at `12340H` and `ASSUME DPP2:DS2`, `MOV R1, W1` (W1 at the
+  start of DS2) gives `F2F140A3`.
+- A section, or `SYSTEM`, can belong to one DPP only (error A94).
+  `ASSUME NOTHING` forgets all of them. An unknown name is silently
+  ignored, as in Keil.
+- A label or SFR with no `ASSUME` for its section gives warning A77, and
+  its low 16 bits are used. Inside an `EXTP`/`EXTPR` sequence the
+  instruction supplies the page, so there is no A77.
+- `EQU` and `SET` keep the `ASSUME` link only for a plain label
+  (`X SET W1`). A section name or `W1+2` becomes a plain number.
+
+**Data directives** (`DB`, `DW`, `DD`, `DPPTR`, `DSPTR`) store a label's
+plain address, even after `ASSUME`. A data section's *name* is different:
+alone, in parentheses, or plus or minus a number, it uses the DPP that
+`ASSUME` gives the section. With the example above, `DW DS2` stores
+`0A340H`, but `DW W1` stores `2340H` (with warning A62, as the value does
+not fit in 16 bits). A `DPPn:` prefix in data works on numbers and section
+names; a label keeps its address.
+
+**Pointer directives** store an address split for code that loads a DPP or
+segment register from a table:
+
+| Directive | Words stored |
+|---|---|
+| `DPPTR addr` | page offset (`addr AND 3FFFH`), page number (`addr SHR 14`) |
+| `DSPTR addr` | segment offset (`addr AND 0FFFFH`), segment number (`addr SHR 16`) |
+| `DBPTR bit` | bit number, then the `DPPTR` words of the bit's word address |
+
+**Other checks.**
+
+- A word access to an odd address (`MOV R1, 0E001H`) gives warning A134.
+- A `DATA` section with `AT` must fit in the 16 KB page it starts in
+  (error A86). Keil also checks the size of some `CODE`, `CONST` and
+  `HDATA` sections; openc166 does not yet.
+
 ## Expression details
 
 **Operator precedence**, from tightest to loosest, as in Keil:
 
-1. unary `-`, `NOT`, `HIGH`, `LOW`, `SEG`, `SOF`, `PAG`, `POF`;
+1. unary `-`, `NOT`, `HIGH`, `LOW`, `SEG`, `SOF`, `PAG`, `POF`, `DATA3`,
+   `DATA4`, `DATA8`, `DATA16`;
 2. `*`, `/`, `MOD`;
 3. `+`, `-`;
 4. `SHL`, `SHR`;
@@ -409,6 +473,17 @@ for a near jump or call to a FAR label, A134 for an odd absolute target.
 
 Unlike C, `A AND B > 1` means `(A AND B) > 1`, and `A OR B AND C` means
 `(A OR B) AND C`. Use parentheses.
+
+**`BOF`** gives the position (0..15) of a bit, and applies only to the name
+or the parenthesised expression right after it: write `BOF (PSW.3)`, as
+`BOF PSW.3` means `(BOF PSW).3` and fails with A61.
+
+**`DATA3`, `DATA4`, `DATA8` and `DATA16`** say how many bits an immediate
+needs. The value is cut to that many bits without a warning (`#DATA3 -1` is
+7, `#DATA8 1234H` is 34H), and the instruction uses the shortest form with
+at least that many bits: `MOV R1, #DATA4 3` is 2 bytes, but
+`ADD R1, #DATA4 3` is 4, as the short `ADD` has only 3 bits. Keil has no
+`DATA32` or `DATA64` (error A6).
 
 Plain numbers are signed 64-bit values. Labels work differently in Keil, and
 openc166 copies that, because the result can change the code.

@@ -13,10 +13,19 @@
 
 namespace oc166 {
 
+// ASSUME DPPn:SYSTEM; other ASSUME targets are section indices.
+constexpr int kAssumeSystem = -2;
+
 struct EncodeContext {
     isa::Cpu cpu = isa::Cpu::C166;
     std::int64_t pc = 0;   // address of the instruction
     bool ext_sfr = false;  // inside an EXTR/EXTPR/EXTSR range
+    // Segmented mode: memory operands, immediates and displacements of an
+    // address get the page of the DPP that ASSUME ties to its section (or to
+    // SYSTEM for SFRs). assume[n] is a section index, kAssumeSystem or -1.
+    bool segmented = false;
+    std::array<int, 4> assume{-1, -1, -1, -1};
+    bool ext_page = false;  // inside an EXTP/EXTPR range: the page is explicit
 };
 
 struct Encoding {
@@ -34,10 +43,12 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
 
 // Range of an ATOMIC or EXT* instruction: it covers the next 'count'
 // instructions; 'esfr' is set for EXTR, EXTPR and EXTSR, which switch short
-// register and bit addresses to the extended SFR space.
+// register and bit addresses to the extended SFR space, and 'page' for EXTP
+// and EXTPR, which give the data page of long addresses.
 struct ExtSequence {
     int count = 0;  // 0 if the instruction does not start a sequence
     bool esfr = false;
+    bool page = false;
 };
 ExtSequence ext_sequence(const Encoding& e);
 

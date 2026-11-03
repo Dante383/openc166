@@ -27,6 +27,7 @@ struct FieldMatch {
     Space space = Space::None;
     const char* code = nullptr;  // Bad: error code and message
     const char* message = nullptr;
+    bool quiet = false;  // Trunc chosen on purpose (DATAn): no warning
 };
 
 FieldMatch fits(Fit f, std::int64_t field, Space space = Space::None) {
@@ -41,7 +42,64 @@ Space bitoff_space(std::int64_t off, bool ext) {
     return ext ? Space::Esfr : Space::Sfr;
 }
 
+// An address as a memory operand, immediate or displacement sees it. An
+// explicit DPPn: prefix selects the page; in segmented mode, so does the DPP
+// that ASSUME ties to the value's section, or to SYSTEM for an SFR.
+// 'missing' marks an address of a label or SFR with no ASSUME for it.
+struct Paged {
+    Value value;
+    bool missing = false;
+};
+
+Paged paged(const Value& v, const EncodeContext& ctx) {
+    Paged p{v};
+    if (v.dpp >= 0) {
+        p.value.num = v.dpp_address();
+        return p;
+    }
+    if (!ctx.segmented || !v.known) return p;
+    const int key = v.section ? v.section : (v.type == VType::Sfr || v.system) ? kAssumeSystem : 0;
+    if (key == 0) return p;
+    for (int d = 0; d < 4; ++d) {
+        if (ctx.assume[d] != key) continue;
+        p.value.num = (std::int64_t{d} << 14) | (v.num & 0x3FFF);
+        return p;
+    }
+    // Keil does not ask for a DPP for a section name inside an AT section.
+    p.missing = v.section == 0 || v.rel != Rel::None;
+    return p;
+}
+
+bool is_immediate(Cls cls) {
+    switch (cls) {
+    case Cls::D3:
+    case Cls::D4:
+    case Cls::D8:
+    case Cls::D16:
+    case Cls::M8:
+    case Cls::Trap7:
+    case Cls::Irang2:
+    case Cls::Pag10:
+    case Cls::Seg8: return true;
+    default: return false;
+    }
+}
+
+// True if a memory operand of the instruction is a word, which must lie at
+// an even address. MOVBZ and MOVBS read a byte and write a word.
+bool word_memory(std::string_view mnemonic, std::size_t operand) {
+    if (mnemonic == "MOVBZ" || mnemonic == "MOVBS") return operand == 0;
+    return mnemonic.back() != 'B' || mnemonic == "SUB";
+}
+
 FieldMatch match_immediate(Cls cls, const Value& v) {
+    if (v.data_bits && (cls == Cls::D3 || cls == Cls::D4 || cls == Cls::D8 || cls == Cls::D16 || cls == Cls::M8)) {
+        // DATAn: the shortest form with at least n bits, else the longest form.
+        const int w = cls == Cls::D3 ? 3 : cls == Cls::D4 ? 4 : cls == Cls::D16 ? 16 : 8;
+        FieldMatch m = fits(v.data_bits <= w ? Fit::Strict : Fit::Trunc, v.known ? v.num & ((1 << w) - 1) : 0);
+        m.quiet = true;
+        return m;
+    }
     if (!v.known) return fits(Fit::Strict, 0);
     std::int64_t n = v.num;
     switch (cls) {
@@ -74,8 +132,16 @@ FieldMatch match_register(Cls cls, const Value& v) {
     return {};
 }
 
-FieldMatch match(Cls cls, const Operand& op, std::int64_t next_pc) {
-    const Value& v = op.value;
+FieldMatch match(Cls cls, const Operand& op, const EncodeContext& ctx, std::int64_t next_pc) {
+    Value v = op.value;
+    bool missing = false;  // an address with no DPP: the linker's business
+    if (cls == Cls::Mem || cls == Cls::IndDisp || is_immediate(cls)) {
+        Paged p = paged(v, ctx);
+        v = p.value;
+        missing = p.missing;
+    } else if (v.dpp >= 0) {
+        v.num = v.dpp_address();
+    }
     const bool direct = op.mode == OpMode::Direct;
     switch (cls) {
     case Cls::None: return {};
@@ -112,7 +178,10 @@ FieldMatch match(Cls cls, const Operand& op, std::int64_t next_pc) {
         if (!direct) return {};
         if (v.type == VType::Sfr) return fits(Fit::Strict, v.num);
         if (v.type != VType::Number) return {};
+        // Keil refuses a DATAn size on the address of a label.
+        if (v.data_bits && v.relocatable()) return {};
         if (!v.known) return fits(Fit::Strict, 0);
+        if (missing) return fits(Fit::Strict, v.num & 0xFFFF);
         return fits(v.num >= 0 && v.num <= 0xFFFF ? Fit::Strict : Fit::Trunc, v.num & 0xFFFF);
     case Cls::BitOff: {
         if (!direct) return {};
@@ -213,7 +282,7 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
         count_ok = true;
         Fit worst = Fit::Strict;
         for (std::size_t i = 0; i < ops.size() && worst != Fit::No; ++i) {
-            FieldMatch m = match(f.ops[i], ops[i], ctx.pc + f.size);
+            FieldMatch m = match(f.ops[i], ops[i], ctx, ctx.pc + f.size);
             if (m.fit < worst) worst = m.fit;
             if (m.fit == Fit::Bad && !bad_operand.code) {
                 bad_operand = m;
@@ -238,14 +307,26 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
 
     std::uint32_t fields[3] = {};
     for (std::size_t i = 0; i < ops.size(); ++i) {
-        FieldMatch m = match(form->ops[i], ops[i], ctx.pc + form->size);
+        FieldMatch m = match(form->ops[i], ops[i], ctx, ctx.pc + form->size);
         fields[i] = m.field;
         int col = ops[i].column;
         if (m.space == Space::Esfr && !ctx.ext_sfr)
             rep.warning("A111", "access to extended SFR outside an 'extended' sequence", col);
         if (m.space == Space::Sfr && ctx.ext_sfr)
             rep.warning("A110", "access to normal SFR within an 'extended' sequence", col);
-        if (m.fit != Fit::Trunc) continue;
+        if (form->ops[i] == Cls::Mem) {
+            const Value& v = ops[i].value;
+            Paged p = paged(v, ctx);
+            if (p.missing) {
+                if (!ctx.ext_page) rep.warning("A77", "missing 'DPP' information", col);
+                continue;
+            }
+            if (v.known && m.fit != Fit::Trunc && (p.value.num & 1) && !ops[i].unchecked &&
+                word_memory(form->mnemonic, i))
+                rep.warning("A134", "address alignment not sufficient", col);
+            if (ops[i].unchecked) continue;
+        }
+        if (m.fit != Fit::Trunc || m.quiet) continue;
         if (form->ops[i] == Cls::Irang2) {
             rep.error("A19", "numeric value out of range (1..4)", col);
         } else if (form->ops[i] == Cls::Rel) {
@@ -282,7 +363,7 @@ ExtSequence ext_sequence(const Encoding& e) {
     auto m = e.form->mnemonic;
     if (m != "ATOMIC" && m.substr(0, 3) != "EXT") return {};
     // The irang2 field is bits 5..4 of the second byte and holds count-1.
-    return {((e.bytes[1] >> 4) & 3) + 1, m == "EXTR" || m == "EXTPR" || m == "EXTSR"};
+    return {((e.bytes[1] >> 4) & 3) + 1, m == "EXTR" || m == "EXTPR" || m == "EXTSR", m == "EXTP" || m == "EXTPR"};
 }
 
 }  // namespace oc166

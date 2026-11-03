@@ -1,0 +1,152 @@
+; Segmented mode: DPPn: prefixes select the data page of an address, and
+; ASSUME tells the assembler which page each DPP register will point to.
+$MOD167
+$SEGMENTED
+DS1     SECTION DATA AT 0E000H
+V1      DSW     2
+VB      DSB     2
+DS1     ENDS
+DS2     SECTION DATA AT 12340H
+W1      DSW     2
+DS2     ENDS
+MYR     DEFR    0FE40H
+X1      EQU     DPP2:3FFEH+2
+X2      EQU     DPP1:V1
+X3      EQU     (DPP2:3FFEH)+2
+CSEC    SECTION CODE AT 0C000H
+P       PROC NEAR
+        MOV     R1,DPP2:1234H
+        MOV     R1,DPP2:12345H
+        MOV     R1,DPP1:V1
+        MOV     R1,DPP1:V1+2
+        MOV     R1,(DPP2:3FFEH)+2
+        MOV     R1,2+DPP2:1234H
+        MOV     R1,DPP2:(DPP1:1234H)
+        MOV     R1,X1
+        MOV     R1,X2
+        MOV     R1,X3
+        MOV     R1,[R2+#DPP2:1234H]
+        MOV     R1,#DPP3:1234H
+        MOV     R1,#HIGH DPP2:1234H
+        JMPA    cc_UC,DPP2:1234H
+        MOV     R1,DPP2:1235H
+        MOV     R1,DPP0:P
+; No ASSUME yet: addresses of data labels and SFRs miss their DPP.
+        MOV     R1,W1
+        MOV     R1,W1+1
+        MOV     R1,V1
+        MOV     R1,PSW
+        MOV     R1,PSW+1
+        MOV     R1,#V1
+        MOV     R1,#W1
+        MOV     R1,0FF10H
+        MOV     R1,12340H
+        ASSUME  DPP1:DS1, DPP2:DS2
+        MOV     R1,V1
+        MOV     R1,W1+2
+        MOV     R1,#W1
+        MOV     R1,[R2+#V1]
+        MOVB    RL1,VB+1
+        MOV     R1,V1+1
+        MOV     R1,#POF W1
+        MOV     R1,#PAG W1
+        ASSUME  DPP3:SYSTEM
+        MOV     R1,PSW
+        MOV     R1,MYR
+        ASSUME  DPP0:SYSTEM
+        ASSUME  DPP3:NOTHING
+        ASSUME  DPP0:SYSTEM
+        MOV     R1,PSW
+        MOV     R1,#PSW
+        MOV     R1,[R2+#PSW]
+        MOV     R1,PSW+2
+        MOV     PSW,R1
+        MOV     R1,0FF10H
+        BSET    PSW.3
+        ASSUME  DPP1:NOTHING
+        ASSUME  DPP2:DS1
+        MOV     R1,V1
+        MOV     R1,W1
+        ASSUME  DPP1:W1
+        MOV     R1,W1
+        ASSUME  DPP3:DS3
+        MOV     R1,U1
+        ASSUME  DPP3:UNDEF1
+        MOV     R1,U1
+        ASSUME  DPP4:DS1
+        ASSUME  DPP1
+        ASSUME  DPP1:1234H
+        ASSUME  DPP3:V1+2
+        ASSUME  DPP2:DS1
+        ASSUME  NOTHING
+        MOV     R1,V1
+        MOV     R1,PSW
+        EXTP    #4,#2
+        MOV     R1,V1
+        MOV     R1,PSW
+        EXTS    #1,#1
+        MOV     R1,V1
+; Section names
+        ASSUME  DPP1:DS1, DPP2:CSEC
+        MOV     R1,DS1
+        MOV     R1,#DS1+2
+        MOV     R1,[R2+#DS1]
+        MOV     R1,CSEC
+        MOV     R1,#DS3
+        MOV     R1,#PAG DS3
+P       ENDP
+        DW      DPP2:1234H, DPP2:V1, DPP2:12345H
+        DPPTR   W1, V1
+        DSPTR   W1
+        DBPTR   PSW.3
+CSEC    ENDS
+DS3     SECTION DATA AT 18000H
+U1      DSW     1
+DS3     ENDS
+; Section names in data directives: only a data section's name, alone or
+; plus or minus a number, uses the DPP that ASSUME gives the section. Labels,
+; other operators and values that went through EQU or SET keep the address.
+Y1      EQU     DS2
+Y2      SET     DS2+2
+Y3      EQU     W1+2
+Y4      SET     W1
+CS2     SECTION CODE AT 0D000H
+Q       PROC NEAR
+        ASSUME  NOTHING
+        DW      DS2
+        DD      DS2
+        ASSUME  DPP1:DS1, DPP2:DS2
+        DW      DS2
+        DW      DS1
+        DW      CSEC
+        DD      DS2
+        DB      DS2
+        DW      DS2+2
+        DW      2+DS2
+        DW      DS2-2
+        DW      (DS2)
+        DW      DS2+0
+        DW      DPP1:DS2
+        DW      DS2/2
+        DW      DS2 AND 0FFFFH
+        DW      DS2 OR 0
+        DW      HIGH DS2, LOW DS2
+        DW      SEG DS2, PAG DS2, POF DS2
+        DW      W1, W1+0, W1+2, V1+2
+        DPPTR   DS2
+        DPPTR   DS1
+        DSPTR   DS2
+        DSPTR   DS1+2
+        DW      Y1, Y2, Y3, Y4
+        MOV     R1,Y1
+        MOV     R1,#Y1
+        MOV     R1,[R2+#Y1]
+        MOV     R1,Y2
+        MOV     R1,Y3
+        MOV     R1,Y4
+        DW      PSW
+        ASSUME  DPP3:SYSTEM
+        DW      PSW
+Q       ENDP
+CS2     ENDS
+        END

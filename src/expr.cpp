@@ -11,14 +11,33 @@ namespace {
 using U = std::uint64_t;
 
 constexpr std::string_view kOperatorKeywords[] = {
-    "AND", "OR",  "XOR", "NOT", "MOD", "SHL", "SHR", "HIGH", "LOW", "EQ",  "NE",  "LT",
-    "LE",  "GT",  "GE",  "ULT", "ULE", "UGT", "UGE", "SEG",  "PAG", "SOF", "POF",
+    "AND", "OR",  "XOR", "NOT", "MOD", "SHL", "SHR", "HIGH", "LOW", "EQ",    "NE",    "LT",    "LE",     "GT",
+    "GE",  "ULT", "ULE", "UGT", "UGE", "SEG", "PAG", "SOF",  "POF", "BOF",   "DATA3", "DATA4", "DATA8", "DATA16",
 };
 
 int byte_word_index(std::string_view t, std::string_view prefix) {
     if (t.size() != prefix.size() + 1 || !ieq(t.substr(0, prefix.size()), prefix)) return -1;
     char d = t.back();
     return (d >= '0' && d <= '9') ? d - '0' : -1;
+}
+
+// Width of a DATAn operator (DATA3, DATA4, DATA8, DATA16), otherwise 0.
+// Returns -1 for DATA32 and DATA64, which Keil rejects.
+int data_width(const Token& t) {
+    if (t.kind != TokKind::Ident) return 0;
+    for (int w : {3, 4, 8, 16, 32, 64})
+        if (ieq(t.text, "DATA" + std::to_string(w))) return w > 16 ? -1 : w;
+    return 0;
+}
+
+// Operators other than + and - see a DPPn: prefixed value as the address it
+// stands for. Keil does not mask the offset here: DPP2:4000H OR 0 is C000H.
+Value resolved(Value v) {
+    if (v.dpp >= 0) {
+        v.num |= std::int64_t{v.dpp} << 14;
+        v.dpp = -1;
+    }
+    return v;
 }
 
 class Evaluator {
@@ -155,7 +174,8 @@ private:
         return select_bit(base);
     }
 
-    Value select_bit(const Value& base) {
+    Value select_bit(const Value& base_in) {
+        const Value base = resolved(base_in);
         const Token& dot = cur_.next();
         int pos_column = cur_.peek().column;
         // Keil accepts a signed position such as 0FE00H.-1.
@@ -186,14 +206,18 @@ private:
         return r;
     }
 
-    // Level 2: SEG PAG SOF POF
+    // Level 2: SEG PAG SOF POF BOF DATAn DPPn:
     Value segment_ops() {
         const Token& t = cur_.peek();
         if (t.kind == TokKind::Ident) {
+            if (int n = dpp_prefix_at(cur_); n >= 0) return dpp_prefix(n, t);
+            if (int w = data_width(t); w > 0) return data_op(w, t);
+            if (data_width(t) < 0) throw AsmError("A6", "syntax error: Keil A166 has DATA3, DATA4, DATA8 and DATA16 only", t.column);
+            if (ieq(t.text, "BOF")) return bit_offset_op(t);
             int which = ieq(t.text, "SEG") ? 0 : ieq(t.text, "PAG") ? 1 : ieq(t.text, "SOF") ? 2 : ieq(t.text, "POF") ? 3 : -1;
             if (which >= 0) {
                 cur_.next();
-                Value a = segment_ops();
+                Value a = resolved(segment_ops());
                 require_number(a, t.column);
                 U x = static_cast<U>(a.num);
                 U r = which == 0 ? x >> 16 : which == 1 ? x >> 14 : which == 2 ? x & 0xFFFF : x & 0x3FFF;
@@ -205,6 +229,78 @@ private:
         return bit_select();
     }
 
+    // DPPn: selects the data page register for an address in segmented mode;
+    // the operand binds like a unary operator (DPP2:HIGH x is DPP2:(HIGH x)).
+    // Only + and - keep the prefix; other operators see the address.
+    // Nonsegmented mode ignores the prefix.
+    Value dpp_prefix(int n, const Token& t) {
+        cur_.next();
+        cur_.next();
+        Value a = unary();
+        if (a.type == VType::Gpr) {
+            a.num = 0xFE00 + 2 * (0xF0 + a.num);
+            a.type = VType::Sfr;
+        }
+        require_number(a, t.column);
+        if (!ctx_.segmented()) {
+            ctx_.warning(AsmError("A55", "'DPP' in nonsegmented mode ignored", t.column));
+            return a;
+        }
+        if (a.ltype == LType::Near || a.ltype == LType::Far) {
+            ctx_.soft_error(AsmError("A100", "illegal 'DPP' operand: a code label has no data page", t.column));
+            throw AsmError("A74", "operand type mismatch", t.column);
+        }
+        a.type = VType::Number;
+        a.dpp = static_cast<std::int8_t>(n);
+        return a;
+    }
+
+    // DATAn masks a number to n bits and makes an immediate use an n-bit
+    // form: the shortest one that holds n bits, else the longest one there
+    // is. Its operand binds like a unary operator (DATA4 -1+20 is 0FH+20).
+    // Arithmetic on the result drops the size; parentheses keep it.
+    Value data_op(int width, const Token& t) {
+        cur_.next();
+        Value a = resolved(unary());
+        if (a.type == VType::Sfr) {
+            // Keil reports a register here but goes on with its address.
+            ctx_.soft_error(AsmError("A104", "DATAn operator: incompatible operand", t.column));
+            a.type = VType::Number;
+        } else if (a.type != VType::Number) {
+            throw AsmError("A104", "DATAn operator: incompatible operand", t.column);
+        }
+        // Relocatable addresses keep their value; the linker would truncate them.
+        if (!a.relocatable()) {
+            a.num &= (std::int64_t{1} << width) - 1;
+            a.unsig = true;
+        }
+        a.data_bits = static_cast<std::uint8_t>(width);
+        return a;
+    }
+
+    // BOF: the bit position (0..15) of a bit address, a 4-bit immediate.
+    // It binds tighter than '.', so it takes a bit name, not word.bit.
+    Value bit_offset_op(const Token& t) {
+        cur_.next();
+        Value a = primary();
+        Value r = Value::number(0);
+        r.data_bits = 4;
+        r.unsig = true;
+        if (!a.known) {
+            r.known = false;  // a bit defined later
+            return r;
+        }
+        if (a.type == VType::Bit && bit_word_address(a) >= 0) {
+            r.num = a.bit;
+            return r;
+        }
+        if (a.type == VType::Number && a.rel == Rel::None) {
+            ctx_.soft_error(AsmError("A66", "value out of range: BOF needs a bit address", t.column));
+            return r;
+        }
+        throw AsmError("A61", "illegal operand for this operator: BOF needs a bit address", t.column);
+    }
+
     // Level 3: HIGH LOW BYTEn WORDn NOT unary + -
     Value unary() {
         const Token& t = cur_.peek();
@@ -213,6 +309,7 @@ private:
             Value a = unary();
             require_number(a, t.column);
             if (t.text == "+") return a;
+            a = resolved(a);
             reject_negated(a, t.column);
             return num(a, a, U{0} - static_cast<U>(a.num));
         }
@@ -223,7 +320,7 @@ private:
             if (byte > 7 || (word >= 0 && (word > 6 || word % 2))) throw AsmError("A6", "syntax error", t.column);
             if (high || low || bnot || byte >= 0 || word >= 0) {
                 cur_.next();
-                Value a = unary();
+                Value a = resolved(unary());
                 require_number(a, t.column);
                 if (bnot) reject_negated(a, t.column);
                 U x = static_cast<U>(a.num);
@@ -253,7 +350,7 @@ private:
             }
             require_number(a, t.column);
             require_number(b, t.column);
-            a = apply(op, a, b, t.column);
+            a = (op == Add || op == Sub) ? add_sub(op, a, b, t.column) : apply(op, resolved(a), resolved(b), t.column);
         }
     }
 
@@ -288,7 +385,19 @@ private:
     // In a section with a fixed address, "label + n" with n not zero (a
     // number or a label difference) is no longer relocatable; Keil treats it
     // like a label difference.
+    // A DPPn: prefix, an SFR origin (for ASSUME DPPn:SYSTEM) and the section
+    // of a section name carry over to the sum.
     static Value add_sub(int op, const Value& a, const Value& b, int column) {
+        Value v = add_sub_value(op, a, b, column);
+        v.dpp = a.dpp >= 0 ? a.dpp : b.dpp;
+        if (a.rel == Rel::None && b.rel == Rel::None) {
+            v.system = a.system || b.system || a.type == VType::Sfr || b.type == VType::Sfr;
+            if (v.section == 0) v.section = a.section ? a.section : b.section;
+        }
+        return v;
+    }
+
+    static Value add_sub_value(int op, const Value& a, const Value& b, int column) {
         U x = static_cast<U>(a.num), y = static_cast<U>(b.num);
         const bool rel_left = a.rel == Rel::Addr || a.rel == Rel::Diff;
         if (b.rel == Rel::Diff && !rel_left && (y >> 60)) y |= ~kRelMask;  // sign-extend from 61 bits
@@ -321,7 +430,6 @@ private:
     }
 
     static Value apply(int op, const Value& a, const Value& b, int column) {
-        if (op == Add || op == Sub) return add_sub(op, a, b, column);
         U x = static_cast<U>(a.num), y = static_cast<U>(b.num);
         std::int64_t sx = a.num, sy = b.num;
         const bool known = a.known && b.known;
@@ -399,12 +507,26 @@ bool is_operator_keyword(std::string_view name) {
     return byte_word_index(name, "BYTE") >= 0 || byte_word_index(name, "WORD") >= 0;
 }
 
+int dpp_number(std::string_view name) {
+    int n = byte_word_index(name, "DPP");
+    return n >= 0 && n <= 3 ? n : -1;
+}
+
+int dpp_prefix_at(const TokenCursor& cur) {
+    const Token& t = cur.peek();
+    if (t.kind != TokKind::Ident || !cur.peek(1).is_op(":")) return -1;
+    return dpp_number(t.text);
+}
+
 Value evaluate(TokenCursor& cur, SymbolContext& ctx) { return Evaluator(cur, ctx).expression(); }
 
 Value evaluate_immediate(TokenCursor& cur, SymbolContext& ctx) {
     int column = cur.peek().column;
     Value v = Evaluator(cur, ctx, true).expression();
-    if (v.type == VType::Sfr) v.type = VType::Number;
+    if (v.type == VType::Sfr) {
+        v.type = VType::Number;
+        v.system = true;
+    }
     if (v.type == VType::Cc) throw AsmError("A6", "syntax error: a condition code is not a value", column);
     if (v.type != VType::Number) throw AsmError("A70", "invalid type of expression", column);
     return v;

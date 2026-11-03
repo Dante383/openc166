@@ -22,6 +22,9 @@ struct Operand {
     Value value;            // Direct/Imm: the expression; IndDisp: the displacement
     std::uint8_t reg = 0;   // indirect modes: pointer register number
     int column = 0;
+    // Nonsegmented mode: a direct operand that starts with a DPPn: prefix.
+    // Keil then skips its truncation and alignment checks.
+    bool unchecked = false;
 };
 
 // Parses comma-separated operands up to the end of the line.

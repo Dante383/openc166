@@ -17,14 +17,17 @@ Early development (version 0.x). What works today:
 
 - **The complete C166 and C167 instruction set**, with all addressing modes.
   Every instruction form is checked byte for byte against Keil A166 V5.38:
-  over 4,000 checks of code bytes, addresses and symbol values, all
+  over 5,000 checks of code bytes, addresses and symbol values, all
   identical.
 - Keil expression syntax: operators, `HIGH`/`LOW`, `SOF`/`SEG`/`PAG`/`POF`,
-  character constants, bit addresses such as `PSW.3` or `0FD00H.5`, and
-  extended-SFR checks inside `EXTR` sequences.
+  `BOF`, `DATA3`/`DATA4`/`DATA8`/`DATA16`, character constants, bit
+  addresses such as `PSW.3` or `0FD00H.5`, and extended-SFR checks inside
+  `EXTR` sequences.
 - Absolute sections (`SECTION CODE AT 0E000H`), `PROC`/`ENDP`, `ORG`, `EVEN`,
-  `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`, and `DS`/`DSB`/`DSW`/`DSD`, including
-  Keil's automatic alignment of word data.
+  `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`, `DS`/`DSB`/`DSW`/`DSD`, and
+  `DPPTR`/`DSPTR`/`DBPTR`, including Keil's automatic alignment of word data.
+- Segmented mode (`$SEGMENTED`): `ASSUME`, `DPPn:` prefixes, and Keil's
+  rules for which data page register an address goes through.
 - `DEFR`/`DEFA`/`DEFB`, the register-definition directives that register
   files use, with Keil's rules for repeated definitions.
 - A built-in `REG167.INC` register file, written from Infineon's manuals, so
@@ -41,9 +44,9 @@ Early development (version 0.x). What works today:
   bit 0 of a condition counts) and listing format.
 - `LIT` text replacement (`PORT LIT 'R2'`), with Keil's rules for where
   names are replaced.
-- The `$MOD167` and `$CASE` controls, with Keil's rule that these come
-  before the first statement. Listing-only controls are accepted and
-  ignored.
+- The `$MOD167`, `$CASE` and `$SEGMENTED` controls, with Keil's rule that
+  these come before the first statement. Listing-only controls are accepted
+  and ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
   the Keil manual.
 - A Python package and a C API, for tools that assemble code themselves.

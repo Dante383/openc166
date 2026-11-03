@@ -44,8 +44,20 @@ struct Value {
     LType ltype = LType::None;
     bool short_jump = false;  // SHORT operator: JMP/CALL must use the relative form
     std::uint16_t section = 0;  // Addr: index of the section that holds the address
+    // Segmented mode: the DPPn: prefix (0..3) that selects the data page,
+    // with num holding the page offset; -1 if none.
+    std::int8_t dpp = -1;
+    // Size class (3, 4, 8 or 16 bits) that a DATAn or BOF operator gave an
+    // immediate; 0 if none.
+    std::uint8_t data_bits = 0;
+    // Derived from an SFR address, so ASSUME DPPn:SYSTEM applies to it.
+    bool system = false;
 
     bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg; }
+
+    // The 16-bit address a DPPn: prefixed value stands for: the DPP number in
+    // bits 15..14 above the page offset.
+    std::int64_t dpp_address() const { return (std::int64_t{dpp} << 14) | (num & 0x3FFF); }
 
     static Value number(std::int64_t n) { return Value{VType::Number, true, false, 0, n}; }
     static Value unknown() { return Value{VType::Number, false, false, 0, 0}; }

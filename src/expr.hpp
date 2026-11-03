@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // A166 expression evaluation with Keil operator precedence:
-//   ()  >  .  >  SEG PAG SOF POF  >  HIGH LOW BYTEn WORDn NOT unary+-
+//   ()  >  .  >  SEG PAG SOF POF BOF DATAn DPPn:  >  HIGH LOW BYTEn WORDn NOT unary+-
 //   >  * / MOD  >  + -  >  SHL SHR << >>  >  AND OR XOR & | ^
 //   >  EQ NE LT LE GT GE ULT ULE UGT UGE == != < <= > >=
 //   >  SHORT, type PTR (prefixes that apply to the whole rest)
@@ -37,6 +37,11 @@ public:
     // Reports an error after which evaluation goes on, as Keil does; contexts
     // without a diagnostics sink make it fatal.
     virtual void soft_error(const AsmError& e) { throw e; }
+    // Reports a warning; contexts without a diagnostics sink drop it.
+    virtual void warning(const AsmError& w) { (void)w; }
+    // True in Keil's segmented mode ($SEGMENTED), where DPPn: prefixes and
+    // ASSUME select data pages. Nonsegmented mode ignores both.
+    virtual bool segmented() const { return false; }
     // In the final pass undefined symbols are errors; before it they are
     // unknown values that later passes resolve.
     virtual bool final_pass() const = 0;
@@ -96,5 +101,11 @@ std::optional<Value> evaluate_bit_select(TokenCursor& cur, SymbolContext& ctx);
 
 // True if the identifier is an expression operator keyword (AND, SHL, ...).
 bool is_operator_keyword(std::string_view name);
+
+// DPP register number (0..3) if the name is DPP0..DPP3, otherwise -1.
+int dpp_number(std::string_view name);
+
+// DPP register number if the cursor is at a "DPPn :" prefix, otherwise -1.
+int dpp_prefix_at(const TokenCursor& cur);
 
 }  // namespace oc166

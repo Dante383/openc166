@@ -42,6 +42,7 @@ Operand parse_operand(TokenCursor& cur, SymbolContext& ctx) {
         return op;
     }
     op.mode = OpMode::Direct;
+    op.unchecked = !ctx.segmented() && dpp_prefix_at(cur) >= 0;
     op.value = evaluate(cur, ctx);
     return op;
 }
