@@ -13,7 +13,7 @@ CMake.
 
 ## Status
 
-Early development (version 0.0.x). What works today:
+Early development (version 0.x). What works today:
 
 - **The complete C166 and C167 instruction set**, with all addressing modes.
   Every instruction form is checked byte for byte against Keil A166 V5.38:
@@ -54,7 +54,7 @@ Not done yet:
 - relocatable sections and linking, and OMF-166 object files
 - the TASKING assembler dialect
 
-See [docs/compatibility.md](docs/compatibility.md) for exact behaviour and
+See [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md) for exact behaviour and
 the few places where openc166 deliberately differs from Keil.
 
 ## Building
@@ -90,17 +90,21 @@ The binary starts at the lowest address used. For example, code in
 
 The exit status is 0 on success, 1 on assembly errors (no binary is
 written), and 2 for usage or file errors. Messages use the format
-`file:line: error A74: ...`.
+`file:line:column: error A74: ...`.
 
-[examples/payload.a66](examples/payload.a66) is a short, commented example.
-[examples/mtos/](examples/mtos/) holds real ECU payloads for Siemens SIMK43
+[examples/payload.a66](https://github.com/Dante383/openc166/blob/main/examples/payload.a66) is a short, commented example.
+[examples/mtos/](https://github.com/Dante383/openc166/tree/main/examples/mtos) holds real ECU payloads for Siemens SIMK43
 ECUs, taken from gkflasher.
 
 ## Python
 
 ```sh
-pip install .        # from a checkout; builds the library with CMake
+pip install openc166     # or "pip install ." in a checkout
 ```
+
+Wheels are published for Linux, Windows and macOS on x86 and ARM; other
+systems build from source, which needs CMake and a C++20 compiler. To get
+just the `openc166` command, `pipx install openc166` works too.
 
 ```python
 import openc166
@@ -135,7 +139,7 @@ every Python version.
 
 ## C API
 
-[include/openc166/openc166.h](include/openc166/openc166.h) declares a plain C
+[include/openc166/openc166.h](https://github.com/Dante383/openc166/blob/main/include/openc166/openc166.h) declares a plain C
 interface, exported by the shared library (`libopenc166.so`,
 `libopenc166.dylib` or `openc166.dll`). Any language that can call C can
 use it. The header documents every function; the Python package is an
@@ -157,7 +161,7 @@ example of a complete binding.
   with L166 and OH166 and compare the complete memory image, and `--codes`
   to list lines where both assemblers report an error but with different
   codes. Lines marked `; DIVERGES:` are deliberate differences (see
-  [docs/compatibility.md](docs/compatibility.md)) and are skipped.
+  [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md)) and are skipped.
 
   On Linux and macOS, Keil runs under Wine. To generate test lines that
   cover the whole instruction set, run
@@ -169,7 +173,7 @@ example of a complete binding.
 
 ## License
 
-MIT; see [LICENSE](LICENSE). The bundled [doctest](third_party/doctest)
+MIT; see [LICENSE](https://github.com/Dante383/openc166/blob/main/LICENSE). The bundled [doctest](https://github.com/Dante383/openc166/tree/main/third_party/doctest)
 test framework is also MIT.
 
 openc166 is not affiliated with Arm/Keil or Infineon. "Keil", "A166",

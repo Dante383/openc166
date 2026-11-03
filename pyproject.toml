@@ -45,3 +45,21 @@ OPENC166_BUILD_TESTS = "OFF"
 provider = "scikit_build_core.metadata.regex"
 input = "CMakeLists.txt"
 regex = 'project\(openc166\s+VERSION\s+(?P<value>[0-9][0-9.]*)'
+
+# Wheels for PyPI (.github/workflows/wheels.yml). A wheel does not depend on
+# the Python version, so cibuildwheel builds it once per platform and then
+# tests that same wheel on the oldest and the newest supported Python.
+[tool.cibuildwheel]
+build = ["cp39-*", "cp314-*"]
+test-sources = ["CMakeLists.txt", "examples", "python/tests"]
+test-command = "python -m unittest discover -s python/tests -v"
+test-environment = { OPENC166_TEST_COMMAND = "1" }
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+# std::filesystem needs macOS 10.15.
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[tool.cibuildwheel.windows]
+# The DLL and the program link the C runtime statically: nothing to bundle.
+repair-wheel-command = ""

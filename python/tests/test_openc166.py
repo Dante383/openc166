@@ -10,6 +10,8 @@ or against a build tree (ctest does this):
 import doctest
 import os
 import re
+import shutil
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -63,6 +65,41 @@ class ExampleTest(unittest.TestCase):
         self.assertEqual(gap, 204)
         image = result.image(fill=0)
         self.assertEqual(image.data[result.chunks[0].end - image.base], 0)
+
+
+class CommandTest(unittest.TestCase):
+    """The openc166 command that "pip install" puts on PATH.
+
+    Skipped when it is not installed, unless OPENC166_TEST_COMMAND is set.
+    """
+
+    def setUp(self):
+        self.program = shutil.which("openc166")
+        if self.program is None:
+            if os.environ.get("OPENC166_TEST_COMMAND"):
+                self.fail("the openc166 command is not on PATH")
+            self.skipTest("the openc166 command is not installed")
+
+    def run_program(self, *args):
+        return subprocess.run([self.program, *args], capture_output=True, text=True)
+
+    def test_assembles_example(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "marker.bin")
+            proc = self.run_program(os.path.join(EXAMPLES, "mtos", "marker.a66"), "-o", out)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            with open(out, "rb") as f:
+                self.assertEqual(f.read().hex(), "e6f4efbef6f402c0db00")
+
+    def test_error_exit_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "bad.a66")
+            with open(src, "w") as f:
+                f.write(" MOV R1, NOWHERE\n END\n")
+            proc = self.run_program(src, "-o", os.path.join(tmp, "bad.bin"))
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("bad.a66:1:10: error A42", proc.stdout + proc.stderr)
+            self.assertFalse(os.path.exists(os.path.join(tmp, "bad.bin")))
 
 
 class AssembleTest(unittest.TestCase):

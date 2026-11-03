@@ -1,0 +1,89 @@
+# Builds and tests the Python packages (sdist and wheels) on every push to
+# main and every pull request. Publishing a GitHub release also uploads them
+# to PyPI; see docs/releasing.md.
+name: Wheels
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdist:
+    name: Source package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - name: Build
+        run: |
+          python -m pip install build twine
+          python -m build --sdist
+          python -m twine check --strict dist/*
+      - name: Check that the release tag matches the version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(basename dist/openc166-*.tar.gz .tar.gz)
+          version=${version#openc166-}
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Release tag $TAG does not match the version in CMakeLists.txt; expected v$version"
+            exit 1
+          fi
+      - name: Install and test
+        env:
+          OPENC166_TEST_COMMAND: "1"
+        run: |
+          python -m pip install dist/*.tar.gz
+          python -m unittest discover -s python/tests -v
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux x86-64 and ARM64 (glibc and musl), Windows x64, x86 and ARM64,
+        # macOS Intel and Apple silicon (see [tool.cibuildwheel] in pyproject.toml).
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, windows-11-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pypa/cibuildwheel@v4.3.5
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [sdist, wheels]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/openc166/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

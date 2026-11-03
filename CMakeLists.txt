@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(openc166
-        VERSION 0.0.1
+        VERSION 0.1.0
         DESCRIPTION "Keil A166-compatible assembler for the Infineon C166/C167 family"
         LANGUAGES CXX)
 
