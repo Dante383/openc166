@@ -52,4 +52,46 @@ target_include_directories(openc166_core
         ${OPENC166_GENERATED_DIR})
 target_compile_features(openc166_core PUBLIC cxx_std_20)
 target_link_libraries(openc166_core PRIVATE openc166_options)
-set_target_properties(openc166_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(openc166_core PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON)
+
+# The C interface (include/openc166/openc166.h) as a shared library:
+# libopenc166.so, libopenc166.dylib or openc166.dll. It exports only the
+# oc166_* functions. The Python package loads it with ctypes.
+if(OPENC166_BUILD_SHARED)
+    add_library(openc166_shared SHARED capi.cpp)
+    add_library(openc166::shared ALIAS openc166_shared)
+    set_target_properties(openc166_shared PROPERTIES
+        OUTPUT_NAME openc166
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN ON)
+    target_include_directories(openc166_shared PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+    target_compile_definitions(openc166_shared PRIVATE
+        OPENC166_BUILDING_LIBRARY
+        OPENC166_VERSION="${PROJECT_VERSION}")
+    target_link_libraries(openc166_shared PRIVATE openc166_core openc166_options)
+    # Keep the C++ standard library code inside private, too.
+    if(APPLE)
+        target_link_options(openc166_shared PRIVATE "LINKER:-exported_symbol,_oc166_*")
+    elseif(UNIX AND NOT CYGWIN)
+        target_link_options(openc166_shared PRIVATE "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/capi.map")
+        set_property(TARGET openc166_shared APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/capi.map)
+    endif()
+
+    if(SKBUILD)
+        # Python wheel: the library goes into the openc166 package.
+        install(FILES $<TARGET_FILE:openc166_shared> DESTINATION openc166)
+    else()
+        include(GNUInstallDirs)
+        install(TARGETS openc166_shared
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(FILES ${PROJECT_SOURCE_DIR}/include/openc166/openc166.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/openc166)
+    endif()
+endif()

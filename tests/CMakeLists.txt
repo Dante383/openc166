@@ -10,8 +10,37 @@ add_executable(openc166_tests
     unit/test_lit.cpp
     unit/test_cond.cpp)
 target_include_directories(openc166_tests PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
+# doctest's own declarations of std types break with newer MSVC libraries.
+target_compile_definitions(openc166_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 target_link_libraries(openc166_tests PRIVATE openc166::core openc166_options)
 add_test(NAME unit COMMAND openc166_tests)
+
+if(TARGET openc166_shared)
+    # The C interface, tested from C.
+    enable_language(C)
+    add_executable(openc166_capi_test capi/test_capi.c)
+    set_target_properties(openc166_capi_test PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+    target_link_libraries(openc166_capi_test PRIVATE openc166::shared openc166_options)
+    if(WIN32)
+        # Windows finds DLLs next to the program.
+        add_custom_command(TARGET openc166_capi_test POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:openc166_shared> $<TARGET_FILE_DIR:openc166_capi_test>)
+    endif()
+    add_test(NAME capi COMMAND openc166_capi_test)
+
+    # The Python package, run against the library in the build tree. A
+    # sanitizer build cannot be loaded into an ordinary Python.
+    find_package(Python3 3.9 COMPONENTS Interpreter)
+    if(Python3_FOUND AND NOT OPENC166_SANITIZE)
+        add_test(NAME python
+            COMMAND ${CMAKE_COMMAND} -E env
+                OPENC166_LIBRARY=$<TARGET_FILE:openc166_shared>
+                PYTHONPATH=${PROJECT_SOURCE_DIR}/python
+                PYTHONDONTWRITEBYTECODE=1
+                ${Python3_EXECUTABLE} -m unittest discover -s ${PROJECT_SOURCE_DIR}/python/tests -v)
+    endif()
+endif()
 
 if(TARGET openc166_cli)
     # Assembles an example and compares the binary byte for byte.

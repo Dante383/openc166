@@ -7,6 +7,13 @@ explicit load/execution addresses, for integration into the Python-based OpenGK
 
 Status: research only — no implementation.
 
+> **Later decision (implementation):** the Python package talks to the C API
+> through **ctypes** instead of a nanobind module. The package is plain
+> Python plus the shared library, so one wheel per platform serves every
+> Python 3 version. The C API that was built is
+> [include/openc166/openc166.h](../include/openc166/openc166.h); it differs
+> from the sketch in §5.3.
+
 ---
 
 ## 1. Executive summary
@@ -241,6 +248,8 @@ openc166/
 ```
 
 ### 5.3 C API sketch
+
+(Superseded by [include/openc166/openc166.h](../include/openc166/openc166.h).)
 
 ```c
 oc166_ctx *oc166_create(void);

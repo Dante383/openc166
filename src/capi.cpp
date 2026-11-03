@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: MIT
+// The C interface (include/openc166/openc166.h) over the C++ assembler.
+// Every function catches all exceptions: none may cross into C.
+#include "openc166/openc166.h"
+
+#include "assembler.hpp"
+#include "predef.hpp"
+
+#include <cctype>
+#include <memory>
+#include <new>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#ifndef OPENC166_VERSION
+#error "OPENC166_VERSION must be defined"
+#endif
+
+struct oc166_options {
+    oc166::AssembleOptions opt;
+};
+
+struct oc166_result {
+    oc166::AssemblyResult res;
+    std::vector<std::string> diagnostic_text;  // format_diagnostic() of each diagnostic
+    std::optional<std::string> listing;
+    oc166::FlatImage image;
+    std::string last_error;
+};
+
+namespace {
+
+const char* symbol_kind(oc166::SymbolKind k) {
+    switch (k) {
+    case oc166::SymbolKind::Label: return "label";
+    case oc166::SymbolKind::Equ: return "equ";
+    case oc166::SymbolKind::Set: return "set";
+    case oc166::SymbolKind::Bit: return "bit";
+    case oc166::SymbolKind::Lit: return "lit";
+    }
+    return "";
+}
+
+const char* label_type(oc166::LType t) {
+    switch (t) {
+    case oc166::LType::None: return "";
+    case oc166::LType::Near: return "near";
+    case oc166::LType::Far: return "far";
+    case oc166::LType::Byte: return "byte";
+    case oc166::LType::Word: return "word";
+    case oc166::LType::Dword: return "dword";
+    }
+    return "";
+}
+
+void fill_symbol(const oc166::Symbol& s, oc166_symbol* out) {
+    const oc166::Value& v = s.value;
+    out->name = s.name.c_str();
+    out->kind = symbol_kind(s.kind);
+    out->label_type = label_type(v.ltype);
+    out->value = v.num;
+    out->bit = 0;
+    out->known = v.known ? 1 : 0;
+    out->text = s.text.c_str();
+    out->line = s.line;
+    if (s.kind == oc166::SymbolKind::Lit) {
+        out->type = "";
+        out->label_type = "";
+        out->value = 0;
+        out->known = 1;
+        return;
+    }
+    switch (v.type) {
+    case oc166::VType::Number: out->type = "number"; break;
+    case oc166::VType::Gpr: out->type = "gpr"; break;
+    case oc166::VType::GprB: out->type = "gpr_byte"; break;
+    case oc166::VType::Sfr: out->type = "sfr"; break;
+    case oc166::VType::Cc: out->type = "cc"; break;
+    case oc166::VType::Bit:
+        // Symbols never name bits of GPRs, so the word address is known.
+        out->type = "bit";
+        out->value = oc166::bit_word_address(v);
+        out->bit = v.bit;
+        break;
+    }
+}
+
+}  // namespace
+
+extern "C" {
+
+int oc166_api_version(void) { return OC166_API_VERSION; }
+
+const char* oc166_version(void) { return OPENC166_VERSION; }
+
+oc166_options* oc166_options_new(void) { return new (std::nothrow) oc166_options; }
+
+void oc166_options_free(oc166_options* opts) { delete opts; }
+
+int oc166_options_set_cpu(oc166_options* opts, const char* cpu) {
+    if (!opts || !cpu) return -1;
+    std::string v(cpu);
+    for (auto& c : v) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (v == "c166" || v == "80c166")
+        opts->opt.cpu = oc166::isa::Cpu::C166;
+    else if (v == "c167" || v == "80c167" || v == "st10")
+        opts->opt.cpu = oc166::isa::Cpu::C167;
+    else
+        return -1;
+    return 0;
+}
+
+int oc166_options_set_origin(oc166_options* opts, int64_t origin) {
+    if (!opts || origin < 0) return -1;
+    opts->opt.origin = origin;
+    return 0;
+}
+
+int oc166_options_add_include_dir(oc166_options* opts, const char* dir) {
+    if (!opts || !dir) return -1;
+    try {
+        opts->opt.include_dirs.emplace_back(dir);
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
+oc166_result* oc166_assemble(const oc166_options* opts, const char* source, size_t length, const char* file_name) {
+    if (!source && length != 0) return nullptr;
+    try {
+        oc166::AssembleOptions opt = opts ? opts->opt : oc166::AssembleOptions{};
+        if (file_name) opt.file_name = file_name;
+        auto r = std::make_unique<oc166_result>();
+        try {
+            r->res = oc166::assemble(std::string_view(source ? source : "", length), opt);
+        } catch (const std::bad_alloc&) {
+            return nullptr;
+        } catch (const std::exception& e) {
+            // A bug in openc166: report it instead of losing the whole result.
+            r->res.diagnostics.push_back(
+                {oc166::Severity::Error, "OC0", std::string("internal error: ") + e.what(), opt.file_name, 0, 0});
+        }
+        r->diagnostic_text.reserve(r->res.diagnostics.size());
+        for (const auto& d : r->res.diagnostics) r->diagnostic_text.push_back(oc166::format_diagnostic(d));
+        return r.release();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+void oc166_result_free(oc166_result* r) { delete r; }
+
+size_t oc166_result_error_count(const oc166_result* r) { return r ? r->res.error_count() : 0; }
+
+size_t oc166_result_warning_count(const oc166_result* r) { return r ? r->res.warning_count() : 0; }
+
+const char* oc166_result_cpu(const oc166_result* r) {
+    if (!r) return "";
+    return r->res.cpu == oc166::isa::Cpu::C167 ? "c167" : "c166";
+}
+
+size_t oc166_result_diagnostic_count(const oc166_result* r) { return r ? r->res.diagnostics.size() : 0; }
+
+int oc166_result_diagnostic(const oc166_result* r, size_t index, oc166_diagnostic* out) {
+    if (!r || !out || index >= r->res.diagnostics.size()) return -1;
+    const oc166::Diagnostic& d = r->res.diagnostics[index];
+    out->is_error = d.severity == oc166::Severity::Error ? 1 : 0;
+    out->code = d.code.c_str();
+    out->message = d.message.c_str();
+    out->file = d.file.c_str();
+    out->line = d.line;
+    out->column = d.column;
+    out->text = r->diagnostic_text[index].c_str();
+    return 0;
+}
+
+size_t oc166_result_chunk_count(const oc166_result* r) { return r ? r->res.chunks.size() : 0; }
+
+int oc166_result_chunk(const oc166_result* r, size_t index, oc166_chunk* out) {
+    if (!r || !out || index >= r->res.chunks.size()) return -1;
+    const oc166::Chunk& c = r->res.chunks[index];
+    out->address = c.address;
+    out->data = c.bytes.data();
+    out->size = c.bytes.size();
+    return 0;
+}
+
+int oc166_result_image(oc166_result* r, int has_base, int64_t base, uint8_t fill, oc166_image* out) {
+    if (!r || !out) return -1;
+    try {
+        r->last_error.clear();
+        r->image = oc166::flat_image(r->res, has_base ? std::optional<std::int64_t>(base) : std::nullopt, fill);
+        out->base = r->image.base;
+        out->data = r->image.bytes.data();
+        out->size = r->image.bytes.size();
+        return 0;
+    } catch (const std::exception& e) {
+        try {
+            r->last_error = e.what();
+        } catch (...) {
+        }
+        return -1;
+    } catch (...) {
+        return -1;
+    }
+}
+
+const char* oc166_result_last_error(const oc166_result* r) { return r ? r->last_error.c_str() : ""; }
+
+const char* oc166_result_listing(oc166_result* r) {
+    if (!r) return nullptr;
+    try {
+        if (!r->listing) r->listing = oc166::format_listing(r->res);
+        return r->listing->c_str();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+size_t oc166_result_symbol_count(const oc166_result* r) { return r ? r->res.symbols.size() : 0; }
+
+int oc166_result_symbol(const oc166_result* r, size_t index, oc166_symbol* out) {
+    if (!r || !out || index >= r->res.symbols.size()) return -1;
+    fill_symbol(r->res.symbols[index], out);
+    return 0;
+}
+
+}  // extern "C"

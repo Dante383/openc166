@@ -48,9 +48,9 @@ FieldMatch match_immediate(Cls cls, const Value& v) {
     case Cls::D3:
     case Cls::D4: {
         int w = cls == Cls::D3 ? 3 : 4;
-        Fit f = (n >= 0 && n < (1 << w)) ? Fit::Strict : fits_width(v, w) ? Fit::Loose : Fit::Trunc;
+        Fit f = (n >= 0 && n < (std::int64_t{1} << w)) ? Fit::Strict : fits_width(v, w) ? Fit::Loose : Fit::Trunc;
         if (v.relocatable() && f != Fit::Trunc) f = Fit::Fallback;
-        return fits(f, n & ((1 << w) - 1));
+        return fits(f, n & ((std::int64_t{1} << w) - 1));
     }
     case Cls::D8:
     case Cls::M8:

@@ -46,6 +46,7 @@ Early development (version 0.0.x). What works today:
   ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
   the Keil manual.
+- A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:
 
@@ -65,7 +66,8 @@ ctest --test-dir build
 ```
 
 The program is `build/cli/openc166`. On Windows with Visual Studio it is
-under `build\cli\Debug\` or `build\cli\Release\`.
+under `build\cli\Debug\` or `build\cli\Release\`. The shared library with
+the C API is built in `build/src/`.
 
 ## Usage
 
@@ -94,10 +96,55 @@ written), and 2 for usage or file errors. Messages use the format
 [examples/mtos/](examples/mtos/) holds real ECU payloads for Siemens SIMK43
 ECUs, taken from gkflasher.
 
+## Python
+
+```sh
+pip install .        # from a checkout; builds the library with CMake
+```
+
+```python
+import openc166
+
+result = openc166.assemble("""
+$MOD167
+CODE    SECTION CODE AT 0E000H
+        MOV     R4, #0BEEFH
+        RET
+CODE    ENDS
+        END
+""")
+image = result.image()     # raises openc166.AssemblyError if there are errors
+image.base                 # 0xE000, the address of image.data[0]
+image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
+```
+
+- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=())`
+  assembles a `str` or `bytes`. `openc166.assemble_file(path, ...)` reads a
+  file; `$INCLUDE` then also searches the file's directory.
+- The result has `ok`, `diagnostics` (each with `severity`, `code`,
+  `message`, `file`, `line`, `column`; `str()` gives the usual one-line
+  message), `errors`, `warnings`, `chunks` (address and bytes of each piece
+  of code), `symbols` (a dict of name to `Symbol`), `symbol(name)` (lookup
+  ignoring case), `listing` and `cpu`.
+- `result.image(base=None, fill=0xFF)` lays all code out as one block, like
+  the command-line tool.
+
+The package needs Python 3.9 or newer. It also installs the `openc166`
+command. It loads the library through `ctypes`, so one wheel works with
+every Python version.
+
+## C API
+
+[include/openc166/openc166.h](include/openc166/openc166.h) declares a plain C
+interface, exported by the shared library (`libopenc166.so`,
+`libopenc166.dylib` or `openc166.dll`). Any language that can call C can
+use it. The header documents every function; the Python package is an
+example of a complete binding.
+
 ## Testing
 
-- `ctest --test-dir build` runs the unit tests and assembles the examples,
-  checking every byte.
+- `ctest --test-dir build` runs the unit tests, the C API test and the
+  Python package tests, and assembles the examples, checking every byte.
 - `tests/diff/` contains the differential test against Keil A166. Keil is
   **not** included. If you have your own copy, run:
 

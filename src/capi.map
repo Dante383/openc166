@@ -1,0 +1,5 @@
+/* Linker version script: the shared library exports only the C interface. */
+{
+    global: oc166_*;
+    local: *;
+};

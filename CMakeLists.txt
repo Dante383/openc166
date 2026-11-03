@@ -11,6 +11,7 @@ else()
 endif()
 
 option(OPENC166_BUILD_CLI "Build the openc166 command-line tool" ON)
+option(OPENC166_BUILD_SHARED "Build the shared library with the C interface" ON)
 option(OPENC166_BUILD_TESTS "Build the unit tests" ${OPENC166_TOP_LEVEL})
 option(OPENC166_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(OPENC166_WERROR "Treat compiler warnings as errors" OFF)
@@ -21,10 +22,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Link the C++ runtime statically with MSVC, so that openc166.exe and
+# openc166.dll run without the Visual C++ Redistributable.
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Shared warning and sanitizer settings for every target in this project.
 add_library(openc166_options INTERFACE)
 if(MSVC)
-    target_compile_options(openc166_options INTERFACE /W4 /permissive- /utf-8)
+    target_compile_options(openc166_options INTERFACE /W4 /utf-8 $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     if(OPENC166_WERROR)
         target_compile_options(openc166_options INTERFACE /WX)
     endif()

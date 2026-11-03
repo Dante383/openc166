@@ -1,0 +1,237 @@
+# SPDX-License-Identifier: MIT
+"""Tests of the openc166 Python package.
+
+Run from the repository root after "pip install .":
+    python -m unittest discover -s python/tests
+or against a build tree (ctest does this):
+    OPENC166_LIBRARY=build/src/libopenc166.so PYTHONPATH=python python -m unittest discover -s python/tests
+"""
+
+import doctest
+import os
+import re
+import tempfile
+import threading
+import unittest
+
+import openc166
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+EXAMPLES = os.path.join(ROOT, "examples")
+
+
+class VersionTest(unittest.TestCase):
+    def test_version_matches_cmake_project(self):
+        with open(os.path.join(ROOT, "CMakeLists.txt")) as f:
+            m = re.search(r"project\(openc166\s+VERSION\s+([0-9.]+)", f.read())
+        self.assertEqual(openc166.__version__, m.group(1))
+
+
+class DocTest(unittest.TestCase):
+    def test_docstring_examples(self):
+        self.assertEqual(doctest.testmod(openc166).failed, 0)
+
+
+class ExampleTest(unittest.TestCase):
+    """The MTOS payloads must give the bytes of gkflasher's mtos_asm.py."""
+
+    def test_marker(self):
+        result = openc166.assemble_file(os.path.join(EXAMPLES, "mtos", "marker.a66"))
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.cpu, "c167")
+        image = result.image()
+        self.assertEqual(image.base, 0xC014)
+        self.assertEqual(image.data.hex(), "e6f4efbef6f402c0db00")
+        self.assertEqual(bytes(image), image.data)
+        self.assertEqual(len(image), 10)
+        self.assertEqual(image.end, 0xC01E)
+
+    def test_memory_dump(self):
+        result = openc166.assemble_file(os.path.join(EXAMPLES, "mtos", "memory_dump.a66"))
+        self.assertEqual(
+            result.image().data.hex(),
+            "6eb6e6f40001e6f54000"
+            "a758a7a7d7400200a904f7f0b0fe9ab6fe707eb6084128513df3"
+            "e75800009ab6fe707eb66fb6db00",
+        )
+
+    def test_driver_patch_has_two_chunks(self):
+        result = openc166.assemble_file(os.path.join(EXAMPLES, "mtos", "driver_patch.a66"))
+        self.assertEqual(len(result.chunks), 2)
+        self.assertEqual(result.chunks[1].data.hex(), "bb94cc00")
+        gap = result.chunks[1].address - result.chunks[0].end
+        self.assertEqual(gap, 204)
+        image = result.image(fill=0)
+        self.assertEqual(image.data[result.chunks[0].end - image.base], 0)
+
+
+class AssembleTest(unittest.TestCase):
+    def test_str_and_bytes(self):
+        src = " MOV R4, #0BEEFH\n RET\n END\n"
+        self.assertEqual(openc166.assemble(src).image().data.hex(), "e6f4efbecb00")
+        self.assertEqual(openc166.assemble(src.encode()).image().data.hex(), "e6f4efbecb00")
+        self.assertEqual(openc166.assemble(bytearray(src.encode())).image().data.hex(), "e6f4efbecb00")
+        with self.assertRaises(TypeError):
+            openc166.assemble(42)
+
+    def test_non_ascii(self):
+        utf8 = openc166.assemble(" DB 'é' ; é\n END\n")
+        self.assertEqual(utf8.image().data, "é".encode("utf-8"))
+        cp1252 = openc166.assemble(" DB 'é' ; é\n END\n".encode("cp1252"))
+        self.assertEqual(cp1252.image().data, b"\xe9")
+        self.assertIn("\ufffd", cp1252.listing)  # not UTF-8: shown as a replacement character
+
+    def test_origin(self):
+        result = openc166.assemble("L: JMPR cc_UC, L\n END\n", origin=0xE000)
+        self.assertEqual(result.image().base, 0xE000)
+        self.assertEqual(result.symbols["L"].value, 0xE000)
+        with self.assertRaises(ValueError):
+            openc166.assemble(" NOP\n", origin=-1)
+
+    def test_cpu(self):
+        src = " EXTR #1\n MOV 0F100H, R1\n END\n"  # EXTR is C167 only
+        self.assertFalse(openc166.assemble(src).ok)
+        self.assertFalse(openc166.assemble(src, cpu="c166").ok)
+        result = openc166.assemble(src, cpu="C167")
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.cpu, "c167")
+        with self.assertRaises(ValueError):
+            openc166.assemble(src, cpu="z80")
+
+    def test_empty_source(self):
+        result = openc166.assemble("")
+        self.assertEqual(result.chunks, [])
+        self.assertEqual(result.image().data, b"")
+
+
+class DiagnosticTest(unittest.TestCase):
+    def setUp(self):
+        self.result = openc166.assemble(" NOP\n MOV R1, NOWHERE\n", file_name="t.a66")
+
+    def test_diagnostics(self):
+        r = self.result
+        self.assertFalse(r.ok)
+        self.assertEqual(len(r.errors), 1)
+        self.assertEqual(len(r.warnings), 1)  # no END statement
+        e = r.errors[0]
+        self.assertTrue(e.is_error)
+        self.assertEqual((e.severity, e.code, e.file, e.line, e.column), ("error", "A42", "t.a66", 2, 10))
+        self.assertEqual(e.message, "undefined identifier 'NOWHERE'")
+        self.assertEqual(str(e), "t.a66:2:10: error A42: undefined identifier 'NOWHERE'")
+        self.assertEqual(r.warnings[0].code, "A89")
+        self.assertIn("errors=1", repr(r))
+
+    def test_image_raises(self):
+        with self.assertRaises(openc166.AssemblyError) as ctx:
+            self.result.image()
+        self.assertIs(ctx.exception.result, self.result)
+        self.assertEqual([d.code for d in ctx.exception.diagnostics], ["A42"])
+        self.assertIn("t.a66:2:10: error A42", str(ctx.exception))
+
+    def test_listing_shows_errors(self):
+        self.assertIn("*** ERROR A42", self.result.listing)
+
+
+class ImageTest(unittest.TestCase):
+    def setUp(self):
+        self.result = openc166.assemble(
+            "A SECTION CODE AT 100H\n NOP\nA ENDS\n"
+            "B SECTION CODE AT 104H\n RET\nB ENDS\n END\n"
+        )
+
+    def test_gap_and_fill(self):
+        self.assertEqual(self.result.image().data.hex(), "cc00ffffcb00")
+        self.assertEqual(self.result.image(fill=0x00).data.hex(), "cc000000cb00")
+
+    def test_base(self):
+        image = self.result.image(base=0xFE)
+        self.assertEqual(image.base, 0xFE)
+        self.assertEqual(image.data.hex(), "ffffcc00ffffcb00")
+        with self.assertRaises(ValueError):
+            self.result.image(base=0x102)
+        with self.assertRaises(ValueError):
+            self.result.image(fill=256)
+        with self.assertRaises(ValueError):
+            self.result.image(base=-2)
+
+
+class SymbolTest(unittest.TestCase):
+    def test_symbols(self):
+        r = openc166.assemble(
+            "$MOD167\n"
+            "$INCLUDE (REG167.INC)\n"
+            "Count  EQU 10\n"
+            "STEP   SET 2\n"
+            "LED    BIT P2.3\n"
+            "IDX    EQU R6\n"
+            "LOW1   EQU RL1\n"
+            "PORT   EQU P2\n"
+            "COND   EQU cc_Z\n"
+            "GREET  LIT 'MOV R1, #Count'\n"
+            "CODE   SECTION CODE AT 0C000H\n"
+            "MAIN   PROC FAR\n"
+            "       GREET\n"
+            "       RET\n"
+            "MAIN   ENDP\n"
+            "TABLE: DW 1, 2\n"
+            "CODE   ENDS\n"
+            "       END\n"
+        )
+        self.assertTrue(r.ok, r.diagnostics)
+        s = r.symbols
+        self.assertEqual((s["Count"].kind, s["Count"].type, s["Count"].value), ("equ", "number", 10))
+        self.assertIs(r.symbol("COUNT"), s["Count"])
+        with self.assertRaises(KeyError):
+            r.symbol("nothing")
+        self.assertEqual((s["STEP"].kind, s["STEP"].value), ("set", 2))
+        self.assertEqual((s["LED"].kind, s["LED"].type, s["LED"].value, s["LED"].bit), ("bit", "bit", 0xFFC0, 3))
+        self.assertEqual((s["IDX"].type, s["IDX"].value, s["IDX"].bit), ("gpr", 6, None))
+        self.assertEqual((s["LOW1"].type, s["LOW1"].value), ("gpr_byte", 2))
+        self.assertEqual((s["PORT"].type, s["PORT"].value), ("sfr", 0xFFC0))
+        self.assertEqual(s["COND"].type, "cc")
+        self.assertEqual((s["GREET"].kind, s["GREET"].type, s["GREET"].value), ("lit", "", None))
+        self.assertEqual(s["GREET"].text, "MOV R1, #Count")
+        self.assertEqual((s["MAIN"].kind, s["MAIN"].label_type, s["MAIN"].value), ("label", "far", 0xC000))
+        self.assertEqual((s["TABLE"].label_type, s["TABLE"].value), ("word", 0xC004))
+        self.assertEqual(list(s), sorted(s))
+
+
+class IncludeTest(unittest.TestCase):
+    def test_include_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.mkdir(os.path.join(tmp, "src"))
+            os.mkdir(os.path.join(tmp, "lib"))
+            with open(os.path.join(tmp, "src", "near.inc"), "w") as f:
+                f.write("NEARVAL EQU 1\n")
+            with open(os.path.join(tmp, "lib", "far.inc"), "w") as f:
+                f.write("FARVAL EQU 2\n")
+            main = os.path.join(tmp, "src", "main.a66")
+            with open(main, "w") as f:
+                f.write("$INCLUDE (near.inc)\n$INCLUDE (far.inc)\n DW NEARVAL, FARVAL\n END\n")
+
+            missing = openc166.assemble_file(main)
+            self.assertFalse(missing.ok)
+            result = openc166.assemble_file(main, include_dirs=[os.path.join(tmp, "lib")])
+            self.assertTrue(result.ok, result.diagnostics)
+            self.assertEqual(result.image().data.hex(), "01000200")
+
+
+class ThreadTest(unittest.TestCase):
+    def test_parallel(self):
+        src = " MOV R4, #0BEEFH\n RET\n END\n"
+        results = []
+
+        def work():
+            for _ in range(20):
+                results.append(openc166.assemble(src).image().data)
+
+        threads = [threading.Thread(target=work) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(set(results), {bytes.fromhex("e6f4efbecb00")})
+
+
+if __name__ == "__main__":
+    unittest.main()
