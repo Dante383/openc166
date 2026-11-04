@@ -41,7 +41,10 @@ since OH166 starts a new record at each section.
   and the `SHORT` and `type PTR` operators. See
   [Expression details](#expression-details) and
   [Segmented mode and DPPs](#segmented-mode-and-dpps).
-- **Directives:** `SECTION ... [AT addr]` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
+- **Sections:** `SECTION` with or without `AT`, with Keil's types, align
+  types, combine types and class names. Sections without `AT` are placed as
+  L166 would place them. See [Sections](#sections).
+- **Directives:** `SECTION` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
   / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DB`, `DW`, `DD`, `DS`, `DSB`, `DSW`,
   `DSD`, `DPPTR`, `DSPTR`, `DBPTR`, `ASSUME`, `ORG`, `EVEN` and `END`.
 - **Register definitions:** `DEFR`, `DEFA` and `DEFB`, the directives that
@@ -341,6 +344,102 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC9 | warning | an `IF`-statement structure that Keil accepts but that is probably a mistake |
 | OC10 | warning | a condition that counts as false because only bit 0 is tested (`IF 2`) |
 | OC11 | error | a line longer than 65536 characters after LIT replacement |
+| OC12 | error | no room for a section without `AT` |
+| OC13 | warning | a given section address that does not suit the section's alignment, or names no section |
+| OC14 | error | a given section address for a section with `AT`, or one that runs past the address space |
+
+## Sections
+
+```
+name SECTION type [align] [AT address | combine] ['class']
+     ...
+name ENDS
+```
+
+- **Names** must be new. The name of a label, constant, register, PSW flag
+  or other predefined symbol gives A25, and a reserved word (a directive,
+  type, operator or condition code such as `cc_UC`) gives A6. Either way
+  the section is not opened, so its `ENDS` gives A6 and A27, as in Keil.
+  Defining a symbol with the name of a section gives A25 too.
+- **Types:** `CODE`, `DATA`, `CONST`, `HDATA`, `HCONST`, `XDATA`, `XCONST`.
+  `BIT` sections are not supported yet (OC3).
+- **Align types:** `BYTE`, `WORD` (the default), `DWORD`, `PAGE` (16 KB),
+  `SEGMENT` (64 KB), `BITADDRESSABLE` and `PECADDRESSABLE`. A type that
+  does not suit the section gives A43, as in Keil (`CODE BYTE`,
+  `CONST BITADDRESSABLE`).
+- **Combine types** (`PUBLIC`, `PRIVATE`, `COMMON`, `GLOBAL`, `SYSSTACK`,
+  `USRSTACK`) and **class names** only matter to a linker joining several
+  modules. They are checked and otherwise ignored.
+- **Reopening** a section continues it. The attributes must match what came
+  before: A30 (type), A31 (align type), A32 (combine type or `AT` address),
+  A33 (class).
+- **Nesting:** open sections form a stack. `ENDS` closes the innermost one.
+  As in Keil, a section may be opened again inside itself, and then needs
+  one `ENDS` for each opening. `ENDS` with the name of another known
+  section gives A29 and still closes the innermost one. With an unknown
+  name it gives A28 and closes nothing. With no section open, it gives A6
+  and A27.
+- **`BYTE` sections without `AT`** may start at any address, so a word
+  (`DW`, `DSW`, word labels) in one gives A48, as in Keil.
+
+### Where sections without AT go
+
+Keil leaves the address of a section without `AT` to its linker, L166.
+openc166 has no linker, so it places these sections itself, as L166 does by
+default:
+
+- in order of first appearance;
+- each at the lowest free address that suits its align type, from
+  `--origin` on (default 0, as in L166), around the sections with `AT` and
+  the code outside sections;
+- `BITADDRESSABLE` sections in `0FD00H..0FDFFH`;
+- `DATA` and `CONST` sections inside one 16 KB data page, and `CODE`,
+  `HDATA` and `HCONST` sections inside one 64 KB segment, unless they are
+  bigger than that;
+- without `$SEGMENTED`, in the first 64 KB;
+- empty sections take no room.
+
+`--section NAME=ADDR` (Python: `sections={"NAME": ADDR}`) puts a section at
+a given address instead, like L166's `SECTIONS` control. Only sections
+without `AT` can be placed this way (OC14). An address that does not suit
+the align type, or a name that matches no section, gives warning OC13. A
+section that fits nowhere gives OC12.
+
+The listing ends with a table of every section: type, align type, address,
+size, and whether the address came from `AT`, from `--section`, or from
+openc166.
+
+### Values that move with their section
+
+To Keil, a label in a section without `AT` is not a number yet: the linker
+fills it in. That limits what may be computed from it, and it decides some
+instruction forms. openc166 follows the same rules, even though it knows
+the final address, so that the same source gives the same code and errors.
+
+"Movable" values are labels, `$` and section names in a section without
+`AT`, and `PAG`, `POF`, `SOF`, `SEG`, `HIGH`, `LOW`, `BYTEn` and `WORDn`
+of these, each plus or minus a plain number.
+
+- **Long forms:** an immediate with a movable value always uses the long
+  instruction form (`MOV R1, #POF X` is 4 bytes even if the value is
+  small). In a section with `AT` the same expression is a plain number and
+  may use the short form.
+- **Differences** of two labels in the same section (`Y - X`, or the
+  section name minus one of its labels) are plain numbers.
+- **Allowed:** comparing two labels of the same section (`X LT Y`), adding
+  a difference to a movable value (`POF X + (Y - X)`), and `DATAn` of a
+  label in an immediate.
+- **Error A63:** any other arithmetic with movable values, for example
+  `X AND 1`, `X * 2`, `X SHR 1`, `-POF X`, `NOT PAG X`, `2 - POF X`,
+  `X + POF Y`, the difference of labels in different sections, or a
+  comparison of a label with a number.
+- **Error A72:** a movable value where a number is needed now: `DS X`,
+  `EXTR #POF X`, `AT X`. After `AT X` the section is still opened, at
+  address 0, as in Keil.
+- **Error A104:** `DATAn` of `PAG`, `POF`, `LOW` and similar in an
+  immediate. Keil still emits the instruction; openc166 does too.
+- **`ORG`** in a section without `AT` takes an offset in the section:
+  `ORG $ + 2` and `ORG X + 10H` work as in Keil.
 
 ## Data alignment
 
@@ -564,6 +663,10 @@ follow are unchanged. Other bad items are dropped.
 | repeated definition with a different value (A25) | the new value is used from then on | the first value stays |
 | `LIT` that fails with A25 (`E1 LIT 'R1'` after `E1 EQU 3`) | the text is still used, in the second pass even on the lines before it (`E1 EQU 3` becomes `R1 EQU 3`) | the LIT is not defined |
 | name used before its `LIT` | A60; the listing shows the line replaced | A60; the listing shows the line as written |
+| `X - FX`, with `X` in a section without `AT` and `FX` in one with `AT` | silently 0 | error A63 |
+| `X + X`, with `X` in a section without `AT` | twice the offset of `X` in its section | error A63 |
+| `POF X - POF Y`, `SEG X + SEG X` (sections without `AT`) | silently 0 | error A63 |
+| `IF X EQ 2`, with `X` in a section without `AT` | compares the offset in the section | error A63 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

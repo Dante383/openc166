@@ -92,6 +92,38 @@ int data_alignment(std::string_view upper_dir) {
     return 1;
 }
 
+struct AlignType {
+    std::string_view name;
+    int align;
+};
+// BITADDRESSABLE sections lie in FD00H..FDFFH; PECADDRESSABLE only tells
+// the linker that PEC pointers may address the section.
+constexpr AlignType kAlignTypes[] = {
+    {"BYTE", 1}, {"WORD", 2}, {"DWORD", 4}, {"PAGE", 0x4000}, {"SEGMENT", 0x10000},
+    {"BITADDRESSABLE", 2}, {"PECADDRESSABLE", 2},
+};
+constexpr std::string_view kCombineTypes[] = {"PUBLIC", "PRIVATE", "COMMON", "GLOBAL", "SYSSTACK", "USRSTACK"};
+constexpr std::int64_t kBitAreaStart = 0xFD00, kBitAreaEnd = 0xFE00;
+
+bool align_allowed(std::string_view align, std::string_view type) {
+    if (align == "BYTE") return type != "CODE";
+    if (align == "BITADDRESSABLE") return type == "CODE" || type == "DATA" || type == "HDATA";
+    if (align == "PECADDRESSABLE") return type == "CODE" || type == "DATA";
+    return true;
+}
+
+// L166 keeps a DATA or CONST section within one 16 KB data page, and a CODE,
+// HDATA or HCONST section within one 64 KB segment.
+std::int64_t section_boundary(std::string_view type) {
+    if (type == "DATA" || type == "CONST") return 0x4000;
+    if (type == "CODE" || type == "HDATA" || type == "HCONST") return 0x10000;
+    return 0;
+}
+
+std::int64_t align_up(std::int64_t v, std::int64_t n) { return (v + n - 1) / n * n; }
+
+constexpr std::string_view kSectionTypes[] = {"CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA", "XCONST", "BIT"};
+
 constexpr std::string_view kKeywords[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW",
     "DSD", "ORG", "EVEN", "END", "NAME", "PUBLIC", "GLOBAL", "EXTERN", "EXTRN", "ASSUME", "REGDEF",
@@ -319,9 +351,16 @@ struct Section {
     std::string name;
     std::int64_t base = 0;
     std::int64_t loc = 0;
+    std::int64_t size = 0;  // highest offset reached
     bool absolute = false;
     bool code = true;  // CODE section: plain labels are NEAR and must be even
     bool data = false;  // DATA section: DS must stay within one data page
+    std::string type;  // CODE, DATA, ...
+    std::string align_type = "WORD";
+    int align = 2;
+    std::string combine = "PRIVATE";  // or "AT" for a section with a fixed address
+    std::string class_name;
+    bool placed = false;  // AssembleOptions::section_addresses gives the address
 };
 
 class Assembler final : public SymbolContext {
@@ -386,6 +425,8 @@ private:
     bool case_ = false;
     std::vector<Section> sections_;  // [0] holds code outside any section
     std::vector<Section> prev_sections_;  // sections_ of the previous pass, for forward section names
+    std::map<std::string, std::int64_t> layout_;  // section key -> address chosen after the previous pass
+    std::vector<std::pair<std::int64_t, std::int64_t>> outside_;  // [from, to) used outside any section
     std::size_t cur_ = 0;
     bool segmented_ = false;  // $SEGMENTED: DPPn: prefixes and ASSUME take effect
     std::array<int, 4> assume_{};  // per DPP: a section index, kAssumeSystem or -1 (ASSUME)
@@ -443,22 +484,32 @@ private:
     void assume(TokenCursor& cur, Reporter& rep);
     std::optional<Value> section_value(std::string_view name);
     void assumed_section_page(Value& v) const;
+    void check_section_name(const Token& name) const;
     void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
-    void section_end(const Token& name);
+    void section_end(const Token& name, Reporter& rep);
+    void locate_sections();
+    std::optional<std::int64_t> option_address(const std::string& name_key) const;
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
     void define(const Token& name, SymbolKind kind, const Value& v, bool same_ok = false);
     void undefine(const Token& name);
     Value here(LType type) const;
     Value expression(TokenCursor& cur);
-    std::int64_t absolute(TokenCursor& cur, const char* what);
+    std::int64_t absolute(TokenCursor& cur, const char* what, bool offset = false);
     void expect_end(TokenCursor& cur);
     void access_attribute(TokenCursor& cur);
     void emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst);
     void advance(std::int64_t n);
     void align(int n);
     void check_alignment(int need, const Token& name, Reporter& rep);
+    void check_byte_section(int need, int column);
     Section& section() { return sections_[cur_]; }
+    // Alignment counts from the start of a relocatable section, as Keil
+    // cannot know where the linker will put it.
+    std::int64_t align_offset() const {
+        const Section& s = sections_[cur_];
+        return location() - (s.absolute ? 0 : s.base);
+    }
 };
 
 std::optional<Value> Assembler::lookup(std::string_view name) {
@@ -490,6 +541,9 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
         if (repeat(*p)) return;
         throw AsmError("A25", "symbol redefinition", name.column);
     }
+    for (std::size_t i = 1; i < sections_.size(); ++i)
+        if (key(sections_[i].name) == key(name.text))
+            throw AsmError("A25", "symbol redefinition: '" + sections_[i].name + "' is a section", name.column);
     auto [it, inserted] = symbols_.try_emplace(key(name.text));
     Entry& e = it->second;
     if (!inserted && e.pass == pass_ && !(kind == SymbolKind::Set && e.sym.kind == SymbolKind::Set)) {
@@ -518,19 +572,27 @@ Value Assembler::here(LType type) const {
     v.unsig = true;
     v.fixed = location_fixed();
     v.section = section_index();
+    if (!v.fixed) v.movable = section_index();
     v.ltype = type;
     return v;
 }
 
 Value Assembler::expression(TokenCursor& cur) { return evaluate(cur, *this); }
 
-// Evaluates an expression that must be a number known at this point.
-std::int64_t Assembler::absolute(TokenCursor& cur, const char* what) {
+// Evaluates an expression that must be a number known at this point. With
+// 'offset' (ORG), a label or '$' in the current section without AT stands
+// for its offset in the section, as in Keil.
+std::int64_t Assembler::absolute(TokenCursor& cur, const char* what, bool offset) {
     int column = cur.peek().column;
     forward_ref_ = false;
     Value v = expression(cur);
     if (forward_ref_) throw AsmError("A71", std::string("expression with forward reference not permitted in ") + what, column);
     if (v.type != VType::Number) throw AsmError("A72", "absolute expression required", column);
+    if (v.movable) {
+        if (!offset || v.movable != cur_ || v.rel != Rel::Addr)
+            throw AsmError("A72", "absolute expression required", column);
+        v.num -= section().base;
+    }
     return v.dpp >= 0 ? v.num | (std::int64_t{v.dpp} << 14) : v.num;
 }
 
@@ -555,17 +617,32 @@ void Assembler::advance(std::int64_t n) {
     s.loc += n;
     if (s.loc < 0 || s.loc > kAddressLimit) throw AsmError("A66", "location counter out of the 16 MB address space");
     free_ = std::max(free_, s.loc);
+    s.size = std::max(s.size, s.loc - s.base);
+    if (cur_ == 0 && n > 0) {
+        if (!outside_.empty() && outside_.back().second == s.loc - n)
+            outside_.back().second = s.loc;
+        else
+            outside_.emplace_back(s.loc - n, s.loc);
+    }
 }
 
 void Assembler::align(int n) {
-    if (std::int64_t r = location() % n) advance(n - r);
+    if (std::int64_t r = align_offset() % n) advance(n - r);
 }
 
 // Keil warns when a label was misaligned in any pass, even if shortening
 // jumps in a later pass moved it to a good address.
 void Assembler::check_alignment(int need, const Token& name, Reporter& rep) {
-    if (location() % need) misaligned_.insert(line_no_);
+    if (align_offset() % need) misaligned_.insert(line_no_);
     if (final_ && misaligned_.count(line_no_)) rep.warning("A48", "insufficient alignment", name.column);
+}
+
+// A relocatable BYTE section may start at any address, so Keil refuses data
+// that needs an even address there and drops the line.
+void Assembler::check_byte_section(int need, int column) {
+    const Section& s = section();
+    if (need > 1 && !s.absolute && s.align == 1)
+        throw AsmError("A48", "insufficient alignment: a BYTE section cannot hold word-aligned data", column);
 }
 
 void Assembler::emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst) {
@@ -629,6 +706,13 @@ AssemblyResult Assembler::run(std::string_view source) {
 
     for (auto& [k, e] : symbols_) res_.symbols.push_back(e.sym);
     std::sort(res_.symbols.begin(), res_.symbols.end(), [](const Symbol& a, const Symbol& b) { return a.name < b.name; });
+    for (std::size_t i = 1; i < sections_.size(); ++i) {
+        const Section& s = sections_[i];
+        res_.sections.push_back({s.name, s.type, s.align_type, s.base, s.size,
+                                 s.absolute ? SectionInfo::Placement::At
+                                 : s.placed ? SectionInfo::Placement::Given
+                                            : SectionInfo::Placement::Located});
+    }
     return std::move(res_);
 }
 
@@ -636,7 +720,10 @@ void Assembler::run_pass() {
     cpu_ = opt_.cpu;
     sys166_ = cpu_ == isa::Cpu::C166;
     case_ = false;
-    sections_.assign(1, Section{"", 0, opt_.origin, true});
+    sections_.assign(1, Section{});
+    sections_[0].loc = opt_.origin;
+    sections_[0].absolute = true;
+    outside_.clear();
     cur_ = 0;
     open_.clear();
     free_ = opt_.origin;
@@ -701,12 +788,19 @@ void Assembler::run_pass() {
     }
 
     // ASSUME and expressions may name a section before it starts; they see
-    // where the previous pass put it.
+    // where the previous pass put it. Passes repeat until every section is
+    // where the layout of the previous pass put it.
+    locate_sections();
+    std::vector<Section> located = sections_;
+    for (std::size_t i = 1; i < located.size(); ++i)
+        if (!located[i].absolute) located[i].base = layout_.at(key(located[i].name));
     auto same = [](const Section& a, const Section& b) { return a.name == b.name && a.base == b.base; };
-    if (sections_.size() != prev_sections_.size() ||
-        !std::equal(sections_.begin(), sections_.end(), prev_sections_.begin(), same))
-        changed_ |= sections_.size() > 1;
-    prev_sections_ = sections_;
+    if (sections_.size() > 1 &&
+        (sections_.size() != prev_sections_.size() ||
+         !std::equal(sections_.begin(), sections_.end(), prev_sections_.begin(), same) ||
+         !std::equal(sections_.begin(), sections_.end(), located.begin(), same)))
+        changed_ = true;
+    prev_sections_ = std::move(located);
 
     if (!final_ || fatal_) return;
     // Like Keil, report problems found at the end on the last line of the
@@ -899,7 +993,17 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         // otherwise it is a NEAR label in code sections and needs an even address.
         std::string next = cur.peek().kind == TokKind::Ident ? upper(cur.peek().text) : std::string();
         bool data_follows = contains(kDataDirectives, next);
-        if (data_follows) align(data_alignment(next));
+        if (data_follows) {
+            // Keil reports the data and the line, and leaves the label undefined.
+            const int column = cur.peek().column;
+            try {
+                check_byte_section(data_alignment(next), column);
+            } catch (const AsmError& e) {
+                rep.error(e.code(), e.message(), e.column());
+                throw AsmError("A6", "syntax error: the label is ignored", column);
+            }
+            align(data_alignment(next));
+        }
         lst.has_address = true;
         lst.address = location();
         // Keil gives plain labels outside CODE sections the type BYTE.
@@ -1361,7 +1465,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         section_start(name, cur, rep);
     } else if (dir == "ENDS") {
         expect_end(cur);
-        section_end(name);
+        section_end(name, rep);
     } else if (dir == "PROC") {
         if (proc_ != ProcKind::None) throw AsmError("A75", "can't nest procedures", name.column);
         ProcKind kind = ProcKind::Near;
@@ -1457,6 +1561,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         // Keil keeps the first string of 'name LIT 'a', 'b''.
         expect_end(cur);
     } else if (contains(kDataDirectives, dir)) {
+        check_byte_section(data_alignment(dir), name.column);
         align(data_alignment(dir));
         lst.has_address = true;
         lst.address = location();
@@ -1473,7 +1578,7 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
                           ListingLine& lst) {
     if (kw == "ORG") {
         int column = cur.peek().column;
-        std::int64_t v = absolute(cur, "ORG");
+        std::int64_t v = absolute(cur, "ORG", true);
         expect_end(cur);
         Section& s = section();
         std::int64_t target = s.absolute ? v : s.base + v;
@@ -1482,12 +1587,14 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         free_ = std::max(free_, target);
     } else if (kw == "EVEN") {
         expect_end(cur);
-        if (location() & 1) advance(1);
+        check_byte_section(2, tok.column);
+        if (align_offset() & 1) advance(1);
     } else if (kw == "END") {
         expect_end(cur);
         ended_ = true;
         end_line_ = res_.listing.size();
     } else if (contains(kDataDirectives, kw)) {
+        check_byte_section(data_alignment(kw), tok.column);
         align(data_alignment(kw));
         lst.has_address = true;
         lst.address = location();
@@ -1498,6 +1605,10 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         throw AsmError("OC4", "external symbols need a linker, which openc166 does not use", tok.column);
     } else if (contains(kIgnoredDirectives, kw)) {
         // No effect on a raw image.
+    } else if (kw == "ENDS" || kw == "ENDP") {
+        throw AsmError("A6", "syntax error: " + kw + " needs the name of the " +
+                                 (kw == "ENDS" ? "section" : "procedure"),
+                       tok.column);
     } else if (contains(kKeywords, kw)) {
         throw AsmError("OC3", "directive " + kw + " is not supported yet", tok.column);
     } else {
@@ -1636,6 +1747,7 @@ std::optional<Value> Assembler::section_value(std::string_view name) {
             v.unsig = true;
             v.fixed = s.absolute;
             v.section = s.code ? 0 : static_cast<std::uint16_t>(i);
+            if (!s.absolute) v.movable = static_cast<std::uint16_t>(i);
             return v;
         }
     }
@@ -1709,60 +1821,237 @@ void Assembler::assume(TokenCursor& cur, Reporter& rep) {
     } while (cur.accept_op(","));
 }
 
+// name SECTION type [align] [AT address | combine] ['class']
+// The alignment, combine type and class only matter to the linker, except
+// that the alignment guides where openc166 puts the section. Keil opens the
+// section even when it reports a problem with these, except a different
+// type for a section seen before.
+// Keil does not take a mnemonic, directive, operator, section type or
+// condition code as a section name: SECTION and ENDS lines with one are
+// syntax errors.
+void Assembler::check_section_name(const Token& name) const {
+    const std::string u = upper(name.text);
+    const std::optional<Value> pre = predefined(name.text, cpu_, sys166_);
+    if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u) || contains(kSectionTypes, u) ||
+        (pre && pre->type == VType::Cc))
+        throw AsmError("A6", "syntax error: '" + std::string(name.text) + "' is a reserved word", name.column);
+}
+
 void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep) {
-    static constexpr std::string_view kTypes[] = {"CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA", "XCONST", "BIT"};
-    const Token& type = cur.peek();
-    if (type.kind != TokKind::Ident || !contains(kTypes, upper(type.text)))
-        throw AsmError("A34", "illegal section type", type.column);
-    if (ieq(type.text, "BIT")) throw AsmError("OC3", "BIT sections are not supported yet", type.column);
-    const bool code = ieq(type.text, "CODE");
-    const bool data = ieq(type.text, "DATA");
-    cur.next();
-    std::optional<std::int64_t> at;
-    while (!cur.at_end()) {
-        const Token& t = cur.peek();
-        if (t.kind == TokKind::Ident && ieq(t.text, "AT")) {
-            cur.next();
-            int column = cur.peek().column;
-            at = absolute(cur, "AT");
-            // Without $SEGMENTED, everything lives in the first 64 KB.
-            if (!segmented_ && *at > 0xFFFF) {
-                rep.error("A19", "numeric value out of range: AT above 0FFFFH needs $SEGMENTED", column);
-                at = 0;
-            }
-        } else if (t.kind == TokKind::Ident || t.kind == TokKind::String) {
-            cur.next();  // alignment, combine type or class name: linker information
-        } else {
-            throw AsmError("A6", "syntax error", t.column);
+    // As in Keil, a name already taken by a symbol, register, flag or other
+    // predefined name is a redefinition, and the section is not opened.
+    check_section_name(name);
+    if (auto it = symbols_.find(key(name.text));
+        predefined(name.text, cpu_, sys166_) || (it != symbols_.end() && it->second.pass == pass_))
+        throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is already defined", name.column);
+    const Token& type_tok = cur.peek();
+    if (type_tok.kind != TokKind::Ident || !contains(kSectionTypes, upper(type_tok.text)))
+        throw AsmError("A34", "illegal section type", type_tok.column);
+    if (ieq(type_tok.text, "BIT")) throw AsmError("OC3", "BIT sections are not supported yet", type_tok.column);
+    const std::string type = upper(cur.next().text);
+
+    const std::string k = key(name.text);
+    std::size_t old = 0;
+    for (std::size_t i = 1; i < sections_.size() && !old; ++i)
+        if (key(sections_[i].name) == k) old = i;
+    if (old && sections_[old].type != type) {
+        AsmError e("A30", "redefinition: section type: '" + sections_[old].name + "' is a " +
+                              sections_[old].type + " section", cur.peek().column);
+        if (cur.at_end()) throw e;
+        rep.error(e.code(), e.message(), e.column());
+        throw AsmError("A6", "syntax error", cur.peek().column);
+    }
+
+    const AlignType* align = nullptr;
+    int align_column = 0;
+    if (const Token& t = cur.peek(); t.kind == TokKind::Ident) {
+        for (const auto& a : kAlignTypes)
+            if (ieq(t.text, a.name)) align = &a;
+    }
+    if (align) {
+        align_column = cur.next().column;
+        if (!align_allowed(align->name, type)) {
+            rep.error("A43", "illegal align type: " + std::string(align->name) + " for a " + type + " section",
+                      align_column);
+            align = nullptr;
         }
     }
-    std::string k = key(name.text);
-    for (std::size_t i = 1; i < sections_.size(); ++i) {
-        if (key(sections_[i].name) != k) continue;
-        if (std::find(open_.begin(), open_.end(), i) != open_.end())
-            throw AsmError("A46", "section '" + sections_[i].name + "' is already open", name.column);
-        if (at && (!sections_[i].absolute || *at != sections_[i].base))
-            throw AsmError("A30", "section redefinition with a different AT address", name.column);
-        open_.push_back(i);
-        cur_ = i;
+    std::optional<std::string> combine;
+    std::optional<std::int64_t> at;
+    int combine_column = cur.peek().column;
+    if (cur.accept_keyword("AT")) {
+        int column = cur.peek().column;
+        try {
+            at = absolute(cur, "AT");
+        } catch (const AsmError& e) {
+            // Keil opens the section anyway.
+            if (e.code() != "A72") throw;
+            rep.error(e.code(), e.message(), e.column());
+            at = 0;
+        }
+        // Without $SEGMENTED, everything lives in the first 64 KB.
+        if (!segmented_ && *at > 0xFFFF) {
+            rep.error("A19", "numeric value out of range: AT above 0FFFFH needs $SEGMENTED", column);
+            at = 0;
+        }
+        combine = "AT";
+    } else if (const Token& t = cur.peek(); t.kind == TokKind::Ident && contains(kCombineTypes, upper(t.text))) {
+        combine = upper(cur.next().text);
+    }
+    std::optional<std::string> class_name;
+    int class_column = cur.peek().column;
+    if (cur.peek().kind == TokKind::String) {
+        auto bytes = string_bytes(cur.next());
+        class_name = std::string(bytes.begin(), bytes.end());
+    }
+    if (!cur.at_end())
+        rep.error("A6", "syntax error: unexpected '" + std::string(cur.peek().text) + "'", cur.peek().column);
+
+    if (old) {
+        const Section& s = sections_[old];
+        if (align && align->name != s.align_type)
+            rep.error("A31", "redefinition: align type: '" + s.name + "' is " + s.align_type, align_column);
+        if (combine && (*combine != s.combine || (at && *at != s.base)))
+            rep.error("A32", "redefinition: combine type: '" + s.name + "' is " +
+                                 (s.absolute ? "AT " + hex(s.base, 4) + "H" : s.combine), combine_column);
+        if (class_name && *class_name != s.class_name)
+            rep.error("A33", "redefinition: class name of '" + s.name + "'", class_column);
+        open_.push_back(old);
+        cur_ = old;
         return;
     }
     if (at && (*at < 0 || *at >= kAddressLimit)) throw AsmError("A66", "value out of range");
     Section s;
     s.name = std::string(name.text);
+    s.type = type;
+    s.code = type == "CODE";
+    s.data = type == "DATA";
+    if (align) {
+        s.align_type = std::string(align->name);
+        s.align = align->align;
+    }
+    if (combine) s.combine = *combine;
+    if (class_name) s.class_name = *class_name;
     s.absolute = at.has_value();
-    s.code = code;
-    s.data = data;
-    s.base = s.loc = at ? *at : (free_ + 1) & ~std::int64_t{1};
+    const std::optional<std::int64_t> given = option_address(k);
+    s.placed = !at && given;
+    if (at)
+        s.base = *at;
+    else if (auto it = layout_.find(k); it != layout_.end())
+        s.base = it->second;
+    else if (given)
+        s.base = *given;
+    else  // the first pass: a guess that the following passes correct
+        s.base = align_up(std::max(free_, s.align_type == "BITADDRESSABLE" ? kBitAreaStart : std::int64_t{0}), s.align);
+    s.loc = s.base;
     sections_.push_back(s);
     cur_ = sections_.size() - 1;
     open_.push_back(cur_);
     free_ = std::max(free_, s.loc);
 }
 
-void Assembler::section_end(const Token& name) {
-    if (open_.empty() || key(sections_[open_.back()].name) != key(name.text))
-        throw AsmError("A29", "unmatched ENDS/ENDP", name.column);
+std::optional<std::int64_t> Assembler::option_address(const std::string& name_key) const {
+    const auto& given = opt_.section_addresses;
+    for (auto it = given.rbegin(); it != given.rend(); ++it)
+        if (key(it->first) == name_key) return it->second;
+    return std::nullopt;
+}
+
+// Puts the sections without AT where L166 would by default: in the order in
+// which they first appear, each at the lowest suitably aligned address from
+// the origin on where it fits between the sections and code placed so far,
+// without crossing the page or segment boundary its type forbids. Sections
+// with an address in AssembleOptions::section_addresses go there first. The
+// next pass assembles with these addresses.
+void Assembler::locate_sections() {
+    auto report = [&](Severity sev, const char* code, std::string msg) {
+        if (final_) res_.diagnostics.push_back({sev, code, std::move(msg), opt_.file_name, 0, 0});
+    };
+    const std::int64_t top = segmented_ ? kAddressLimit : 0x10000;
+    std::vector<std::pair<std::int64_t, std::int64_t>> used = outside_;
+    for (std::size_t i = 1; i < sections_.size(); ++i) {
+        const Section& s = sections_[i];
+        const std::optional<std::int64_t> given = option_address(key(s.name));
+        if (s.absolute) {
+            if (given)
+                report(Severity::Error, "OC14", "section '" + s.name + "' has an AT address; it cannot also be placed at " +
+                                                   hex(*given, 6) + "H");
+        } else if (given) {
+            layout_[key(s.name)] = *given;
+            const bool bit = s.align_type == "BITADDRESSABLE";
+            if (*given < 0 || *given + s.size > top)
+                report(Severity::Error, "OC14", "section '" + s.name + "' cannot be placed at " + hex(*given, 6) +
+                                                   "H: it would end beyond " + hex(top - 1, 6) + "H" +
+                                                   (segmented_ ? "" : " (higher addresses need $SEGMENTED)"));
+            else if (*given % s.align || (bit && (*given < kBitAreaStart || *given + s.size > kBitAreaEnd)))
+                report(Severity::Warning, "OC13", "section '" + s.name + "' is placed at " + hex(*given, 6) +
+                                                     "H, which does not suit its alignment " + s.align_type);
+        } else {
+            continue;
+        }
+        const std::int64_t start = s.absolute ? s.base : *given;
+        if (s.size > 0) used.emplace_back(start, start + s.size);
+    }
+    std::set<std::string> unknown;
+    for (const auto& [name, address] : opt_.section_addresses) {
+        bool found = false;
+        for (std::size_t i = 1; i < sections_.size() && !found; ++i) found = key(sections_[i].name) == key(name);
+        if (!found && unknown.insert(key(name)).second)
+            report(Severity::Warning, "OC13", "an address is given for section '" + name + "', which does not exist");
+    }
+
+    for (std::size_t i = 1; i < sections_.size(); ++i) {
+        const Section& s = sections_[i];
+        if (s.absolute || option_address(key(s.name))) continue;
+        const bool bit = s.align_type == "BITADDRESSABLE";
+        const std::int64_t from = bit ? kBitAreaStart : opt_.origin, to = bit ? kBitAreaEnd : top;
+        const std::int64_t boundary = section_boundary(s.type);
+        std::int64_t a = align_up(from, s.align);
+        bool fits = false;
+        while (a + s.size <= to) {
+            if (boundary && s.size > 0 && s.size <= boundary && a / boundary != (a + s.size - 1) / boundary) {
+                a = align_up((a / boundary + 1) * boundary, s.align);
+                continue;
+            }
+            auto clash = std::find_if(used.begin(), used.end(), [&](const auto& u) {
+                return u.first < a + std::max<std::int64_t>(s.size, 1) && a < u.second;
+            });
+            if (clash == used.end()) {
+                fits = true;
+                break;
+            }
+            a = align_up(clash->second, s.align);
+        }
+        if (!fits) {
+            report(Severity::Error, "OC12", "no room for section '" + s.name + "' (" + hex(s.size, 4) + "H bytes" +
+                                               (bit ? " in FD00H..FDFFH)" : ")"));
+            a = s.base;
+        } else if (s.size > 0) {
+            used.emplace_back(a, a + s.size);
+        }
+        layout_[key(s.name)] = a;
+    }
+}
+
+// Sections nest: ENDS closes the innermost open one, which may be the same
+// section opened again inside itself. Like Keil, an ENDS with the name of
+// another section still closes it, but one with an unknown name does not.
+void Assembler::section_end(const Token& name, Reporter& rep) {
+    check_section_name(name);
+    if (open_.empty()) {
+        rep.error("A6", "syntax error: no section is open", name.column);
+        throw AsmError("A27", "misplaced directive: ENDS outside a section", name.column);
+    }
+    const std::string k = key(name.text);
+    if (key(sections_[open_.back()].name) != k) {
+        bool known = false;
+        for (std::size_t i = 1; i < sections_.size(); ++i) known = known || key(sections_[i].name) == k;
+        if (!known) throw AsmError("A28", "invalid or unmatched section name", name.column);
+        const std::string closed = sections_[open_.back()].name;
+        open_.pop_back();
+        cur_ = open_.empty() ? 0 : open_.back();
+        throw AsmError("A29", "unmatched ENDS/ENDP: closed section '" + closed + "' instead", name.column);
+    }
     open_.pop_back();
     cur_ = open_.empty() ? 0 : open_.back();
 }
@@ -1796,7 +2085,7 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         ctx.assume = assume_;
         ctx.ext_page = ext_left_ > 0 && ext_page_;
         Encoding e = encode(m, ops, ctx, rep);
-        if (pc & 1) rep.error("A134", "improper address alignment: instruction at an odd address");
+        if (align_offset() & 1) rep.error("A134", "improper address alignment: instruction at an odd address");
 
         if (ext_left_ > 0) --ext_left_;
         if (ExtSequence seq = ext_sequence(e); seq.count) {
@@ -2000,6 +2289,17 @@ std::string format_listing(const AssemblyResult& result) {
         char row[160];
         std::snprintf(row, sizeof row, "%-32s %-6s %s\n", s.name.c_str(), kKinds[static_cast<int>(s.kind)], value.c_str());
         out += row;
+    }
+    if (!result.sections.empty()) {
+        out += "\nSECTIONS\n\n";
+        for (const auto& s : result.sections) {
+            static constexpr const char* kPlacement[] = {"AT", "given", "located"};
+            char row[160];
+            std::snprintf(row, sizeof row, "%-32s %-6s %-14s %sH  size %sH  %s\n", s.name.c_str(), s.type.c_str(),
+                          s.align.c_str(), hex(s.address, 6).c_str(), hex(s.size, 4).c_str(),
+                          kPlacement[static_cast<int>(s.placement)]);
+            out += row;
+        }
     }
     out += "\n" + std::to_string(result.error_count()) + " error(s), " + std::to_string(result.warning_count()) +
            " warning(s)\n";

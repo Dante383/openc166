@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace oc166 {
@@ -26,9 +27,15 @@ struct AssembleOptions {
     // CPU selected before the source is read; $MOD167 in the source also
     // selects the C167.
     isa::Cpu cpu = isa::Cpu::C166;
-    // Address of code outside any section, and of the first section that has
-    // no AT address.
+    // Address of code outside any section, and the lowest address used for
+    // sections without AT (see section_addresses).
     std::int64_t origin = 0;
+    // Addresses for sections without AT, by section name, like L166's
+    // SECTIONS control. openc166 puts the other sections without AT in the
+    // order in which they first appear, each at the lowest free address from
+    // the origin on that suits its alignment and type, as L166 does. Names
+    // ignore case; if one appears more than once, the last address counts.
+    std::vector<std::pair<std::string, std::int64_t>> section_addresses;
     // Directories searched by $INCLUDE. The order is: the current directory,
     // the directory of file_name, these directories, then the directories
     // given by $INCDIR in the source. A bare file name that is found nowhere
@@ -70,11 +77,27 @@ struct Symbol {
     std::string text;  // replacement text of a LIT
 };
 
+// Where a section went.
+struct SectionInfo {
+    enum class Placement : std::uint8_t {
+        At,       // AT in the source
+        Given,    // AssembleOptions::section_addresses
+        Located,  // chosen by openc166
+    };
+    std::string name;
+    std::string type;   // CODE, DATA, CONST, HDATA, HCONST, XDATA or XCONST
+    std::string align;  // BYTE, WORD, DWORD, PAGE, SEGMENT, BITADDRESSABLE or PECADDRESSABLE
+    std::int64_t address = 0;
+    std::int64_t size = 0;
+    Placement placement = Placement::Located;
+};
+
 struct AssemblyResult {
     std::vector<Diagnostic> diagnostics;
     std::vector<Chunk> chunks;  // in source order
     std::vector<ListingLine> listing;
     std::vector<Symbol> symbols;  // sorted by name
+    std::vector<SectionInfo> sections;  // in order of first appearance
     isa::Cpu cpu = isa::Cpu::C166;
     int passes = 0;
 

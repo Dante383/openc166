@@ -48,7 +48,9 @@ class Line:
         self.skipped = False  # in a false IF block: listed without a number
 
     def errors(self):
-        return sorted(d for d in self.diags if d.endswith("E"))
+        # Keil may report one problem more than once (in DW, A63 at both the
+        # operand and the operator); only the distinct codes count.
+        return sorted({d for d in self.diags if d.endswith("E")})
 
     def warnings(self):
         return sorted(d for d in self.diags if d.endswith("W"))
@@ -90,7 +92,8 @@ def parse_keil_listing(text, source=()):
     printed = 0  # characters of its source printed so far
     # Lines from include files carry a nesting marker (+1, +2, ...).
     row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
-    more = re.compile(r"^[0-9A-F]{8} ([0-9A-F]+)\s*$")
+    # The linker fills in the digits that Keil lists as '?' (marked R).
+    more = re.compile(r"^[0-9A-F]{8} ([0-9A-F?]+)(?:\s+R)?\s*$")
     unnumbered = re.compile(r" *(?:\+\d+)? *")
     # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
@@ -137,26 +140,65 @@ def parse_keil_listing(text, source=()):
             last = lines.setdefault(number, Line())
             if re.fullmatch(r"[0-9A-F]{8}", m.group(1)) and last.loc is None:
                 last.loc = int(m.group(1), 16)
-            if re.fullmatch(r"[0-9A-F]+", m.group(2)):
+            if re.fullmatch(r"[0-9A-F?]+", m.group(2)):
                 last.code += m.group(2)
     return lines, symbols
+
+
+SECTION_START = re.compile(r"\s*([A-Za-z_?@][\w?@]*)\s+SECTION\b", re.I)
+SECTION_END = re.compile(r"\s*([A-Za-z_?@][\w?@]*)\s+ENDS\b", re.I)
+
+
+def relocatable_bases(source, sections):
+    """{line number: address} for the lines inside sections that openc166
+    placed itself (no AT). Keil lists offsets from the start of such
+    sections, openc166 the final addresses."""
+    bases = {}
+    stack = []
+    for n, l in enumerate(source, 1):
+        code = l.split(";")[0]
+        m = SECTION_START.match(code)
+        if m:
+            stack.append(m.group(1).upper())
+            continue
+        m = SECTION_END.match(code)
+        if m:
+            if stack and stack[-1] == m.group(1).upper():
+                stack.pop()
+            continue
+        if stack and stack[-1] in sections and sections[stack[-1]][1] != "AT":
+            bases[n] = sections[stack[-1]][0]
+    return bases
 
 
 def parse_openc166_listing(text, source=()):
     lines = {}
     symbols = {}
+    labels = set()
+    sections = {}
     last = None
-    in_symbols = False
+    in_symbols = in_sections = False
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) (\w+):")
     sym = re.compile(r"^(\S+)\s+(LABEL|EQU|SET|BIT)\s+(?:SFR\s+)?(\S+)")
+    sec = re.compile(r"^(\S+)\s+[A-Z]+\s+[A-Z]+\s+([0-9A-F]+)H\s+size [0-9A-F]+H\s+(\S+)")
     for l in text.splitlines():
-        if l.startswith("SYMBOLS"):
+        if l == "SYMBOLS":
             in_symbols = True
+            continue
+        if l == "SECTIONS":
+            in_symbols, in_sections = False, True
+            continue
+        if in_sections:
+            m = sec.match(l)
+            if m:
+                sections[m.group(1).upper()] = (int(m.group(2), 16), m.group(3))
             continue
         if in_symbols:
             m = sym.match(l)
             if m:
                 symbols[m.group(1).upper()] = symbol_value(m.group(3))
+                if m.group(2) == "LABEL":
+                    labels.add(m.group(1).upper())
             continue
         m = diag.match(l)
         if m:
@@ -176,6 +218,15 @@ def parse_openc166_listing(text, source=()):
             # a line in a false IF block, listed without a number
             last = lines.setdefault(locate(source, max(lines, default=0), l[37:]), Line())
             last.skipped = True
+    bases = relocatable_bases(source, sections)
+    for n, line in lines.items():
+        if line.loc is not None:
+            line.loc -= bases.get(n, 0)
+    defs = definitions(source)
+    for name in labels:
+        v, where = symbols.get(name), defs.get(name)
+        if v is not None and where and where[0] in bases:
+            symbols[name] = (v[0] - bases[where[0]], v[1])
     return lines, symbols
 
 
@@ -330,7 +381,12 @@ def classify(kl, ol, shift):
         return "ok" if kl.errors() == ol.errors() else "soft"
     if shift is not None and kl.loc is not None and ol.loc is not None and kl.loc - ol.loc != shift:
         return "hard"
-    return "ok" if (kl.code, kl.warnings()) == (ol.code, ol.warnings()) else "hard"
+    return "ok" if same_code(kl.code, ol.code) and kl.warnings() == ol.warnings() else "hard"
+
+
+def same_code(keil, tool):
+    """True if the code matches, with '?' in Keil's code matching any digit."""
+    return len(keil) == len(tool) and all(k in ("?", t) for k, t in zip(keil, tool))
 
 
 def definitions(text):

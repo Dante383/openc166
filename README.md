@@ -24,9 +24,13 @@ Early development (version 0.x). What works today:
   `BOF`, `DATA3`/`DATA4`/`DATA8`/`DATA16`, character constants, bit
   addresses such as `PSW.3` or `0FD00H.5`, and extended-SFR checks inside
   `EXTR` sequences.
-- Absolute sections (`SECTION CODE AT 0E000H`), `PROC`/`ENDP`, `ORG`, `EVEN`,
-  `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`, `DS`/`DSB`/`DSW`/`DSD`, and
-  `DPPTR`/`DSPTR`/`DBPTR`, including Keil's automatic alignment of word data.
+- Sections with an address (`SECTION CODE AT 0E000H`) and without one.
+  openc166 places sections without `AT` as Keil's L166 linker would, or at
+  addresses you give (`--section NAME=ADDR`), so code that leaves placement
+  to the linker can still be assembled straight to a binary.
+- `PROC`/`ENDP`, `ORG`, `EVEN`, `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`,
+  `DS`/`DSB`/`DSW`/`DSD`, and `DPPTR`/`DSPTR`/`DBPTR`, including Keil's
+  automatic alignment of word data.
 - Segmented mode (`$SEGMENTED`): `ASSUME`, `DPPn:` prefixes, and Keil's
   rules for which data page register an address goes through.
 - `DEFR`/`DEFA`/`DEFB`, the register-definition directives that register
@@ -57,7 +61,7 @@ Early development (version 0.x). What works today:
 Not done yet:
 
 - macros
-- relocatable sections and linking, and OMF-166 object files
+- linking several source files, and OMF-166 object files
 - the TASKING assembler dialect
 
 See [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md) for exact behaviour and
@@ -97,12 +101,19 @@ carry the address of every record, so they hold only the bytes used.
 | Option | Meaning |
 |---|---|
 | `-f, --format FMT` | `bin`, `hex` or `srec` (default: from the output extension) |
-| `--origin ADDR` | address of code outside sections and of sections without `AT` |
+| `--origin ADDR` | address of code outside sections, and the lowest address for sections without `AT` (default 0) |
+| `--section NAME=ADDR` | put section `NAME`, which has no `AT`, at `ADDR` (may be repeated) |
 | `--base ADDR` | binary: address of the first byte of the file |
 | `--fill BYTE` | binary: value of gaps between pieces of code (default `0FFh`) |
 | `--record-size N` | HEX and S-records: data bytes per record (default 16) |
 | `--cpu c166\|c167` | instruction set (`$MOD167` in the source also selects C167) |
 | `-I DIR` | also search `DIR` for `$INCLUDE` files (may be repeated) |
+
+Sections without `AT` go in order of first appearance to the first free,
+suitably aligned place from the origin on, as L166 places them by default.
+`--section` overrides that for chosen sections, like L166's `SECTIONS`
+control. The listing ends with a table of where each section went.
+[examples/sections.a66](https://github.com/Dante383/openc166/blob/main/examples/sections.a66) shows both.
 
 Intel HEX files use extended linear address records (type 04) for addresses
 above 64 KB, like OH166 with its `H167` option. S-records use S1, S2 or S3
@@ -132,10 +143,10 @@ import openc166
 
 result = openc166.assemble("""
 $MOD167
-CODE    SECTION CODE AT 0E000H
+PROG    SECTION CODE AT 0E000H
         MOV     R4, #0BEEFH
         RET
-CODE    ENDS
+PROG    ENDS
         END
 """)
 image = result.image()     # raises openc166.AssemblyError if there are errors
@@ -143,14 +154,17 @@ image.base                 # 0xE000, the address of image.data[0]
 image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
 ```
 
-- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=())`
-  assembles a `str` or `bytes`. `openc166.assemble_file(path, ...)` reads a
-  file; `$INCLUDE` then also searches the file's directory.
+- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=(), sections=None)`
+  assembles a `str` or `bytes`. `sections` gives addresses for sections
+  without `AT`, e.g. `{"VARS": 0xF600}`. `openc166.assemble_file(path, ...)`
+  reads a file; `$INCLUDE` then also searches the file's directory.
 - The result has `ok`, `diagnostics` (each with `severity`, `code`,
   `message`, `file`, `line`, `column`; `str()` gives the usual one-line
   message), `errors`, `warnings`, `chunks` (address and bytes of each piece
   of code), `symbols` (a dict of name to `Symbol`), `symbol(name)` (lookup
-  ignoring case), `listing` and `cpu`.
+  ignoring case), `sections` (a dict of name to `Section`: `type`, `align`,
+  `address`, `size`, and `placement`, which is `"at"`, `"given"` or
+  `"located"`), `listing` and `cpu`.
 - `result.image(base=None, fill=0xFF)` lays all code out as one block, like
   the command-line tool.
 - `result.intel_hex(record_size=16)` and

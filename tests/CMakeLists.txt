@@ -10,7 +10,8 @@ add_executable(openc166_tests
     unit/test_lit.cpp
     unit/test_cond.cpp
     unit/test_dpp.cpp
-    unit/test_output.cpp)
+    unit/test_output.cpp
+    unit/test_sections.cpp)
 target_include_directories(openc166_tests PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
 # doctest's own declarations of std types break with newer MSVC libraries.
 target_compile_definitions(openc166_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
@@ -45,15 +46,19 @@ if(TARGET openc166_shared)
 endif()
 
 if(TARGET openc166_cli)
-    # Assembles an example and compares the binary byte for byte.
+    # Assembles an example and compares the binary byte for byte. Arguments
+    # after OPTIONS are passed to openc166.
     function(add_binary_test name source)
-        list(JOIN ARGN "" expected)
+        cmake_parse_arguments(PARSE_ARGV 2 arg "" "" "OPTIONS")
+        list(JOIN arg_UNPARSED_ARGUMENTS "" expected)
+        list(JOIN arg_OPTIONS "|" args)
         add_test(NAME ${name}
             COMMAND ${CMAKE_COMMAND}
                 -DOPENC166=$<TARGET_FILE:openc166_cli>
                 -DSOURCE=${PROJECT_SOURCE_DIR}/examples/${source}
                 -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${name}.bin
                 -DEXPECTED=${expected}
+                -DARGS=${args}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/check_binary.cmake)
     endfunction()
 
@@ -81,6 +86,15 @@ if(TARGET openc166_cli)
     add_binary_test(example payload.a66
         "e6f214e0" "e6f300f6" "e084" "e832" "0832" "2841" "3dfc" "cb00"  # code
         "3412" "7856" "bc9a" "f0de" "4241" "4443" "0000" "ffff")         # Source
+
+    # Sections without AT, placed by openc166 or by --section. The second
+    # matches L166 with SECTIONS(PROG(0E000H),VARS(0F600H)).
+    add_binary_test(sections_located sections.a66
+        "f2f40ce0" "0841" "f6f40ce0" "cb00"
+        OPTIONS --origin 0E000H)
+    add_binary_test(sections_given sections.a66
+        "f2f400f6" "0841" "f6f400f6" "cb00"
+        OPTIONS --origin 0E000H --section VARS=0F600H)
 
     # The MTOS payloads of gkflasher. The expected bytes are the output of
     # flasher/mtos_asm.py in gkflasher, whose encodings were checked against

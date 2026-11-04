@@ -52,8 +52,12 @@ struct Value {
     std::uint8_t data_bits = 0;
     // Derived from an SFR address, so ASSUME DPPn:SYSTEM applies to it.
     bool system = false;
+    // Index of the section without AT whose start address the value depends
+    // on (a label in it, or PAG, POF, SOF, SEG, HIGH or LOW of one, plus or
+    // minus a number); 0 if none. Keil leaves such values to the linker.
+    std::uint16_t movable = 0;
 
-    bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg; }
+    bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg || movable != 0; }
 
     // The 16-bit address a DPPn: prefixed value stands for: the DPP number in
     // bits 15..14 above the page offset.

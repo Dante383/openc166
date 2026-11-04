@@ -121,6 +121,7 @@ public:
                 v.unsig = true;
                 v.fixed = ctx_.location_fixed();
                 v.section = ctx_.section_index();
+                if (!v.fixed) v.movable = ctx_.section_index();
                 return v;
             }
             if (t.text == "(") {
@@ -159,6 +160,17 @@ private:
     static void reject_negated(const Value& a, int column) {
         if (a.rel == Rel::Addr || a.rel == Rel::Diff)
             throw AsmError("A63", "illegal relocatable expression: Keil A166 miscomputes a negated address", column);
+        reject_movable(a, column);
+    }
+
+    // Only + and - with a number can follow a value that the linker fills in.
+    static void reject_movable(const Value& a, int column) {
+        if (a.movable) throw AsmError("A63", "illegal relocatable expression", column);
+    }
+
+    static Value moving_with(Value v, const Value& a) {
+        v.movable = a.movable;
+        return v;
     }
 
     // Operands of arithmetic must be plain numbers; SFRs act as their address.
@@ -221,7 +233,7 @@ private:
                 require_number(a, t.column);
                 U x = static_cast<U>(a.num);
                 U r = which == 0 ? x >> 16 : which == 1 ? x >> 14 : which == 2 ? x & 0xFFFF : x & 0x3FFF;
-                Value v = num(a, a, r);
+                Value v = moving_with(num(a, a, r), a);
                 if (which == 0) v.rel = Rel::Seg;  // Keil treats every SEG value as relocatable
                 return v;
             }
@@ -268,6 +280,10 @@ private:
             a.type = VType::Number;
         } else if (a.type != VType::Number) {
             throw AsmError("A104", "DATAn operator: incompatible operand", t.column);
+        } else if (a.movable && a.rel != Rel::Addr) {
+            // Keil reports PAG, POF, SOF, SEG, HIGH or LOW of a label here,
+            // but still leaves the value to the linker.
+            ctx_.soft_error(AsmError("A104", "DATAn operator: incompatible operand", t.column));
         }
         // Relocatable addresses keep their value; the linker would truncate them.
         if (!a.relocatable()) {
@@ -329,7 +345,7 @@ private:
                     : bnot ? ~x
                     : byte >= 0 ? (x >> (8 * byte)) & 0xFF
                                 : (x >> (8 * word)) & 0xFFFF;
-                return num(a, a, r);
+                return moving_with(num(a, a, r), a);
             }
         }
         return segment_ops();
@@ -388,8 +404,20 @@ private:
     // A DPPn: prefix, an SFR origin (for ASSUME DPPn:SYSTEM) and the section
     // of a section name carry over to the sum.
     static Value add_sub(int op, const Value& a, const Value& b, int column) {
+        const bool difference = op == Sub && a.rel == Rel::Addr && b.rel == Rel::Addr;
+        if (a.movable || b.movable) {
+            // Keil works out the difference of two labels in one section
+            // itself; anything else that combines two addresses, or takes a
+            // value the linker fills in away from a number, it either
+            // refuses or silently gets wrong.
+            if (difference ? a.movable != b.movable
+                           : (a.movable || a.rel == Rel::Addr) && (b.movable || b.rel == Rel::Addr))
+                throw AsmError("A63", "illegal relocatable expression", column);
+            if (!difference && op == Sub && b.movable) throw AsmError("A63", "illegal relocatable expression", column);
+        }
         Value v = add_sub_value(op, a, b, column);
         v.dpp = a.dpp >= 0 ? a.dpp : b.dpp;
+        if (!difference) v.movable = a.movable ? a.movable : b.movable;
         if (a.rel == Rel::None && b.rel == Rel::None) {
             v.system = a.system || b.system || a.type == VType::Sfr || b.type == VType::Sfr;
             if (v.section == 0) v.section = a.section ? a.section : b.section;
@@ -430,6 +458,11 @@ private:
     }
 
     static Value apply(int op, const Value& a, const Value& b, int column) {
+        // Two labels in one section compare the same wherever it goes.
+        const bool comparison = op >= Eq;
+        if ((a.movable || b.movable) &&
+            !(comparison && a.rel == Rel::Addr && b.rel == Rel::Addr && a.movable == b.movable))
+            throw AsmError("A63", "illegal relocatable expression", column);
         U x = static_cast<U>(a.num), y = static_cast<U>(b.num);
         std::int64_t sx = a.num, sy = b.num;
         const bool known = a.known && b.known;

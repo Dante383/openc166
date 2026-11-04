@@ -148,6 +148,16 @@ int oc166_options_add_include_dir(oc166_options* opts, const char* dir) {
     }
 }
 
+int oc166_options_set_section_address(oc166_options* opts, const char* name, int64_t address) {
+    if (!opts || !name || !*name || address < 0 || address > 0xFFFFFF) return -1;
+    try {
+        opts->opt.section_addresses.emplace_back(name, address);
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
 oc166_result* oc166_assemble(const oc166_options* opts, const char* source, size_t length, const char* file_name) {
     if (!source && length != 0) return nullptr;
     try {
@@ -255,6 +265,24 @@ size_t oc166_result_symbol_count(const oc166_result* r) { return r ? r->res.symb
 int oc166_result_symbol(const oc166_result* r, size_t index, oc166_symbol* out) {
     if (!r || !out || index >= r->res.symbols.size()) return -1;
     fill_symbol(r->res.symbols[index], out);
+    return 0;
+}
+
+size_t oc166_result_section_count(const oc166_result* r) { return r ? r->res.sections.size() : 0; }
+
+int oc166_result_section(const oc166_result* r, size_t index, oc166_section* out) {
+    if (!r || !out || index >= r->res.sections.size()) return -1;
+    const oc166::SectionInfo& s = r->res.sections[index];
+    out->name = s.name.c_str();
+    out->type = s.type.c_str();
+    out->align = s.align.c_str();
+    out->address = s.address;
+    out->size = s.size;
+    switch (s.placement) {
+    case oc166::SectionInfo::Placement::At: out->placement = "at"; break;
+    case oc166::SectionInfo::Placement::Given: out->placement = "given"; break;
+    case oc166::SectionInfo::Placement::Located: out->placement = "located"; break;
+    }
     return 0;
 }
 

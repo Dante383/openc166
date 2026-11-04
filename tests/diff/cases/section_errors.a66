@@ -1,0 +1,178 @@
+; Errors in SECTION lines, in sections without AT, and in expressions that
+; Keil leaves to the linker.
+$MOD167
+
+; Grammar: type [align] [AT expr | combine] ['class'].
+S1      SECTION DATA PUBLIC AT 100H
+S1      ENDS
+S2      SECTION DATA 'X' AT 200H
+S2      ENDS
+S3      SECTION DATA WORD PUBLIC AT 300H
+S3      ENDS
+S4      SECTION DATA AT 400H PUBLIC
+S4      ENDS
+S5      SECTION DATA AT 500H WORD
+S5      ENDS
+S6      SECTION DATA 'Y' 'Z'
+S6      ENDS
+S7      SECTION DATA AT 700H 'X'
+S7      ENDS
+S8      SECTION DATA WORD AT 800H
+S8      ENDS
+
+; Not every alignment suits every section type.
+A1      SECTION CODE BYTE
+A1      ENDS
+A2      SECTION CONST BITADDRESSABLE
+A2      ENDS
+A3      SECTION XDATA PECADDRESSABLE
+A3      ENDS
+A4      SECTION DATA BITADDRESSABLE
+A4      ENDS
+
+; Reopening a section may repeat its attributes or leave them out, but not
+; change them.
+RS1      SECTION DATA WORD PUBLIC 'RC'
+        DW      1
+RS1      ENDS
+RS1      SECTION DATA
+        DW      2
+RS1      ENDS
+RS1      SECTION DATA WORD PUBLIC 'RC'
+        DW      3
+RS1      ENDS
+RS1      SECTION DATA BYTE
+RS1      ENDS
+RS1      SECTION DATA PRIVATE
+RS1      ENDS
+RS1      SECTION DATA AT 1000H
+RS1      ENDS
+RS1      SECTION DATA 'OTHER'
+RS1      ENDS
+RS2      SECTION DATA AT 1100H
+RS2      ENDS
+RS2      SECTION DATA AT 1200H
+RS2      ENDS
+RS2      SECTION DATA PUBLIC
+RS2      ENDS
+RS4      SECTION DATA
+RS4      ENDS
+RS4      SECTION CONST
+RS4      ENDS
+
+; Sections nest, and ENDS closes the innermost one. An ENDS naming another
+; known section still closes it; one naming an unknown section does not.
+N1      SECTION DATA
+N2      SECTION DATA
+        DW      1
+N9      ENDS
+        DW      2
+N1      ENDS
+        DW      3
+N1      ENDS
+N1      ENDS
+
+; A BYTE section without AT may start at any address, so words have no
+; place in it.
+B1      SECTION DATA BYTE
+        DB      1
+        DW      2
+        DSW     1
+        DD      3
+        EVEN
+B1L     LABEL   WORD
+        DB      4
+B1      ENDS
+; With AT the address is known, and DW moves to the next even address.
+B2      SECTION DATA BYTE AT 2001H
+        DB      1
+        DW      2
+B2      ENDS
+
+; Only + and - with a number, or the difference of two labels in one
+; section, can be used with a label in a section without AT.
+X1      SECTION DATA
+        DW      1
+X:      DW      2
+Y:      DW      3
+        DW      X AND 0FH
+        DW      X SHR 1
+        DW      X / 2
+        DW      X * 1
+        DW      X - Y, Y - X
+        DW      X - OTHER
+        DW      OTHER - X
+        DW      (X - Y) - X
+        DW      2 - POF X
+        DW      X + POF Y
+        DW      POF X SHR 1
+        DW      -POF X
+        DW      NOT PAG X
+        DW      PAG X + X
+        DW      X EQ Y, X LT Y, X EQ X
+        DW      X EQ 2
+        DW      X GT OTHER
+        DW      X LT FIXED
+        DW      FIXED - X
+        DS      X
+        DS      Y - X
+X1      ENDS
+X2      SECTION DATA
+OTHER:  DW      4
+X2      ENDS
+X3      SECTION DATA AT 3000H
+FIXED:  DW      5
+X3      ENDS
+
+C1      SECTION CODE
+P       PROC    NEAR
+        MOV     R1, #X - OTHER
+        MOV     R1, #POF X SHR 1
+        MOV     R1, #-POF X
+        MOV     R1, #X / 2
+        MOV     R1, #DATA4 POF X
+        MOV     R1, #DATA16 PAG X
+        EXTR    #POF X
+        RET
+P       ENDP
+C1      ENDS
+
+; Keil gets these wrong without a word.
+D1      SECTION DATA
+        DW      X - FIXED               ; DIVERGES: Keil silently gives 0
+        DW      X + X                   ; DIVERGES: Keil adds the offsets in the section
+        DW      POF X - POF Y           ; DIVERGES: Keil silently gives 0
+        DW      SEG X + SEG X           ; DIVERGES: Keil silently gives 0
+D1      ENDS
+
+; A section name must be new. Keil reports a clash and opens nothing, so the
+; ENDS then finds no open section.
+K1      SECTION DATA AT 3200H
+KL:     DW      1
+KQ      EQU     5
+K1      ENDS
+KL      SECTION DATA
+KL      ENDS
+KQ      SECTION DATA
+KQ      ENDS
+DPP0    SECTION DATA
+DPP0    ENDS
+R1      SECTION DATA
+R1      ENDS
+E       SECTION DATA
+E       ENDS
+K1      EQU     6
+CODE    SECTION DATA
+CODE    ENDS
+cc_UC   SECTION DATA
+
+; AT needs a fixed address. Keil still opens the section.
+K2      SECTION DATA AT X
+        DW      5
+K2      ENDS
+
+; ENDS and ENDP need a name.
+        ENDS
+        ENDP
+
+        END

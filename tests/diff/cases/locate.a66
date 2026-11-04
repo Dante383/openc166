@@ -1,0 +1,129 @@
+; Sections without AT, placed as Keil L166 places them by default: in the
+; order in which they first appear, each at the lowest free address from 0
+; on that suits its alignment, around the sections with AT. Run with --image
+; to compare the placement with L166.
+$MOD167
+
+; Fixed: the others must avoid 0010H..0013H.
+FIX     SECTION DATA AT 0010H
+FX1:    DW      1111H, 2222H
+FIX     ENDS
+
+; Too long for the 16 bytes in front of FIX, so it goes after it. It refers
+; to labels in sections that come later.
+MAIN    SECTION CODE
+MAINP   PROC    NEAR
+        MOV     R1, #BYTEV
+        MOV     R2, BYTEV
+        MOV     R3, #SOF WRD2
+        MOV     R4, #POF DD1
+        MOV     R5, #PAG DD1
+        MOV     R6, #BYTES2
+        MOV     R7, #LATE
+        CALL    CC_UC, SUBP
+        MOV     R8, #PAGED
+        MOV     R9, #BITV
+        MOV     R10, #HIGH LATE
+        MOV     R11, #LOW LATE + 1
+        MOV     R12, #CROSS
+        MOV     R13, #POF CROSS
+        RET
+MAINP   ENDP
+MAIN    ENDS
+
+; Small sections fill the space in front of FIX.
+BYTES   SECTION DATA BYTE
+BYTEV:  DB      1, 2, 3
+BYTES   ENDS
+
+BYTES2  SECTION DATA BYTE
+        DB      4
+BYTES2  ENDS
+
+WRD     SECTION DATA WORD
+WRD1:   DW      5
+WRD     ENDS
+
+; 4-byte alignment counts from the start of the section.
+WRDD    SECTION DATA
+        DW      6
+DD1:    DD      7
+WRDD    ENDS
+
+; Reopened: WRD grows to four bytes and stays in one piece, so WRDD moves.
+WRD     SECTION DATA
+WRD2:   DW      8
+WRD     ENDS
+
+SUBS    SECTION CODE
+SUBP    PROC    NEAR
+        MOV     R1, #WRD1
+        MOV     R2, #WRD2
+        MOV     R3, #FX1
+        RET
+SUBP    ENDP
+SUBS    ENDS
+
+DW4     SECTION CONST DWORD
+        DB      9
+DW4     ENDS
+
+; ORG makes the section longer. In a section without AT, ORG counts from
+; the start of the section, and a label or '$' in it stands for its offset.
+GAP     SECTION DATA BYTE
+        ORG     5
+GAPV:   DB      10
+        ORG     $+2
+        DB      11
+        ORG     GAPV+10H
+        DB      12
+GAP     ENDS
+
+; A whole 16 KB data page of its own.
+PAGED   SECTION DATA PAGE
+        DW      PAGED, GAPV, DW4
+PAGED   ENDS
+
+; Bit-addressable sections go to FD00H..FDFFH.
+BITS    SECTION DATA BITADDRESSABLE
+BITV:   DW      0AAAAH
+BITS    ENDS
+
+PEC     SECTION DATA PECADDRESSABLE
+        DW      0BBBBH
+PEC     ENDS
+
+; An empty section takes no space.
+EMPTY   SECTION DATA
+EMPTY   ENDS
+
+LATE    SECTION CONST
+        DB      'late'
+LATE    ENDS
+
+; XDATA may cross a data page boundary, DATA may not: CROSS would straddle
+; 4000H after BIG, so it goes after PAGED.
+BIG     SECTION XDATA
+        DS      3E00H
+BIG     ENDS
+
+CROSS   SECTION DATA
+        DS      200H
+        DW      CROSS
+CROSS   ENDS
+
+; Sections nest. Opening an open section again continues it, and each
+; opening needs its own ENDS.
+OUTER   SECTION CONST
+        DW      1
+INNER   SECTION CONST
+        DW      2
+OUTER   SECTION CONST
+        DW      3
+OUTER   ENDS
+        DW      4
+INNER   ENDS
+        DW      5
+OUTER   ENDS
+
+        END

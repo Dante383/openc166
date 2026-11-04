@@ -3,10 +3,10 @@
 
     >>> import openc166
     >>> result = openc166.assemble('''
-    ... CODE    SECTION CODE AT 0E000H
+    ... PROG    SECTION CODE AT 0E000H
     ...         MOV     R4, #0BEEFH
     ...         RET
-    ... CODE    ENDS
+    ... PROG    ENDS
     ...         END
     ... ''')
     >>> result.ok, result.diagnostics
@@ -28,7 +28,7 @@ import os
 import threading
 import weakref
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Union
 
 from . import _native
 
@@ -40,6 +40,7 @@ __all__ = [
     "Chunk",
     "Image",
     "Symbol",
+    "Section",
     "AssemblyError",
     "__version__",
 ]
@@ -133,6 +134,30 @@ class Symbol:
     line: int = 0  # listing line of the definition
 
 
+@dataclass(frozen=True)
+class Section:
+    """Where a SECTION went.
+
+    type is "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA" or "XCONST".
+    align is "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT", "BITADDRESSABLE"
+    or "PECADDRESSABLE". placement says how the address was chosen: "at"
+    (AT in the source), "given" (the 'sections' argument of assemble()) or
+    "located" (by openc166, in the first free place from the origin on).
+    """
+
+    name: str
+    type: str
+    align: str
+    address: int
+    size: int
+    placement: str
+
+    @property
+    def end(self) -> int:
+        """Address after the last byte."""
+        return self.address + self.size
+
+
 class AssemblyError(Exception):
     """The source has errors. 'diagnostics' lists them; 'result' is the whole Result."""
 
@@ -200,6 +225,20 @@ class Result:
                 line=s.line,
             )
         self._folded = {name.upper(): sym for name, sym in self.symbols.items()}
+
+        self.sections: Dict[str, Section] = {}
+        """Sections in order of first appearance, by name as first spelled."""
+        sec = _native.Section()
+        for i in range(_lib.oc166_result_section_count(handle)):
+            _lib.oc166_result_section(handle, i, ctypes.byref(sec))
+            self.sections[_text(sec.name)] = Section(
+                name=_text(sec.name),
+                type=_text(sec.type),
+                align=_text(sec.align),
+                address=sec.address,
+                size=sec.size,
+                placement=_text(sec.placement),
+            )
 
     @property
     def errors(self) -> List[Diagnostic]:
@@ -298,6 +337,7 @@ def assemble(
     cpu: Optional[str] = None,
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
+    sections: Optional[Mapping[str, int]] = None,
 ) -> Result:
     """Assembles Keil A166 source text.
 
@@ -307,9 +347,13 @@ def assemble(
                   its directory. The source is not read from it.
     cpu           "c166" (the default) or "c167". $MOD167 in the source
                   selects the C167 too.
-    origin        address of code outside any section, and of the first
-                  section without an AT address.
+    origin        address of code outside any section, and the lowest
+                  address for sections without AT.
     include_dirs  more directories searched by $INCLUDE.
+    sections      addresses for sections without AT, by name (any case),
+                  like the SECTIONS control of Keil's L166:
+                  {"MYDATA": 0xF600}. The other sections go in order of
+                  appearance to the first free place from the origin on.
     """
     if isinstance(source, str):
         source = source.encode("utf-8")
@@ -327,6 +371,13 @@ def assemble(
             raise ValueError("origin must not be negative")
         for d in include_dirs:
             _lib.oc166_options_add_include_dir(opts, os.fsencode(os.fspath(d)))
+        for sec_name, address in (sections or {}).items():
+            if not isinstance(address, int) or not 0 <= address <= 0xFFFFFF:
+                raise ValueError(
+                    "bad address {!r} for section {!r} (use 0..0FFFFFFH)".format(address, sec_name)
+                )
+            if _lib.oc166_options_set_section_address(opts, str(sec_name).encode("utf-8"), address) != 0:
+                raise ValueError("bad section name {!r}".format(sec_name))
         name = os.fsencode(os.fspath(file_name)) if file_name is not None else None
         handle = _lib.oc166_assemble(opts, source, len(source), name)
     finally:
@@ -342,8 +393,16 @@ def assemble_file(
     cpu: Optional[str] = None,
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
+    sections: Optional[Mapping[str, int]] = None,
 ) -> Result:
     """Reads and assembles a source file. See assemble() for the options."""
     with open(path, "rb") as f:
         source = f.read()
-    return assemble(source, file_name=path, cpu=cpu, origin=origin, include_dirs=include_dirs)
+    return assemble(
+        source,
+        file_name=path,
+        cpu=cpu,
+        origin=origin,
+        include_dirs=include_dirs,
+        sections=sections,
+    )

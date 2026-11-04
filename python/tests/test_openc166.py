@@ -255,13 +255,13 @@ class SymbolTest(unittest.TestCase):
             "PORT   EQU P2\n"
             "COND   EQU cc_Z\n"
             "GREET  LIT 'MOV R1, #Count'\n"
-            "CODE   SECTION CODE AT 0C000H\n"
+            "PROG   SECTION CODE AT 0C000H\n"
             "MAIN   PROC FAR\n"
             "       GREET\n"
             "       RET\n"
             "MAIN   ENDP\n"
             "TABLE: DW 1, 2\n"
-            "CODE   ENDS\n"
+            "PROG   ENDS\n"
             "       END\n"
         )
         self.assertTrue(r.ok, r.diagnostics)
@@ -281,6 +281,54 @@ class SymbolTest(unittest.TestCase):
         self.assertEqual((s["MAIN"].kind, s["MAIN"].label_type, s["MAIN"].value), ("label", "far", 0xC000))
         self.assertEqual((s["TABLE"].label_type, s["TABLE"].value), ("word", 0xC004))
         self.assertEqual(list(s), sorted(s))
+
+
+class SectionTest(unittest.TestCase):
+    SOURCE = (
+        "PROG   SECTION CODE\n"
+        "MAIN   PROC NEAR\n"
+        "       MOV R4, #COUNT\n"
+        "       RET\n"
+        "MAIN   ENDP\n"
+        "PROG   ENDS\n"
+        "Vars   SECTION DATA\n"
+        "COUNT: DW 0\n"
+        "Vars   ENDS\n"
+        "FIXED  SECTION CONST AT 0A000H\n"
+        "       DB 1\n"
+        "FIXED  ENDS\n"
+        "       END\n"
+    )
+
+    def test_located(self):
+        result = openc166.assemble(self.SOURCE, origin=0x8000)
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(list(result.sections), ["PROG", "Vars", "FIXED"])
+        prog = result.sections["PROG"]
+        self.assertEqual(
+            prog, openc166.Section("PROG", "CODE", "WORD", 0x8000, 6, "located")
+        )
+        self.assertEqual(prog.end, 0x8006)
+        self.assertEqual(result.sections["Vars"].address, 0x8006)
+        self.assertEqual(result.sections["FIXED"].placement, "at")
+        self.assertEqual(result.chunks[0].data[:6].hex(), "e6f40680cb00")
+
+    def test_given(self):
+        result = openc166.assemble(self.SOURCE, origin=0x8000, sections={"VARS": 0xF600})
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.sections["Vars"].address, 0xF600)
+        self.assertEqual(result.sections["Vars"].placement, "given")
+        self.assertEqual(result.chunks[0].data[:6].hex(), "e6f400f6cb00")
+
+    def test_given_problems(self):
+        result = openc166.assemble(self.SOURCE, sections={"FIXED": 0x100, "NONE": 0x200})
+        self.assertEqual([d.code for d in result.errors], ["OC14"])
+        self.assertEqual([d.code for d in result.warnings], ["OC13"])
+        for bad in (-1, 0x1000000, "0x100"):
+            with self.assertRaises(ValueError):
+                openc166.assemble(self.SOURCE, sections={"VARS": bad})
+        with self.assertRaises(ValueError):
+            openc166.assemble(self.SOURCE, sections={"": 0x100})
 
 
 class IncludeTest(unittest.TestCase):

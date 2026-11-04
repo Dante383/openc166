@@ -42,6 +42,11 @@ static void test_options(void) {
     CHECK(oc166_options_set_origin(opts, -1) == -1);
     CHECK(oc166_options_add_include_dir(opts, "inc") == 0);
     CHECK(oc166_options_add_include_dir(opts, NULL) == -1);
+    CHECK(oc166_options_set_section_address(opts, "DATA1", 0x8000) == 0);
+    CHECK(oc166_options_set_section_address(opts, "", 0x8000) == -1);
+    CHECK(oc166_options_set_section_address(opts, NULL, 0x8000) == -1);
+    CHECK(oc166_options_set_section_address(opts, "DATA1", -1) == -1);
+    CHECK(oc166_options_set_section_address(opts, "DATA1", 0x1000000) == -1);
     oc166_options_free(opts);
     oc166_options_free(NULL);
 }
@@ -147,13 +152,13 @@ static void test_symbols(void) {
                       "IDX    EQU R6\n"
                       "PORT   EQU P2\n"
                       "GREET  LIT 'MOV R1, #COUNT'\n"
-                      "CODE   SECTION CODE AT 0C000H\n"
+                      "PROG   SECTION CODE AT 0C000H\n"
                       "MAIN   PROC FAR\n"
                       "       GREET\n"
                       "       RETS\n"
                       "MAIN   ENDP\n"
                       "TABLE: DW 1, 2\n"
-                      "CODE   ENDS\n"
+                      "PROG   ENDS\n"
                       "       END\n");
     CHECK(oc166_result_error_count(r) == 0);
     CHECK(strcmp(oc166_result_cpu(r), "c167") == 0);
@@ -183,6 +188,48 @@ static void test_symbols(void) {
     oc166_options_free(opts);
 }
 
+static void test_sections(void) {
+    oc166_section s;
+    oc166_chunk chunk;
+    oc166_options *opts = oc166_options_new();
+    oc166_result *r;
+    oc166_options_set_origin(opts, 0x8000);
+    oc166_options_set_section_address(opts, "vars", 0x100);
+    oc166_options_set_section_address(opts, "VARS", 0x200); /* replaces 100H */
+    r = assemble_text(opts,
+                      "PROG   SECTION CODE\n"
+                      "MAIN   PROC NEAR\n"
+                      "       MOV R4, #POF COUNT\n"
+                      "       RET\n"
+                      "MAIN   ENDP\n"
+                      "PROG   ENDS\n"
+                      "VARS   SECTION DATA\n"
+                      "COUNT: DW 0\n"
+                      "VARS   ENDS\n"
+                      "FIXED  SECTION CONST AT 0A000H\n"
+                      "       DB 1\n"
+                      "FIXED  ENDS\n"
+                      "       END\n");
+    CHECK(oc166_result_error_count(r) == 0);
+    CHECK(oc166_result_section_count(r) == 3);
+    CHECK(oc166_result_section(r, 0, &s) == 0);
+    CHECK(strcmp(s.name, "PROG") == 0 && strcmp(s.type, "CODE") == 0 && strcmp(s.align, "WORD") == 0);
+    CHECK(s.address == 0x8000 && s.size == 6 && strcmp(s.placement, "located") == 0);
+    CHECK(oc166_result_section(r, 1, &s) == 0);
+    CHECK(strcmp(s.name, "VARS") == 0 && s.address == 0x200 && s.size == 2 && strcmp(s.placement, "given") == 0);
+    CHECK(oc166_result_section(r, 2, &s) == 0);
+    CHECK(strcmp(s.name, "FIXED") == 0 && s.address == 0xA000 && strcmp(s.placement, "at") == 0);
+    CHECK(oc166_result_section(r, 3, &s) == -1);
+    CHECK(oc166_result_section(NULL, 0, &s) == -1);
+    CHECK(oc166_result_section_count(NULL) == 0);
+    /* MOV R4, #200H at 8000H */
+    CHECK(oc166_result_chunk(r, 0, &chunk) == 0);
+    CHECK(chunk.address == 0x8000 && chunk.size >= 4);
+    CHECK(chunk.data[0] == 0xE6 && chunk.data[1] == 0xF4 && chunk.data[2] == 0x00 && chunk.data[3] == 0x02);
+    oc166_result_free(r);
+    oc166_options_free(opts);
+}
+
 static void test_edge_cases(void) {
     oc166_result *r = oc166_assemble(NULL, NULL, 0, NULL);
     CHECK(r != NULL);
@@ -201,6 +248,7 @@ int main(void) {
     test_code_and_image();
     test_diagnostics();
     test_symbols();
+    test_sections();
     test_edge_cases();
     if (failures) {
         fprintf(stderr, "%d check(s) failed\n", failures);

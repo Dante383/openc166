@@ -28,7 +28,11 @@ options:
                       .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
   -l, --listing FILE  write a listing
       --cpu CPU       c166 (default) or c167; $MOD167 in the source also selects c167
-      --origin ADDR   address of code outside sections and of sections without AT (default 0)
+      --origin ADDR   address of code outside sections, and the lowest address for
+                      sections without AT (default 0)
+      --section NAME=ADDR
+                      put section NAME, which has no AT, at ADDR (may be repeated);
+                      the other sections without AT go to the first free place
       --base ADDR     bin: address of the first byte of the file (default: lowest address used)
       --fill BYTE     bin: value of unused bytes inside the file (default 0FFh)
       --record-size N hex, srec: data bytes per record (default 16)
@@ -153,6 +157,14 @@ int run(int argc, char** argv) {
                 throw UsageError("unknown CPU '" + v + "' (use c166 or c167)");
         } else if (is("", "--origin")) {
             opt.origin = parse_number(value(), "origin");
+        } else if (is("", "--section")) {
+            std::string_view v = value();
+            std::size_t eq = v.find('=');
+            if (eq == std::string_view::npos || eq == 0)
+                throw UsageError("--section needs NAME=ADDR, not '" + std::string(v) + "'");
+            std::int64_t address = parse_number(v.substr(eq + 1), "section address");
+            if (address > 0xFFFFFF) throw UsageError("section address must be below 1000000h");
+            opt.section_addresses.emplace_back(std::string(v.substr(0, eq)), address);
         } else if (is("", "--base")) {
             base = parse_number(value(), "base address");
         } else if (is("-I", "--incdir")) {

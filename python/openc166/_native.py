@@ -56,6 +56,17 @@ class Symbol(ctypes.Structure):
     ]
 
 
+class Section(ctypes.Structure):
+    _fields_ = [
+        ("name", ctypes.c_char_p),
+        ("type", ctypes.c_char_p),
+        ("align", ctypes.c_char_p),
+        ("address", ctypes.c_int64),
+        ("size", ctypes.c_int64),
+        ("placement", ctypes.c_char_p),
+    ]
+
+
 def _library_paths():
     override = os.environ.get("OPENC166_LIBRARY")
     if override:
@@ -104,6 +115,7 @@ _declare("oc166_options_free", None, _p)
 _declare("oc166_options_set_cpu", _int, _p, _str)
 _declare("oc166_options_set_origin", _int, _p, ctypes.c_int64)
 _declare("oc166_options_add_include_dir", _int, _p, _str)
+_declare("oc166_options_set_section_address", _int, _p, _str, ctypes.c_int64)
 _declare("oc166_assemble", _p, _p, _str, _size, _str)
 _declare("oc166_result_free", None, _p)
 _declare("oc166_result_error_count", _size, _p)
@@ -120,6 +132,8 @@ _declare("oc166_result_last_error", _str, _p)
 _declare("oc166_result_listing", _str, _p)
 _declare("oc166_result_symbol_count", _size, _p)
 _declare("oc166_result_symbol", _int, _p, _size, ctypes.POINTER(Symbol))
+_declare("oc166_result_section_count", _size, _p)
+_declare("oc166_result_section", _int, _p, _size, ctypes.POINTER(Section))
 
 if lib.oc166_api_version() != API_VERSION:
     raise ImportError(

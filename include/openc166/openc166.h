@@ -82,6 +82,13 @@ OC166_API int oc166_options_set_origin(oc166_options *opts, int64_t origin);
 /* Adds a directory searched by $INCLUDE. Returns 0, or -1 on failure. */
 OC166_API int oc166_options_add_include_dir(oc166_options *opts, const char *dir);
 
+/* Places the section 'name' (any case), which must not have an AT address
+ * in the source, at 'address', like the SECTIONS control of Keil's L166.
+ * Other sections without AT go where openc166 finds room for them, from
+ * the origin on. Setting a name again replaces its address. Returns 0, or
+ * -1 for an empty name or an address outside 0..0FFFFFFH. */
+OC166_API int oc166_options_set_section_address(oc166_options *opts, const char *name, int64_t address);
+
 /* ---- Assembling -------------------------------------------------------- */
 
 typedef struct oc166_result oc166_result;
@@ -207,6 +214,26 @@ OC166_API size_t oc166_result_symbol_count(const oc166_result *r);
 /* Fills '*out' with symbol 'index' (sorted by name). Returns 0, or -1 if
  * 'index' is out of range. */
 OC166_API int oc166_result_symbol(const oc166_result *r, size_t index, oc166_symbol *out);
+
+/* ---- Sections ---------------------------------------------------------- */
+
+typedef struct oc166_section {
+    const char *name;
+    const char *type;       /* "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA" or "XCONST" */
+    const char *align;      /* "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT", "BITADDRESSABLE" or
+                               "PECADDRESSABLE" */
+    int64_t address;
+    int64_t size;           /* in bytes */
+    /* How the address was chosen: "at" (AT in the source), "given"
+     * (oc166_options_set_section_address) or "located" (by openc166). */
+    const char *placement;
+} oc166_section;
+
+OC166_API size_t oc166_result_section_count(const oc166_result *r);
+
+/* Fills '*out' with section 'index' (in order of first appearance).
+ * Returns 0, or -1 if 'index' is out of range. */
+OC166_API int oc166_result_section(const oc166_result *r, size_t index, oc166_section *out);
 
 #ifdef __cplusplus
 }

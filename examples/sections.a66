@@ -1,0 +1,25 @@
+; Sections without AT: openc166 places them as Keil's L166 linker would.
+; Assemble with:
+;   openc166 examples/sections.a66 --origin 0E000H --section VARS=0F600H -l sections.lst
+; PROG goes to 0E000H, the first free place from the origin, and VARS to
+; 0F600H (internal RAM). Without --section, VARS would follow PROG. The
+; SECTIONS table at the end of the listing shows where each section went.
+; DS reserves room without writing any bytes, so the binary holds only the
+; code.
+
+$MOD167
+
+PROG    SECTION CODE
+Bump    PROC    NEAR
+        MOV     R4, Counter     ; Counter = Counter + 1
+        ADD     R4, #1
+        MOV     Counter, R4
+        RET
+Bump    ENDP
+PROG    ENDS
+
+VARS    SECTION DATA
+Counter: DS     2
+VARS    ENDS
+
+        END
