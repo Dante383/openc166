@@ -1,0 +1,91 @@
+; How far DS and ORG may move the location counter of each section type
+; before Keil reports A86 "section length overflow". Data directives never
+; trigger it, a DS that does still reserves its space, and an ORG that does
+; is ignored.
+$MOD167
+$SEGMENTED
+
+; DATA with AT: up to the end of the 16 KB page it starts in.
+Dat1    SECTION DATA AT 4000H
+        DS      3FFFH
+        DS      1
+        DS      1
+Dat1A:  DW      1
+        ORG     8001H
+Dat1B:  DW      2
+        ORG     8000H
+Dat1    ENDS
+Dat2    SECTION DATA AT 0A000H
+        ORG     0C000H
+        DS      0
+        ORG     0C001H
+Dat2A:  DB      3
+Dat2    ENDS
+
+; DATA without AT is not checked.
+Dat3    SECTION DATA
+        DS      4001H
+Dat3    ENDS
+
+; CONST: the last byte of the page must stay free, with or without AT.
+Con1    SECTION CONST AT 10000H
+        DS      3FFEH
+        DS      1
+Con1A:  DB      4
+        DS      1
+Con1B:  DB      5
+Con1    ENDS
+Con2    SECTION CONST AT 0E001H
+        DS      1FFEH
+        DS      1
+Con2    ENDS
+Con3    SECTION CONST
+        DB      6
+        DS      3FFEH
+        DS      0
+        DSW     1
+Con3    ENDS
+Con4    SECTION CONST
+        ORG     3FFFH
+        ORG     4000H
+        DS      0
+Con4    ENDS
+Con5    SECTION CONST AT 18000H
+        DS      3FFEH
+        DW      7
+Con5    ENDS
+
+; CODE, HDATA and HCONST: up to 64 KB long, wherever they start.
+Cod1    SECTION CODE AT 20000H
+        DS      0FFFFH
+        DS      1
+        DS      1
+Cod1    ENDS
+Cod2    SECTION CODE AT 38000H
+        ORG     48000H
+        ORG     48001H
+Cod2    ENDS
+Cod3    SECTION CODE
+        ORG     10001H
+Cod3    ENDS
+Hda1    SECTION HDATA AT 50000H
+        DSW     8000H
+        DSB     1
+Hda1    ENDS
+Hda2    SECTION HDATA
+        ORG     10001H
+Hda2    ENDS
+Hco1    SECTION HCONST AT 68000H
+        DSD     4000H
+        DSB     1
+Hco1    ENDS
+
+; XDATA and XCONST are not checked.
+Xda1    SECTION XDATA AT 80000H
+        DS      10001H
+Xda1    ENDS
+Xco1    SECTION XCONST AT 0A0000H
+        ORG     0B0001H
+        DS      1
+Xco1    ENDS
+        END

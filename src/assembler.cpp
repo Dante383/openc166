@@ -354,7 +354,6 @@ struct Section {
     std::int64_t size = 0;  // highest offset reached
     bool absolute = false;
     bool code = true;  // CODE section: plain labels are NEAR and must be even
-    bool data = false;  // DATA section: DS must stay within one data page
     std::string type;  // CODE, DATA, ...
     std::string align_type = "WORD";
     int align = 2;
@@ -366,7 +365,22 @@ struct Section {
     int column = 0;
 };
 
-// A PUBLIC or GLOBAL symbol, as other modules see it.
+// Keil's A86 check, made by DS and ORG only (data never triggers it): has
+// the location counter outgrown what the section type allows? Returns why,
+// or an empty string. A DATA section at a fixed address must stay in the
+// 16 KB data page it starts in, which one DPP register selects. A CONST
+// section must leave the last byte of its 16 KB page free (a relocatable
+// one counts from its start). A CODE, HDATA or HCONST section may be 64 KB
+// long. Other sections are not checked.
+std::string length_overflow(const Section& s, std::int64_t loc) {
+    const std::int64_t page_end = (s.absolute ? s.base & ~std::int64_t{0x3FFF} : s.base) + 0x4000;
+    if (s.type == "DATA" && s.absolute && loc > page_end) return "a DATA section must fit in one 16 KB page";
+    if (s.type == "CONST" && loc >= page_end)
+        return "a CONST section must leave the last byte of its 16 KB page free";
+    if (section_boundary(s.type) == 0x10000 && loc - s.base > 0x10000)
+        return "a " + s.type + " section must not be longer than 64 KB";
+    return {};
+}
 struct PublicDef {
     std::string name;  // as written
     Value value;
@@ -1638,6 +1652,9 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         Section& s = section();
         std::int64_t target = s.absolute ? v : s.base + v;
         if (target < s.base) throw AsmError("A132", "location counter may not point below section base", column);
+        // Like Keil, the location counter stays where it was.
+        if (std::string why = length_overflow(s, target); !why.empty())
+            throw AsmError("A86", "section length overflow: " + why, column);
         s.loc = target;
         free_ = std::max(free_, target);
     } else if (kw == "EVEN") {
@@ -1682,16 +1699,9 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
         expect_end(cur);
         if (n < 0) throw AsmError("A19", "numeric value out of range", column);
         advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1));
-        // A DATA section at a fixed address must stay in the 16 KB data page
-        // it starts in, which one DPP register selects. A CODE, HDATA or
-        // HCONST section may be 64 KB long. Like Keil, only DS checks this.
-        const Section& s = section();
-        const std::int64_t page_end = (s.base & ~std::int64_t{0x3FFF}) + 0x4000;
-        if (s.data && s.absolute && s.loc > page_end)
-            rep.error("A86", "section length overflow: a DATA section must fit in one 16 KB page", column);
-        else if (section_boundary(s.type) == 0x10000 && s.loc - s.base > 0x10000)
-            rep.error("A86", "section length overflow: a " + s.type + " section must not be longer than 64 KB",
-                      column);
+        // Keil still reserves the space after this error.
+        if (std::string why = length_overflow(section(), section().loc); !why.empty())
+            rep.error("A86", "section length overflow: " + why, column);
         return;
     }
     const int width = dir == "DB" ? 1 : dir == "DW" ? 2 : 4;
@@ -2181,7 +2191,6 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     s.name = std::string(name.text);
     s.type = type;
     s.code = type == "CODE";
-    s.data = type == "DATA";
     if (align) {
         s.align_type = std::string(align->name);
         s.align = align->align;

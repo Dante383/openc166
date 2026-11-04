@@ -672,9 +672,17 @@ segment register from a table:
 - A word access to an odd address (`MOV R1, 0E001H`) gives warning A134.
   Keil does not check addresses that the linker places (labels in sections
   without `AT`), so neither does openc166.
-- A `DATA` section with `AT` must fit in the 16 KB page it starts in
-  (error A86). Keil also checks the size of some `CODE`, `CONST` and
-  `HDATA` sections; openc166 does not yet.
+- `DS` and `ORG` check how far they move the location counter (error A86,
+  "section length overflow"), with the same limits as Keil:
+  - a `DATA` section with `AT` must fit in the 16 KB page it starts in;
+  - a `CONST` section must leave the last byte of its 16 KB page free (one
+    without `AT` may be at most 3FFFH bytes long);
+  - a `CODE`, `HDATA` or `HCONST` section may be at most 64 KB long;
+  - `DATA` sections without `AT`, `XDATA` and `XCONST` are not checked
+    here.
+
+  `DB`, `DW` and the other data directives never trigger A86. A `DS` that
+  does still reserves its space; an `ORG` that does is ignored.
 
 ## Expression details
 

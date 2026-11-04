@@ -40,6 +40,13 @@ std::string result(const AssemblyResult& r, int line) {
     return c + (!c.empty() && !d.empty() ? " " : "") + d;
 }
 
+// Listed address of a source line, or -1.
+std::int64_t address(const AssemblyResult& r, int line) {
+    for (const auto& l : r.listing)
+        if (l.line == line && l.has_address) return l.address;
+    return -1;
+}
+
 }  // namespace
 
 TEST_CASE("DPPn: prefixes select the page of an address") {
@@ -191,4 +198,49 @@ TEST_CASE("Data sections with a fixed address") {
     CHECK(diags(r, 3) == "A86E");
     // Addresses above 0FFFFH need $SEGMENTED.
     CHECK(diags(r, 5) == "A19E");
+}
+
+TEST_CASE("DS and ORG check the length of a section like Keil") {
+    auto r = run("$MOD167\n"                       // 1
+                 "D1 SECTION DATA AT 4000H\n"      // 2
+                 " DS 4000H\n"                     // 3
+                 " ORG 8001H\n"                    // 4
+                 "A1: DB 1\n"                      // 5
+                 " DS 1\n"                         // 6
+                 "D1 ENDS\n"                       // 7
+                 "K1 SECTION CONST AT 0A000H\n"    // 8
+                 " DS 1FFFH\n"                     // 9
+                 " DS 1\n"                         // 10
+                 " DB 2\n"                         // 11
+                 "K1 ENDS\n"                       // 12
+                 "K2 SECTION CONST\n"              // 13
+                 " DS 3FFEH\n"                     // 14
+                 " DW 3\n"                         // 15
+                 " ORG 4000H\n"                    // 16
+                 "K2 ENDS\n"                       // 17
+                 "C1 SECTION CODE\n"               // 18
+                 " ORG 10000H\n"                   // 19
+                 " ORG 10001H\n"                   // 20
+                 "C1 ENDS\n"                       // 21
+                 "X1 SECTION XDATA\n"              // 22
+                 " DS 10001H\n"                    // 23
+                 "X1 ENDS\n"                       // 24
+                 " END\n");
+    // A DATA section may fill its page; ORG past it is ignored.
+    CHECK(diags(r, 3) == "");
+    CHECK(diags(r, 4) == "A86E");
+    CHECK(result(r, 5) == "01");
+    CHECK(address(r, 5) == 0x8000);
+    // DS reports the overflow but still reserves the space.
+    CHECK(diags(r, 6) == "A86E");
+    // CONST must leave the last byte of its page free; data is not checked.
+    CHECK(diags(r, 9) == "");
+    CHECK(diags(r, 10) == "A86E");
+    CHECK(address(r, 11) == 0xC000);
+    CHECK(diags(r, 15) == "");
+    CHECK(diags(r, 16) == "A86E");
+    // CODE may be 64 KB long; XDATA is not checked.
+    CHECK(diags(r, 19) == "");
+    CHECK(diags(r, 20) == "A86E");
+    CHECK(diags(r, 23) == "");
 }
