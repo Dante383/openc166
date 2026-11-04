@@ -177,7 +177,8 @@ ECUs, taken from gkflasher.
 pip install openc166     # or "pip install ." in a checkout
 ```
 
-Wheels are published for Linux, Windows and macOS on x86 and ARM; other
+Wheels are published for Linux, Windows and macOS on x86 and ARM, including
+32-bit and 64-bit Raspberry Pi OS (on a Raspberry Pi 2 or newer); other
 systems build from source, which needs CMake and a C++20 compiler. To get
 just the `openc166` command, `pipx install openc166` works too.
 

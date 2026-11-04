@@ -55,6 +55,13 @@ test-sources = ["CMakeLists.txt", "examples", "python/tests"]
 test-command = "python -m unittest discover -s python/tests -v"
 test-environment = { OPENC166_TEST_COMMAND = "1" }
 
+[[tool.cibuildwheel.overrides]]
+# The 32-bit ARM image (Ubuntu 20.04, glibc 2.31) has GCC 9, which lacks
+# C++20's <span>. Its GCC 10 works and uses the same system libstdc++.
+select = "*-manylinux_armv7l"
+before-all = "apt-get update && apt-get install -y g++-10"
+environment = { CC = "gcc-10", CXX = "g++-10" }
+
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
 # std::filesystem needs macOS 10.15.

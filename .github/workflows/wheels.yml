@@ -95,11 +95,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{ needs.version.outputs.version }}
+      # The ARM runner also builds 32-bit ARM (armv7l) wheels, for 32-bit
+      # Raspberry Pi OS and similar systems; it runs them natively.
+      CIBW_ARCHS_LINUX: ${{ matrix.os == 'ubuntu-24.04-arm' && 'aarch64 armv7l' || 'auto' }}
     strategy:
       fail-fast: false
       matrix:
-        # Linux x86-64 and ARM64 (glibc and musl), Windows x64, x86 and ARM64,
-        # macOS Intel and Apple silicon (see [tool.cibuildwheel] in pyproject.toml).
+        # Linux x86-64, ARM64 and 32-bit ARM (glibc and musl), Windows x64,
+        # x86 and ARM64, macOS Intel and Apple silicon (see [tool.cibuildwheel]
+        # in pyproject.toml).
         os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, windows-11-arm, macos-latest]
     steps:
       - uses: actions/checkout@v7
