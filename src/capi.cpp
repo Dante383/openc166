@@ -27,6 +27,8 @@ struct oc166_result {
     std::vector<std::string> diagnostic_text;  // format_diagnostic() of each diagnostic
     std::optional<std::string> listing;
     oc166::FlatImage image;
+    std::string intel_hex;
+    std::string srec;
     std::string last_error;
 };
 
@@ -85,6 +87,24 @@ void fill_symbol(const oc166::Symbol& s, oc166_symbol* out) {
         out->bit = v.bit;
         break;
     }
+}
+
+// Runs 'f' and returns the text it builds into 'slot', or NULL with
+// last_error set.
+template <class F>
+const char* text_output(oc166_result* r, std::string& slot, F f) {
+    try {
+        r->last_error.clear();
+        slot = f();
+        return slot.c_str();
+    } catch (const std::exception& e) {
+        try {
+            r->last_error = e.what();
+        } catch (...) {
+        }
+    } catch (...) {
+    }
+    return nullptr;
 }
 
 }  // namespace
@@ -206,6 +226,16 @@ int oc166_result_image(oc166_result* r, int has_base, int64_t base, uint8_t fill
     } catch (...) {
         return -1;
     }
+}
+
+const char* oc166_result_intel_hex(oc166_result* r, int record_size) {
+    if (!r) return nullptr;
+    return text_output(r, r->intel_hex, [&] { return oc166::format_intel_hex(r->res, record_size); });
+}
+
+const char* oc166_result_srec(oc166_result* r, int record_size, int address_size) {
+    if (!r) return nullptr;
+    return text_output(r, r->srec, [&] { return oc166::format_srec(r->res, record_size, address_size); });
 }
 
 const char* oc166_result_last_error(const oc166_result* r) { return r ? r->last_error.c_str() : ""; }

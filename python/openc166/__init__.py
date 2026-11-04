@@ -253,6 +253,38 @@ class Result:
             data = ctypes.string_at(img.data, img.size) if img.size else b""
         return Image(img.base, data)
 
+    def intel_hex(self, record_size: int = 16) -> str:
+        """The code and data as Intel HEX text.
+
+        Data records hold up to 'record_size' bytes (1..255). An extended
+        linear address record (type 04) comes before each 64 KB bank, and
+        lines end with CR LF, as Keil OH166 writes them. Only the bytes used
+        are written: gaps stay empty. Raises AssemblyError if the source has
+        errors, and ValueError for a bad record size.
+        """
+        return self._text_output(_lib.oc166_result_intel_hex, record_size)
+
+    def srec(self, record_size: int = 16, address_size: Optional[int] = None) -> str:
+        """The code and data as Motorola S-records.
+
+        address_size is 2 for S1 records, 3 for S2, 4 for S3, or None for
+        the smallest that holds every address. Data records hold up to
+        'record_size' bytes. Raises AssemblyError if the source has errors,
+        and ValueError if an address does not fit or a size is out of range.
+        """
+        return self._text_output(_lib.oc166_result_srec, record_size, address_size or 0)
+
+    def _text_output(self, func, *args: int) -> str:
+        if not self.ok:
+            raise AssemblyError(self)
+        if any(not -(2**31) <= a < 2**31 for a in args):
+            raise ValueError("size out of range")
+        with self._lock:
+            text = func(self._handle, *args)
+            if text is None:
+                raise ValueError(_text(_lib.oc166_result_last_error(self._handle)))
+        return text.decode("ascii")
+
     def __repr__(self) -> str:
         return "<openc166.Result cpu={} errors={} warnings={} chunks={}>".format(
             self.cpu, len(self.errors), len(self.warnings), len(self.chunks)

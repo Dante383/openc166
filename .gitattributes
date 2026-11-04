@@ -1,0 +1,2 @@
+# Expected outputs are compared byte for byte; keep their CR LF line ends.
+tests/expected/** -text

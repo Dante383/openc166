@@ -151,7 +151,25 @@ typedef struct oc166_image {
  * valid until the next oc166_result_image() call on 'r'. */
 OC166_API int oc166_result_image(oc166_result *r, int has_base, int64_t base, uint8_t fill, oc166_image *out);
 
-/* Message of the last failed oc166_result_image() call, or "". */
+/* The code and data as Intel HEX text: data records of up to 'record_size'
+ * bytes (1..255; 16 is usual), an extended linear address record (type 04)
+ * before each 64 KB bank, and an end-of-file record. Lines end with CR LF.
+ * Only the bytes used are written; gaps stay empty. Returns NULL on failure;
+ * then oc166_result_last_error() says why. Like oc166_result_image(), it
+ * works even if the source has errors. The text stays valid until the next
+ * oc166_result_intel_hex() call on 'r'. */
+OC166_API const char *oc166_result_intel_hex(oc166_result *r, int record_size);
+
+/* The code and data as Motorola S-records: S0 header, data records of up to
+ * 'record_size' bytes, S5 record count and end record. 'address_size' is 2
+ * (S1/S9), 3 (S2/S8), 4 (S3/S7), or 0 for the smallest that holds every
+ * address. Lines end with CR LF. Returns NULL if an address does not fit or
+ * 'record_size' is out of range; then oc166_result_last_error() says why.
+ * The text stays valid until the next oc166_result_srec() call on 'r'. */
+OC166_API const char *oc166_result_srec(oc166_result *r, int record_size, int address_size);
+
+/* Message of the last failed oc166_result_image(), oc166_result_intel_hex()
+ * or oc166_result_srec() call, or "". */
 OC166_API const char *oc166_result_last_error(const oc166_result *r);
 
 /* ---- Listing ----------------------------------------------------------- */

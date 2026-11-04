@@ -99,6 +99,22 @@ struct FlatImage {
 FlatImage flat_image(const AssemblyResult& result, std::optional<std::int64_t> base = std::nullopt,
                      std::uint8_t fill = 0xFF);
 
+// The emitted chunks as Intel HEX text: data records (type 00) of up to
+// 'record_size' bytes (1..255), an extended linear address record (type 04)
+// before the first record of each 64 KB bank, and an end-of-file record
+// (type 01). Lines end with CR LF, as OH166 writes them. Only the bytes used
+// are written: gaps stay empty. Where chunks overlap, the later one wins, as
+// in flat_image(). Throws std::invalid_argument for a bad record size.
+std::string format_intel_hex(const AssemblyResult& result, int record_size = 16);
+
+// The emitted chunks as Motorola S-records: a header (S0), data records of
+// up to 'record_size' bytes, a record count (S5) and an end record.
+// 'address_size' selects the data records: 2 for S1/S9, 3 for S2/S8, 4 for
+// S3/S7, or 0 for the smallest that holds every address. Lines end with CR
+// LF. Throws std::invalid_argument if an address does not fit or the record
+// size is out of range (1..252 for S1, 1..251 for S2, 1..250 for S3).
+std::string format_srec(const AssemblyResult& result, int record_size = 16, int address_size = 0);
+
 // "file:line:column: error A62: message"
 std::string format_diagnostic(const Diagnostic& d);
 

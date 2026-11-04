@@ -275,6 +275,8 @@ def read_hex86(path):
                 continue
             b = bytes.fromhex(line[1:])
             n, addr, kind = b[0], (b[1] << 8) | b[2], b[3]
+            if len(b) != n + 5 or sum(b) & 0xFF:
+                raise ValueError(f"{path}: bad record {line}")
             if kind == 0:
                 for i in range(n):
                     data[base + addr + i] = b[4 + i]
@@ -286,19 +288,13 @@ def read_hex86(path):
 
 
 def openc166_image(tool, source, workdir):
-    """openc166 output as {address: byte}, without the gaps. Assembling twice
-    with different fill bytes tells written bytes from gaps."""
-    images = []
-    for fill in ("0", "0FFH"):
-        out = os.path.join(workdir, "img.bin")
-        p = subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", out, "--base", "0", "--fill", fill],
-                           capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
-        if p.returncode != 0:
-            return None
-        with open(out, "rb") as f:
-            images.append(f.read())
-    a, b = images
-    return {i: a[i] for i in range(len(a)) if a[i] == b[i]}
+    """openc166 output as {address: byte}, read from its Intel HEX file."""
+    out = os.path.join(workdir, "img.hex")
+    p = subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", out],
+                       capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
+    if p.returncode != 0:
+        return None
+    return read_hex86(out)
 
 
 def compare_image(source, keil, tool, workdir):

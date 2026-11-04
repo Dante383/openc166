@@ -84,6 +84,28 @@ static void test_code_and_image(void) {
     CHECK(oc166_result_image(r, 1, 0xE002, 0xFF, &image) == -1);
     CHECK(oc166_result_last_error(r)[0] != '\0');
 
+    {
+        const char *hex = oc166_result_intel_hex(r, 16);
+        const char *srec = oc166_result_srec(r, 16, 0);
+        CHECK(hex != NULL && strcmp(hex,
+                                    ":020000040000FA\r\n"
+                                    ":0AE00000E6F4EFBEF6F402C0CB0018\r\n"
+                                    ":00000001FF\r\n") == 0);
+        CHECK(srec != NULL && strcmp(srec,
+                                     "S0030000FC\r\n"
+                                     "S10DE000E6F4EFBEF6F402C0CB0014\r\n"
+                                     "S5030001FB\r\n"
+                                     "S9030000FC\r\n") == 0);
+        hex = oc166_result_intel_hex(r, 4);
+        CHECK(hex != NULL && strstr(hex, ":04E00400F6F402C06C\r\n:02E00800CB004B\r\n") != NULL);
+        CHECK(oc166_result_last_error(r)[0] == '\0');
+        CHECK(oc166_result_intel_hex(r, 0) == NULL);
+        CHECK(oc166_result_last_error(r)[0] != '\0');
+        CHECK(oc166_result_srec(r, 16, 5) == NULL);
+        CHECK(oc166_result_srec(NULL, 16, 0) == NULL);
+        CHECK(oc166_result_intel_hex(NULL, 16) == NULL);
+    }
+
     CHECK(oc166_result_listing(r) != NULL);
     CHECK(strstr(oc166_result_listing(r), "MOV R4, #0BEEFH") != NULL);
 

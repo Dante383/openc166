@@ -43,6 +43,7 @@ add_library(openc166_core STATIC
     expr.cpp
     lexer.cpp
     operand.cpp
+    output.cpp
     predef.cpp)
 add_library(openc166::core ALIAS openc166_core)
 

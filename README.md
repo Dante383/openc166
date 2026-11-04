@@ -4,9 +4,10 @@ An open-source assembler for the Infineon C166 and C167 microcontroller
 family (including ST10 parts), compatible with the Keil A166 assembler.
 
 It turns Keil-style assembly source into a **raw binary image** at a fixed
-address. That suits small programs loaded into RAM or flash and started
-directly, such as ECU payloads, bootstrap loaders, and test code. No linker
-or object-file converter is needed.
+address, or into an Intel HEX or Motorola S-record file. That suits small
+programs loaded into RAM or flash and started directly, such as ECU
+payloads, bootstrap loaders, and test code. No linker or object-file
+converter is needed.
 
 openc166 runs on Linux, Windows and macOS. It needs only a C++20 compiler and
 CMake.
@@ -49,6 +50,8 @@ Early development (version 0.x). What works today:
   and ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
   the Keil manual.
+- Raw binary, Intel HEX and Motorola S-record output. The HEX records match
+  Keil OH166's `H167` format.
 - A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:
@@ -77,21 +80,36 @@ the C API is built in `build/src/`.
 ```sh
 openc166 payload.a66                       # writes payload.bin
 openc166 payload.a66 -o out.bin -l out.lst # choose names, add a listing
+openc166 payload.a66 -o payload.hex        # Intel HEX
+openc166 payload.a66 -o payload.s19        # S-records (S1)
 ```
 
-The binary starts at the lowest address used. For example, code in
+The output format follows the extension of the `-o` file: `.hex`, `.h86`
+and `.ihx` give Intel HEX; `.srec`, `.s19`, `.s28`, `.s37`, `.mot` and
+`.sx` give S-records; anything else gives a raw binary. `--format` chooses
+it explicitly.
+
+A raw binary starts at the lowest address used. For example, code in
 `SECTION CODE AT 0E000H` produces a file whose first byte belongs at
-`0E000H`. To control this:
+`0E000H`. Gaps between pieces of code are filled. HEX and S-record files
+carry the address of every record, so they hold only the bytes used.
 
 | Option | Meaning |
 |---|---|
-| `--base ADDR` | address of the first byte of the file |
+| `-f, --format FMT` | `bin`, `hex` or `srec` (default: from the output extension) |
 | `--origin ADDR` | address of code outside sections and of sections without `AT` |
-| `--fill BYTE` | value of gaps between pieces of code (default `0FFh`) |
+| `--base ADDR` | binary: address of the first byte of the file |
+| `--fill BYTE` | binary: value of gaps between pieces of code (default `0FFh`) |
+| `--record-size N` | HEX and S-records: data bytes per record (default 16) |
 | `--cpu c166\|c167` | instruction set (`$MOD167` in the source also selects C167) |
 | `-I DIR` | also search `DIR` for `$INCLUDE` files (may be repeated) |
 
-The exit status is 0 on success, 1 on assembly errors (no binary is
+Intel HEX files use extended linear address records (type 04) for addresses
+above 64 KB, like OH166 with its `H167` option. S-records use S1, S2 or S3
+records by extension (`.s19`, `.s28`, `.s37`); otherwise the smallest kind
+that holds every address.
+
+The exit status is 0 on success, 1 on assembly errors (no output is
 written), and 2 for usage or file errors. Messages use the format
 `file:line:column: error A74: ...`.
 
@@ -135,6 +153,9 @@ image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
   ignoring case), `listing` and `cpu`.
 - `result.image(base=None, fill=0xFF)` lays all code out as one block, like
   the command-line tool.
+- `result.intel_hex(record_size=16)` and
+  `result.srec(record_size=16, address_size=None)` return Intel HEX and
+  S-record text (`address_size` 2, 3 or 4 picks S1, S2 or S3 records).
 
 The package needs Python 3.9 or newer. It also installs the `openc166`
 command. It loads the library through `ctypes`, so one wheel works with

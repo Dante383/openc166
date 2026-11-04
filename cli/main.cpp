@@ -18,15 +18,20 @@ namespace {
 
 constexpr const char* kUsage = R"(usage: openc166 [options] SOURCE
 
-Assembles Keil A166 assembly for the Infineon C166/C167 into a raw binary.
+Assembles Keil A166 assembly for the Infineon C166/C167 into a raw binary,
+Intel HEX or Motorola S-record file.
 
 options:
-  -o, --output FILE   binary output (default: SOURCE with extension .bin)
+  -o, --output FILE   output file (default: SOURCE with the extension of the format)
+  -f, --format FMT    bin (raw binary), hex (Intel HEX) or srec (S-records); the
+                      default follows the output extension: .hex .h86 .ihx give hex,
+                      .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
   -l, --listing FILE  write a listing
       --cpu CPU       c166 (default) or c167; $MOD167 in the source also selects c167
       --origin ADDR   address of code outside sections and of sections without AT (default 0)
-      --base ADDR     address of the first byte of the binary (default: lowest address used)
-      --fill BYTE     value of unused bytes inside the binary (default 0FFh)
+      --base ADDR     bin: address of the first byte of the file (default: lowest address used)
+      --fill BYTE     bin: value of unused bytes inside the file (default 0FFh)
+      --record-size N hex, srec: data bytes per record (default 16)
   -I, --incdir DIR    also search DIR for $INCLUDE files (may be repeated)
   -h, --help          show this help
       --version       show the version
@@ -74,6 +79,21 @@ void write_file(const std::string& path, const char* data, std::size_t size) {
         throw std::runtime_error("cannot write '" + path + "'");
 }
 
+enum class Format { Bin, Hex, Srec };
+
+std::string lower(std::string_view s) {
+    std::string v(s);
+    for (auto& c : v) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return v;
+}
+
+std::string extension(const std::string& path) {
+    std::size_t slash = path.find_last_of("/\\");
+    std::size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos || (slash != std::string::npos && dot < slash)) return {};
+    return lower(path.substr(dot));
+}
+
 std::string replace_extension(const std::string& path, const std::string& ext) {
     std::size_t slash = path.find_last_of("/\\");
     std::size_t dot = path.find_last_of('.');
@@ -86,6 +106,8 @@ int run(int argc, char** argv) {
     std::string input, output, listing;
     std::optional<std::int64_t> base;
     std::uint8_t fill = 0xFF;
+    std::optional<Format> format;
+    int record_size = 16;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view a = argv[i];
@@ -107,9 +129,22 @@ int run(int argc, char** argv) {
             output = value();
         } else if (is("-l", "--listing")) {
             listing = value();
+        } else if (is("-f", "--format")) {
+            std::string v = lower(value());
+            if (v == "bin" || v == "binary")
+                format = Format::Bin;
+            else if (v == "hex" || v == "ihex")
+                format = Format::Hex;
+            else if (v == "srec" || v == "s19" || v == "mot")
+                format = Format::Srec;
+            else
+                throw UsageError("unknown format '" + v + "' (use bin, hex or srec)");
+        } else if (is("", "--record-size")) {
+            std::int64_t n = parse_number(value(), "record size");
+            if (n < 1 || n > 255) throw UsageError("record size must be 1..255");
+            record_size = static_cast<int>(n);
         } else if (is("", "--cpu")) {
-            std::string v(value());
-            for (auto& c : v) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            std::string v = lower(value());
             if (v == "c166" || v == "80c166")
                 opt.cpu = oc166::isa::Cpu::C166;
             else if (v == "c167" || v == "80c167" || v == "st10")
@@ -137,7 +172,24 @@ int run(int argc, char** argv) {
         }
     }
     if (input.empty()) throw UsageError("no source file given");
-    if (output.empty()) output = replace_extension(input, ".bin");
+    // S1, S2 or S3 records for the conventional extensions; 0 lets the
+    // addresses decide.
+    int srec_address_size = 0;
+    if (!format) {
+        std::string ext = extension(output);
+        if (ext == ".hex" || ext == ".h86" || ext == ".ihx" || ext == ".ihex")
+            format = Format::Hex;
+        else if (ext == ".srec" || ext == ".s19" || ext == ".s28" || ext == ".s37" || ext == ".mot" || ext == ".sx")
+            format = Format::Srec;
+        else
+            format = Format::Bin;
+    }
+    if (*format == Format::Srec) {
+        std::string ext = extension(output);
+        srec_address_size = ext == ".s19" ? 2 : ext == ".s28" ? 3 : ext == ".s37" ? 4 : 0;
+    }
+    if (output.empty())
+        output = replace_extension(input, *format == Format::Hex ? ".hex" : *format == Format::Srec ? ".srec" : ".bin");
 
     opt.file_name = input;
     std::string source = read_file(input);
@@ -150,11 +202,18 @@ int run(int argc, char** argv) {
     }
     if (!result.ok()) {
         std::cerr << result.error_count() << " error(s), " << result.warning_count()
-                  << " warning(s); no binary written\n";
+                  << " warning(s); no output written\n";
         return 1;
     }
-    oc166::FlatImage image = oc166::flat_image(result, base, fill);
-    write_file(output, reinterpret_cast<const char*>(image.bytes.data()), image.bytes.size());
+    if (*format == Format::Bin) {
+        oc166::FlatImage image = oc166::flat_image(result, base, fill);
+        write_file(output, reinterpret_cast<const char*>(image.bytes.data()), image.bytes.size());
+    } else {
+        std::string text = *format == Format::Hex
+                               ? oc166::format_intel_hex(result, record_size)
+                               : oc166::format_srec(result, record_size, srec_address_size);
+        write_file(output, text.data(), text.size());
+    }
     return 0;
 }
 

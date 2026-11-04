@@ -91,6 +91,20 @@ class CommandTest(unittest.TestCase):
             with open(out, "rb") as f:
                 self.assertEqual(f.read().hex(), "e6f4efbef6f402c0db00")
 
+    def test_hex_and_srec_output(self):
+        source = os.path.join(EXAMPLES, "mtos", "marker.a66")
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, args, start in (
+                ("m.hex", (), ":020000040000FA\r\n:0AC01400E6F4EFBEF6F402C0DB00"),
+                ("m.s37", (), "S0030000FC\r\nS30F0000C014E6F4EFBE"),
+                ("m.txt", ("--format", "srec"), "S0030000FC\r\nS10DC014E6F4EFBE"),
+            ):
+                out = os.path.join(tmp, name)
+                proc = self.run_program(source, "-o", out, *args)
+                self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                with open(out, "rb") as f:
+                    self.assertTrue(f.read().decode("ascii").startswith(start), name)
+
     def test_error_exit_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "bad.a66")
@@ -190,6 +204,42 @@ class ImageTest(unittest.TestCase):
             self.result.image(fill=256)
         with self.assertRaises(ValueError):
             self.result.image(base=-2)
+
+
+class HexTest(unittest.TestCase):
+    def setUp(self):
+        self.result = openc166.assemble(
+            "A SECTION CODE AT 100H\n NOP\nA ENDS\n"
+            "B SECTION CODE AT 104H\n RET\nB ENDS\n END\n"
+        )
+
+    def test_intel_hex(self):
+        self.assertEqual(
+            self.result.intel_hex(),
+            ":020000040000FA\r\n:02010000CC0031\r\n:02010400CB002E\r\n:00000001FF\r\n",
+        )
+        with self.assertRaises(ValueError):
+            self.result.intel_hex(0)
+        with self.assertRaises(ValueError):
+            self.result.intel_hex(256)
+
+    def test_srec(self):
+        self.assertEqual(
+            self.result.srec(),
+            "S0030000FC\r\nS1050100CC002D\r\nS1050104CB002A\r\nS5030002FA\r\nS9030000FC\r\n",
+        )
+        self.assertIn("S206000100CC002C\r\nS206000104CB0029\r\n", self.result.srec(address_size=3))
+        with self.assertRaises(ValueError):
+            self.result.srec(address_size=5)
+        with self.assertRaises(ValueError):
+            self.result.srec(record_size=2**40)
+
+    def test_errors_raise(self):
+        bad = openc166.assemble(" MOV R1, NOWHERE\n END\n")
+        with self.assertRaises(openc166.AssemblyError):
+            bad.intel_hex()
+        with self.assertRaises(openc166.AssemblyError):
+            bad.srec()
 
 
 class SymbolTest(unittest.TestCase):

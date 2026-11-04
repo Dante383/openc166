@@ -16,7 +16,13 @@ openc166 targets the syntax and output of Keil A166 (checked against V5.38).
 
 The differential test in `tests/diff/` checks rules 1 and 2 line by line.
 With `--image` it also links Keil's output with L166 and OH166 and compares
-the complete memory image.
+the complete memory image with openc166's Intel HEX output.
+
+openc166 writes what L166 and OH166 would make of the module: a raw binary,
+or Intel HEX in the format of `OH166 ... H167` (type 04 records for
+addresses above 64 KB; OH166 without `H167` writes type 02 records, which
+hold the same data). Records may break at different places than OH166's,
+since OH166 starts a new record at each section.
 
 ## Supported
 

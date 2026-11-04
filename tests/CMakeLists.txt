@@ -9,7 +9,8 @@ add_executable(openc166_tests
     unit/test_include.cpp
     unit/test_lit.cpp
     unit/test_cond.cpp
-    unit/test_dpp.cpp)
+    unit/test_dpp.cpp
+    unit/test_output.cpp)
 target_include_directories(openc166_tests PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
 # doctest's own declarations of std types break with newer MSVC libraries.
 target_compile_definitions(openc166_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
@@ -55,6 +56,26 @@ if(TARGET openc166_cli)
                 -DEXPECTED=${expected}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/check_binary.cmake)
     endfunction()
+
+    # Assembles an example and compares the output file with one in
+    # expected/. ARGN holds more options.
+    function(add_output_test name source output expected)
+        list(JOIN ARGN "|" args)
+        add_test(NAME ${name}
+            COMMAND ${CMAKE_COMMAND}
+                -DOPENC166=$<TARGET_FILE:openc166_cli>
+                -DSOURCE=${PROJECT_SOURCE_DIR}/examples/${source}
+                -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${output}
+                -DEXPECTED_FILE=${CMAKE_CURRENT_SOURCE_DIR}/expected/${expected}
+                -DARGS=${args}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/check_binary.cmake)
+    endfunction()
+
+    # Intel HEX and S-records, chosen by the output extension or --format.
+    # They hold the same bytes as the binaries checked below.
+    add_output_test(hex_output mtos/driver_patch.a66 driver_patch.hex driver_patch.hex)
+    add_output_test(srec_s28_output mtos/driver_patch.a66 driver_patch.s28 driver_patch.s28)
+    add_output_test(srec_format_option payload.a66 payload.out payload.srec --format srec)
 
     # The expected bytes match Keil A166 V5.38 linked with L166 and OH166.
     add_binary_test(example payload.a66
