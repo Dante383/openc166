@@ -45,6 +45,11 @@ public:
     // In the final pass undefined symbols are errors; before it they are
     // unknown values that later passes resolve.
     virtual bool final_pass() const = 0;
+    // An expression uses an EXTERN symbol (Value::external()) at 'column'.
+    virtual void external_used(const Value& v, int column) {
+        (void)v;
+        (void)column;
+    }
 };
 
 // Cursor over the tokens of one line.

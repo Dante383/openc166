@@ -53,7 +53,8 @@ struct Chunk {
 };
 
 struct ListingLine {
-    int line = 0;       // counts the lines of all files, as Keil's listing does
+    int module = 0;     // index into AssemblyResult::modules
+    int line = 0;       // counts the lines of all files of the module, as Keil's listing does
     std::string file;   // file the line comes from
     int file_line = 0;  // line number within 'file'
     int level = 0;      // $INCLUDE nesting depth; 0 for the main source
@@ -67,14 +68,18 @@ struct ListingLine {
     std::vector<std::size_t> diagnostics;  // indices into AssemblyResult::diagnostics
 };
 
-enum class SymbolKind : std::uint8_t { Label, Equ, Set, Bit, Lit };
+// Extern: declared with EXTERN; its value comes from the PUBLIC or GLOBAL
+// symbol of that name in another module.
+enum class SymbolKind : std::uint8_t { Label, Equ, Set, Bit, Lit, Extern };
 
 struct Symbol {
     std::string name;
     SymbolKind kind = SymbolKind::Label;
     Value value;  // unused for a LIT
     int line = 0;  // listing line (ListingLine::line) of the definition
-    std::string text;  // replacement text of a LIT
+    std::string text;  // replacement text of a LIT; type of an EXTERN (WORD, DATA4, ...)
+    int module = 0;  // index into AssemblyResult::modules
+    bool exported = false;  // named by PUBLIC or GLOBAL, so other modules can use it
 };
 
 // Where a section went.
@@ -90,14 +95,18 @@ struct SectionInfo {
     std::int64_t address = 0;
     std::int64_t size = 0;
     Placement placement = Placement::Located;
+    std::string class_name;  // as in the SECTION line, or empty
 };
 
 struct AssemblyResult {
     std::vector<Diagnostic> diagnostics;
     std::vector<Chunk> chunks;  // in source order
     std::vector<ListingLine> listing;
-    std::vector<Symbol> symbols;  // sorted by name
-    std::vector<SectionInfo> sections;  // in order of first appearance
+    std::vector<Symbol> symbols;  // sorted by name, then module
+    // In order of first appearance. Parts of a section in several modules
+    // that L166 would combine count as one section.
+    std::vector<SectionInfo> sections;
+    std::vector<std::string> modules;  // file name of each source
     isa::Cpu cpu = isa::Cpu::C166;
     int passes = 0;
 
@@ -108,6 +117,20 @@ struct AssemblyResult {
 
 // Assembles a complete source text.
 AssemblyResult assemble(std::string_view source, const AssembleOptions& options = {});
+
+// A source text and the name of its file, for diagnostics and $INCLUDE.
+struct Source {
+    std::string file_name;
+    std::string text;
+};
+
+// Assembles several modules and links them into one program, as A166 and
+// L166 would: EXTERN symbols take the value of the PUBLIC or GLOBAL symbol
+// of that name in another module, and parts of a section with the same name
+// and class that are PUBLIC, GLOBAL or COMMON in each module are combined.
+// options.file_name is not used; code outside sections in each module
+// starts at options.origin.
+AssemblyResult assemble(const std::vector<Source>& sources, const AssembleOptions& options = {});
 
 // One contiguous memory image.
 struct FlatImage {

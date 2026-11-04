@@ -55,9 +55,15 @@ struct Value {
     // Index of the section without AT whose start address the value depends
     // on (a label in it, or PAG, POF, SOF, SEG, HIGH or LOW of one, plus or
     // minus a number); 0 if none. Keil leaves such values to the linker.
+    // External symbols (EXTERN) use the numbers from kExternBase on, one per
+    // symbol, as their movable value and, for addresses, as their section.
     std::uint16_t movable = 0;
 
+    static constexpr std::uint16_t kExternBase = 0x8000;
+
     bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg || movable != 0; }
+    // Derived from an external symbol: the linker fills it in.
+    bool external() const { return movable >= kExternBase; }
 
     // The 16-bit address a DPPn: prefixed value stands for: the DPP number in
     // bits 15..14 above the page offset.
@@ -73,6 +79,14 @@ constexpr bool fits_width(const Value& v, int width) {
     if (width >= 64) return true;
     if (v.unsig) return (static_cast<std::uint64_t>(v.num) >> width) == 0;
     std::int64_t hi = v.num >> width;
+    return hi == 0 || hi == -1;
+}
+
+// True if L166 accepts n, taken as a signed 32-bit number, in a fixup field
+// of 'width' bits: the bits above the field must be all zeros or all ones.
+constexpr bool link_fits(std::int64_t n, int width) {
+    const std::int64_t n32 = static_cast<std::int32_t>(static_cast<std::uint32_t>(n & 0xFFFFFFFF));
+    const std::int64_t hi = n32 >> width;
     return hi == 0 || hi == -1;
 }
 

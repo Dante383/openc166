@@ -16,13 +16,15 @@
 
 namespace {
 
-constexpr const char* kUsage = R"(usage: openc166 [options] SOURCE
+constexpr const char* kUsage = R"(usage: openc166 [options] SOURCE...
 
 Assembles Keil A166 assembly for the Infineon C166/C167 into a raw binary,
-Intel HEX or Motorola S-record file.
+Intel HEX or Motorola S-record file. Several sources are linked into one
+program, as L166 would: EXTERN symbols take the values that other sources
+make PUBLIC or GLOBAL, and sections of the same name and class are combined.
 
 options:
-  -o, --output FILE   output file (default: SOURCE with the extension of the format)
+  -o, --output FILE   output file (default: the first SOURCE with the extension of the format)
   -f, --format FMT    bin (raw binary), hex (Intel HEX) or srec (S-records); the
                       default follows the output extension: .hex .h86 .ihx give hex,
                       .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
@@ -107,7 +109,8 @@ std::string replace_extension(const std::string& path, const std::string& ext) {
 
 int run(int argc, char** argv) {
     oc166::AssembleOptions opt;
-    std::string input, output, listing;
+    std::vector<std::string> inputs;
+    std::string output, listing;
     std::optional<std::int64_t> base;
     std::uint8_t fill = 0xFF;
     std::optional<Format> format;
@@ -177,13 +180,11 @@ int run(int argc, char** argv) {
             fill = static_cast<std::uint8_t>(f);
         } else if (a.size() > 1 && a[0] == '-') {
             throw UsageError("unknown option '" + std::string(a) + "'");
-        } else if (input.empty()) {
-            input = a;
         } else {
-            throw UsageError("only one source file may be given");
+            inputs.emplace_back(a);
         }
     }
-    if (input.empty()) throw UsageError("no source file given");
+    if (inputs.empty()) throw UsageError("no source file given");
     // S1, S2 or S3 records for the conventional extensions; 0 lets the
     // addresses decide.
     int srec_address_size = 0;
@@ -201,11 +202,12 @@ int run(int argc, char** argv) {
         srec_address_size = ext == ".s19" ? 2 : ext == ".s28" ? 3 : ext == ".s37" ? 4 : 0;
     }
     if (output.empty())
-        output = replace_extension(input, *format == Format::Hex ? ".hex" : *format == Format::Srec ? ".srec" : ".bin");
+        output = replace_extension(inputs.front(), *format == Format::Hex ? ".hex" : *format == Format::Srec ? ".srec" : ".bin");
 
-    opt.file_name = input;
-    std::string source = read_file(input);
-    oc166::AssemblyResult result = oc166::assemble(source, opt);
+    std::vector<oc166::Source> sources;
+    for (const auto& input : inputs) sources.push_back({input, read_file(input)});
+    opt.file_name = inputs.front();
+    oc166::AssemblyResult result = oc166::assemble(sources, opt);
 
     for (const auto& d : result.diagnostics) std::cerr << oc166::format_diagnostic(d) << "\n";
     if (!listing.empty()) {

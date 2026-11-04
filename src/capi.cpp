@@ -41,6 +41,7 @@ const char* symbol_kind(oc166::SymbolKind k) {
     case oc166::SymbolKind::Set: return "set";
     case oc166::SymbolKind::Bit: return "bit";
     case oc166::SymbolKind::Lit: return "lit";
+    case oc166::SymbolKind::Extern: return "extern";
     }
     return "";
 }

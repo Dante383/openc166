@@ -76,7 +76,7 @@ constexpr std::string_view kNamedDirectives[] = {
 
 // Directives that only matter to a linker or debugger; a raw image ignores them.
 constexpr std::string_view kIgnoredDirectives[] = {
-    "NAME", "PUBLIC", "GLOBAL", "REGDEF", "REGBANK", "SSKDEF", "PECDEF", "TYPEDEC",
+    "NAME", "REGDEF", "REGBANK", "SSKDEF", "PECDEF", "TYPEDEC",
 };
 
 constexpr std::string_view kDataDirectives[] = {"DB", "DW", "DD", "DS", "DSB", "DSW", "DSD", "DPPTR", "DSPTR", "DBPTR"};
@@ -361,13 +361,42 @@ struct Section {
     std::string combine = "PRIVATE";  // or "AT" for a section with a fixed address
     std::string class_name;
     bool placed = false;  // AssembleOptions::section_addresses gives the address
+    // Final pass: the listing line and column of the first SECTION line.
+    std::size_t listing = SIZE_MAX;
+    int column = 0;
+};
+
+// A PUBLIC or GLOBAL symbol, as other modules see it.
+struct PublicDef {
+    std::string name;  // as written
+    Value value;
+    SymbolKind kind = SymbolKind::Label;
+    std::size_t module = 0;
+};
+
+// What the modules of a program know about each other: the PUBLIC and
+// GLOBAL symbols defined in the previous pass, by the name the linker
+// matches (upper case unless the module uses $CASE).
+struct LinkState {
+    std::map<std::string, PublicDef> publics;
+    std::vector<std::string> modules;  // file names
+};
+
+// Types of EXTERN symbols.
+constexpr std::string_view kExternTypes[] = {
+    "NEAR", "FAR", "BYTE", "WORD", "DWORD", "BIT", "BITWORD", "DATA3", "DATA4", "DATA8", "DATA16", "INTNO",
 };
 
 class Assembler final : public SymbolContext {
 public:
-    explicit Assembler(const AssembleOptions& opt) : opt_(opt) {}
+    Assembler(const AssembleOptions& opt, std::string file_name, std::size_t module, const LinkState& link)
+        : opt_(opt), main_name_(std::move(file_name)), module_(module), link_(link) {}
 
-    AssemblyResult run(std::string_view source);
+    void load(std::string text) { add_file(main_name_, std::move(text)); }
+    void begin_pass(int pass, bool final);
+    void run_lines();
+    bool finish_pass();
+    std::vector<std::pair<std::string, PublicDef>> exported() const;
 
     std::optional<Value> lookup(std::string_view name) override;
     std::int64_t location() const override { return sections_[cur_].loc + item_offset_; }
@@ -379,6 +408,7 @@ public:
     void warning(const AsmError& w) override { rep_->warning(w.code(), w.message(), w.column()); }
     bool segmented() const override { return segmented_; }
     bool final_pass() const override { return final_; }
+    void external_used(const Value& v, int column) override;
 
 private:
     struct Entry {
@@ -398,7 +428,19 @@ private:
         std::size_t next = 0;
     };
 
+    friend class Program;
+
     const AssembleOptions& opt_;
+    std::string main_name_;  // file name of the module's source
+    std::size_t module_;  // index of the module in the program
+    const LinkState& link_;
+    struct Export {
+        std::string name;  // as written
+        bool global = false;  // GLOBAL rather than PUBLIC
+    };
+    std::map<std::string, Export> exports_;  // PUBLIC and GLOBAL names of this pass, by key()
+    std::uint16_t externs_ = 0;  // EXTERN symbols declared in this pass
+    std::map<std::uint16_t, std::string> extern_bad_;  // EXTERN id -> why its definition does not suit it
     std::vector<std::unique_ptr<SourceFile>> files_;  // [0] is the main source
     std::map<std::string, int> includes_;  // include request -> files_ index, or -1 if not found
     std::vector<std::string> incdirs_;  // directories from $INCDIR
@@ -459,7 +501,6 @@ private:
     AssemblyResult res_;
 
     bool active() const { return conds_.empty() || conds_.back().active; }
-    void run_pass();
     void process_line(std::string_view text);
     bool expand_lits(std::string_view text, std::string& out, std::vector<std::string>& open,
                      bool keep_file_names = false);
@@ -482,12 +523,18 @@ private:
     void data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void pointer_data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void assume(TokenCursor& cur, Reporter& rep);
+    void extern_directive(TokenCursor& cur, Reporter& rep);
+    void declare_extern(const Token& name, const std::string& type, int dpp, Reporter& rep);
+    void public_directive(bool global, TokenCursor& cur, Reporter& rep);
+    void check_public(const Token& name, Reporter& rep);
+    bool section_name(const std::string& name_key) const;
+    void report(Severity sev, const char* code, std::string msg);
+    void report_at_section(std::size_t index, Severity sev, const char* code, std::string msg);
     std::optional<Value> section_value(std::string_view name);
     void assumed_section_page(Value& v) const;
     void check_section_name(const Token& name) const;
     void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
     void section_end(const Token& name, Reporter& rep);
-    void locate_sections();
     std::optional<std::int64_t> option_address(const std::string& name_key) const;
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
@@ -587,6 +634,7 @@ std::int64_t Assembler::absolute(TokenCursor& cur, const char* what, bool offset
     forward_ref_ = false;
     Value v = expression(cur);
     if (forward_ref_) throw AsmError("A71", std::string("expression with forward reference not permitted in ") + what, column);
+    if (offset && v.external()) throw AsmError("A63", "illegal relocatable expression", column);
     if (v.type != VType::Number) throw AsmError("A72", "absolute expression required", column);
     if (v.movable) {
         if (!offset || v.movable != cur_ || v.rel != Rel::Addr)
@@ -670,53 +718,14 @@ std::size_t Assembler::add_file(std::string name, std::string text) {
     return files_.size() - 1;
 }
 
-AssemblyResult Assembler::run(std::string_view source) {
-    add_file(opt_.file_name, std::string(source));
-
-    bool converged = false;
-    for (pass_ = 1; pass_ <= kMaxPasses; ++pass_) {
-        changed_ = false;
-        run_pass();
-        if (!changed_) {
-            converged = true;
-            break;
-        }
-    }
-    if (!converged) pass_ = kMaxPasses;
-    ++pass_;
-    final_ = true;
-    res_ = AssemblyResult{};
-    run_pass();
-    res_.passes = pass_;
-    res_.cpu = cpu_;
-    if (!converged)
-        res_.diagnostics.push_back({Severity::Error, "A133", "addresses do not settle; code size keeps changing between passes",
-                                    opt_.file_name, 0, 0});
-
-    std::vector<const Chunk*> sorted;
-    for (const auto& c : res_.chunks) sorted.push_back(&c);
-    std::stable_sort(sorted.begin(), sorted.end(), [](auto* a, auto* b) { return a->address < b->address; });
-    for (std::size_t i = 1; i < sorted.size(); ++i) {
-        std::int64_t prev_end = sorted[i - 1]->address + static_cast<std::int64_t>(sorted[i - 1]->bytes.size());
-        if (sorted[i]->address < prev_end)
-            res_.diagnostics.push_back({Severity::Warning, "OC1",
-                                        "code or data overlaps at address " + hex(sorted[i]->address, 6) + "H",
-                                        opt_.file_name, 0, 0});
-    }
-
-    for (auto& [k, e] : symbols_) res_.symbols.push_back(e.sym);
-    std::sort(res_.symbols.begin(), res_.symbols.end(), [](const Symbol& a, const Symbol& b) { return a.name < b.name; });
-    for (std::size_t i = 1; i < sections_.size(); ++i) {
-        const Section& s = sections_[i];
-        res_.sections.push_back({s.name, s.type, s.align_type, s.base, s.size,
-                                 s.absolute ? SectionInfo::Placement::At
-                                 : s.placed ? SectionInfo::Placement::Given
-                                            : SectionInfo::Placement::Located});
-    }
-    return std::move(res_);
+void Assembler::begin_pass(int pass, bool final) {
+    pass_ = pass;
+    final_ = final;
+    changed_ = false;
+    if (final) res_ = AssemblyResult{};
 }
 
-void Assembler::run_pass() {
+void Assembler::run_lines() {
     cpu_ = opt_.cpu;
     sys166_ = cpu_ == isa::Cpu::C166;
     case_ = false;
@@ -742,6 +751,10 @@ void Assembler::run_pass() {
     conds_.clear();
     flags_.clear();
     cond_listing_ = true;
+
+    exports_.clear();
+    externs_ = 0;
+    extern_bad_.clear();
 
     stack_.assign(1, Frame{});
     line_no_ = 0;
@@ -786,11 +799,15 @@ void Assembler::run_pass() {
         process_line(text);
         if (include_) stack_.push_back(Frame{*include_, 0});
     }
+}
 
+// After Program::locate() has placed the sections: notes whether anything
+// moved, and in the final pass reports what is missing at the end. Returns
+// true if another pass is needed.
+bool Assembler::finish_pass() {
     // ASSUME and expressions may name a section before it starts; they see
     // where the previous pass put it. Passes repeat until every section is
     // where the layout of the previous pass put it.
-    locate_sections();
     std::vector<Section> located = sections_;
     for (std::size_t i = 1; i < located.size(); ++i)
         if (!located[i].absolute) located[i].base = layout_.at(key(located[i].name));
@@ -802,11 +819,11 @@ void Assembler::run_pass() {
         changed_ = true;
     prev_sections_ = std::move(located);
 
-    if (!final_ || fatal_) return;
+    if (!final_ || fatal_) return changed_;
     // Like Keil, report problems found at the end on the last line of the
     // file, or on the END line for unterminated sections and procedures.
     auto add = [&](Severity sev, const char* code, std::string msg, bool at_end = false) {
-        std::string file = opt_.file_name;
+        std::string file = main_name_;
         int line = 0;
         if (!res_.listing.empty()) {
             ListingLine& last = at_end && ended_ ? res_.listing[end_line_] : res_.listing.back();
@@ -824,6 +841,44 @@ void Assembler::run_pass() {
     if (proc_ != ProcKind::None) open = "procedure '" + proc_name_ + "'";
     for (auto i : open_) open += (open.empty() ? "section '" : ", section '") + sections_[i].name + "'";
     if (!open.empty()) add(Severity::Error, "A106", "unterminated " + open, true);
+    return changed_;
+}
+
+// The PUBLIC and GLOBAL symbols of this pass that other modules can use, by
+// the name the linker matches.
+std::vector<std::pair<std::string, PublicDef>> Assembler::exported() const {
+    std::vector<std::pair<std::string, PublicDef>> out;
+    for (const auto& [k, e] : exports_) {
+        PublicDef def{e.name, {}, SymbolKind::Equ, module_};
+        if (auto it = symbols_.find(k); it != symbols_.end() && it->second.pass == pass_) {
+            const Symbol& sym = it->second.sym;
+            if ((sym.kind != SymbolKind::Label && sym.kind != SymbolKind::Equ && sym.kind != SymbolKind::Bit) ||
+                sym.value.external())
+                continue;
+            def.value = sym.value;
+            def.kind = sym.kind;
+        } else if (auto p = predefined(e.name, cpu_, sys166_)) {
+            def.value = *p;
+        } else {
+            continue;
+        }
+        out.emplace_back(k, std::move(def));
+    }
+    return out;
+}
+
+void Assembler::report(Severity sev, const char* code, std::string msg) {
+    if (final_) res_.diagnostics.push_back({sev, code, std::move(msg), main_name_, 0, 0});
+}
+
+// Reports a problem with a section on its first SECTION line.
+void Assembler::report_at_section(std::size_t index, Severity sev, const char* code, std::string msg) {
+    if (!final_) return;
+    const Section& s = sections_[index];
+    if (s.listing >= res_.listing.size()) return report(sev, code, std::move(msg));
+    ListingLine& l = res_.listing[s.listing];
+    l.diagnostics.push_back(res_.diagnostics.size());
+    res_.diagnostics.push_back({sev, code, std::move(msg), l.file, l.file_line, s.column});
 }
 
 void Assembler::process_line(std::string_view text) {
@@ -1307,7 +1362,7 @@ bool Assembler::statement_condition(std::string_view text, std::size_t after, in
         if (ctx.dollar || ctx.condition_code)
             throw AsmError("A6", "syntax error: '$' and condition codes cannot be used in a condition", at);
         if (ctx.forward || !v.known) throw AsmError("A71", kForward, at);
-        if (ctx.unusable || v.rel != Rel::None || v.type != VType::Number)
+        if (ctx.unusable || v.rel != Rel::None || v.type != VType::Number || v.external())
             throw AsmError("A11", "bad conditional expression: labels, registers, SFRs and bits cannot be used "
                                   "(Keil silently takes such a condition as false)",
                            at);
@@ -1388,7 +1443,7 @@ void Assembler::include(std::string_view name, int column) {
     for (const auto& d : incdirs_) request += "\n" + d;
     auto [it, inserted] = includes_.try_emplace(request, -1);
     if (inserted) {
-        std::string main_dir = directory_of(opt_.file_name);
+        std::string main_dir = directory_of(main_name_);
         std::vector<std::string> dirs{"", main_dir};
         for (const auto& d : opt_.include_dirs) dirs.push_back(portable_path(d));
         for (const auto& d : incdirs_) {
@@ -1433,7 +1488,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A70", "invalid type of expression: BIT cannot name a GPR bit", column);
         if (kind == SymbolKind::Bit && v.known && v.type != VType::Bit)
             throw AsmError("A70", "invalid type of expression: bit address expected", column);
-        if (kind != SymbolKind::Bit && v.type == VType::Bit)
+        if (kind != SymbolKind::Bit && v.type == VType::Bit && !v.external())
             throw AsmError("A70", "invalid type of expression: use BIT for bit addresses", column);
         // A DPPn: prefix stays with a label; a number takes the DPP number
         // into bits 14 and up (without clearing them first, as Keil does).
@@ -1602,7 +1657,9 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
     } else if (kw == "ASSUME") {
         assume(cur, rep);
     } else if (kw == "EXTERN" || kw == "EXTRN") {
-        throw AsmError("OC4", "external symbols need a linker, which openc166 does not use", tok.column);
+        extern_directive(cur, rep);
+    } else if (kw == "PUBLIC" || kw == "GLOBAL") {
+        public_directive(kw == "GLOBAL", cur, rep);
     } else if (contains(kIgnoredDirectives, kw)) {
         // No effect on a raw image.
     } else if (kw == "ENDS" || kw == "ENDP") {
@@ -1626,11 +1683,15 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
         if (n < 0) throw AsmError("A19", "numeric value out of range", column);
         advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1));
         // A DATA section at a fixed address must stay in the 16 KB data page
-        // it starts in, which one DPP register selects.
+        // it starts in, which one DPP register selects. A CODE, HDATA or
+        // HCONST section may be 64 KB long. Like Keil, only DS checks this.
         const Section& s = section();
         const std::int64_t page_end = (s.base & ~std::int64_t{0x3FFF}) + 0x4000;
         if (s.data && s.absolute && s.loc > page_end)
             rep.error("A86", "section length overflow: a DATA section must fit in one 16 KB page", column);
+        else if (section_boundary(s.type) == 0x10000 && s.loc - s.base > 0x10000)
+            rep.error("A86", "section length overflow: a " + s.type + " section must not be longer than 64 KB",
+                      column);
         return;
     }
     const int width = dir == "DB" ? 1 : dir == "DW" ? 2 : 4;
@@ -1654,10 +1715,16 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
                 Value v = expression(cur);
                 if (v.type != VType::Number && v.type != VType::Sfr)
                     throw AsmError("A70", "invalid type of expression", t.column);
-                // Data keeps the address of a label even with a DPPn: prefix.
-                if (v.dpp >= 0 && v.rel != Rel::Addr) v.num = v.dpp_address();
+                // Data keeps the address of a label even with a DPPn: prefix,
+                // but the linker applies the DPP of an EXTERN.
+                if (v.dpp >= 0 && (v.rel != Rel::Addr || v.external())) v.num = v.dpp_address();
                 assumed_section_page(v);
-                if (v.known && !unchecked && !fits_width(v, 8 * width)) rep.warning("A62", "value truncation", t.column);
+                if (v.known && v.external() && width == 1 && !link_fits(v.num, 8))
+                    rep.error("OC18", "the external value " + hex(v.num, 4) +
+                                          "H does not fit in 8 bits (L166 reports L121: improper fixup)",
+                              t.column);
+                else if (v.known && !unchecked && !v.external() && !fits_width(v, 8 * width))
+                    rep.warning("A62", "value truncation", t.column);
                 num = v.num;
             } catch (const AsmError& e) {
                 rep.error(e.code(), e.message(), e.column());
@@ -1728,6 +1795,195 @@ void Assembler::pointer_data(const std::string& dir, TokenCursor& cur, Reporter&
         cur.expect_op(",");
     }
     emit(out.data(), out.size(), lst);
+}
+
+// EXTERN [DPPn:]name:type, ... declares symbols that another module defines
+// and makes PUBLIC or GLOBAL. Like Keil, an error stops the list, except
+// for a REGBANK type.
+void Assembler::extern_directive(TokenCursor& cur, Reporter& rep) {
+    for (;;) {
+        int dpp = -1;
+        bool stop = false;
+        // A register in front of ':' selects the data page, so it must be DPP0..DPP3.
+        if (const Token& t = cur.peek(); t.kind == TokKind::Ident && cur.peek(1).is_op(":")) {
+            const int n = dpp_number(t.text);
+            const std::optional<Value> pre = predefined(t.text, cpu_, sys166_);
+            if (n >= 0 || (pre && (pre->type == VType::Gpr || pre->type == VType::GprB))) {
+                if (n < 0) {
+                    rep.error("A35", "'DPPn' expected", t.column);
+                    stop = true;
+                } else if (!segmented_) {
+                    rep.warning("A55", "'DPP' in nonsegmented mode ignored", t.column);
+                } else {
+                    dpp = n;
+                }
+                cur.next();
+                cur.next();
+            }
+        }
+        const Token& name = cur.peek();
+        if (name.kind != TokKind::Ident || contains(kExternTypes, upper(name.text)) || ieq(name.text, "REGBANK"))
+            throw AsmError("A23", "identifier expected", name.column);
+        const std::string u = upper(name.text);
+        if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
+            throw AsmError("A4", "illegal use of a reserved word", name.column);
+        cur.next();
+        if (!cur.accept_op(":")) {
+            rep.error("A6", "syntax error", name.column);
+            throw AsmError("A36", "':' expected", cur.peek().column);
+        }
+        const Token& type = cur.peek();
+        const std::string t = type.kind == TokKind::Ident ? upper(type.text) : std::string();
+        if (t == "REGBANK") {
+            cur.next();
+            rep.error("A113", "PUBLIC/EXTERN on REGBANK not allowed", name.column);
+        } else if (!contains(kExternTypes, t)) {
+            rep.error("A6", "syntax error", name.column);
+            throw AsmError("A37", "type identifier expected: NEAR, FAR, BYTE, WORD, DWORD, BIT, BITWORD, DATA3, "
+                                  "DATA4, DATA8, DATA16 or INTNO",
+                           type.column);
+        } else {
+            cur.next();
+            declare_extern(name, t, dpp, rep);
+        }
+        if (stop || cur.at_end()) return;
+        const Token& comma = cur.peek();
+        if (!cur.accept_op(",")) throw AsmError("A6", "syntax error: ',' expected", comma.column);
+        if (cur.at_end()) throw AsmError("A6", "syntax error: name expected after ','", comma.column);
+    }
+}
+
+// Defines an EXTERN symbol with the value of the PUBLIC or GLOBAL symbol of
+// that name in another module, as found in the previous pass. The value
+// keeps the linker's view: an address of the declared type, a DATAn number
+// for the short immediate forms, a bit, and so on. Like L166, the final
+// pass reports a missing definition and a code type for something that is
+// not code here, but a value that does not suit the type only where it is
+// used (external_used()).
+void Assembler::declare_extern(const Token& name, const std::string& type, int dpp, Reporter& rep) {
+    const std::string k = key(name.text);
+    if (auto it = exports_.find(k); it != exports_.end())
+        throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is " +
+                                  (it->second.global ? "GLOBAL" : "PUBLIC") + " in this module",
+                       name.column);
+    const std::uint16_t id = static_cast<std::uint16_t>(Value::kExternBase + externs_++);
+    auto pub_it = link_.publics.find(k);
+    const PublicDef* pub = pub_it != link_.publics.end() && pub_it->second.module != module_ ? &pub_it->second : nullptr;
+    const std::string who = "'" + std::string(name.text) + "'";
+    if (final_ && !pub)
+        rep.error("OC15", "unresolved external " + who + ": no other module makes it PUBLIC or GLOBAL", name.column);
+
+    std::string bad;
+    Value v = Value::number(type == "BITWORD" ? 0xFD00 : 0);
+    v.unsig = true;
+    v.movable = id;
+    if (pub) {
+        const Value& p = pub->value;
+        const std::string where = " in " + link_.modules[pub->module];
+        if (type == "BIT") {
+            if (p.type == VType::Bit && bit_word_address(p) >= 0) {
+                v.type = VType::Bit;
+                v.num = p.num;
+                v.bit = p.bit;
+                v.ext = p.ext;
+            } else {
+                bad = "it is not a bit" + where;
+            }
+        } else if (p.type == VType::Bit) {
+            if (bit_word_address(p) >= 0) v.num = bit_word_address(p);
+        } else if (p.type == VType::Number || p.type == VType::Sfr) {
+            v.num = p.num;
+        } else {
+            bad = "it is a register or condition code" + where;
+        }
+        const std::int64_t w = v.num & ~std::int64_t{1};
+        if (type == "BITWORD" && bad.empty() &&
+            !((w >= 0xFD00 && w <= 0xFDFE) || (w >= 0xFF00 && w <= 0xFFDE) || (w >= 0xF100 && w <= 0xF1DE))) {
+            bad = hex(v.num, 4) + "H is not a bit-addressable word" + where;
+            v.num = 0xFD00;
+        }
+        if ((type == "NEAR" || type == "FAR") && p.ltype != LType::Near && p.ltype != LType::Far && final_)
+            rep.warning("OC17", "external " + who + " is " + type + ", but it is not a code label" + where +
+                                    " (L166 warns L21)",
+                        name.column);
+    }
+    if (type == "BIT") {
+        v.type = VType::Bit;
+        v.unsig = false;
+    } else if (type == "NEAR" || type == "FAR" || type == "BYTE" || type == "WORD" || type == "DWORD") {
+        v.rel = Rel::Addr;
+        v.section = id;
+        v.ltype = type == "NEAR"   ? LType::Near
+                : type == "FAR"    ? LType::Far
+                : type == "BYTE"   ? LType::Byte
+                : type == "WORD"   ? LType::Word
+                                   : LType::Dword;
+        v.dpp = static_cast<std::int8_t>(dpp);
+    } else if (type.rfind("DATA", 0) == 0) {
+        v.data_bits = static_cast<std::uint8_t>(std::stoi(type.substr(4)));
+    }
+    if (!bad.empty()) extern_bad_[id] = "external " + who + " cannot be " + type + ": " + bad;
+    define(name, SymbolKind::Extern, v);
+    symbols_.at(k).sym.text = type;
+}
+
+// Like L166, which checks each place the linker fills in, reports a use of
+// an EXTERN symbol whose PUBLIC definition does not suit its type.
+void Assembler::external_used(const Value& v, int column) {
+    if (!final_ || !rep_) return;
+    if (auto it = extern_bad_.find(v.movable); it != extern_bad_.end())
+        rep_->error("OC18", it->second + " (L166 reports L121: improper fixup)", column);
+}
+
+// PUBLIC name, ... and GLOBAL name, ... let other modules use symbols of
+// this one. Like Keil, the final pass checks each name on its line once the
+// whole module is known.
+void Assembler::public_directive(bool global, TokenCursor& cur, Reporter& rep) {
+    for (;;) {
+        const Token& t = cur.peek();
+        if (t.kind != TokKind::Ident || is_operator_keyword(upper(t.text)))
+            throw AsmError("A23", "identifier expected", t.column);
+        cur.next();
+        auto [it, inserted] = exports_.try_emplace(key(t.text), Export{std::string(t.text), global});
+        if (!inserted && it->second.global != global)
+            throw AsmError("A25", "symbol redefinition: '" + std::string(t.text) + "' is already " +
+                                      (global ? "PUBLIC" : "GLOBAL"),
+                           t.column);
+        if (final_) check_public(t, rep);
+        if (cur.at_end()) return;
+        if (!cur.accept_op(",")) throw AsmError("A6", "syntax error: ',' expected", cur.peek().column);
+    }
+}
+
+bool Assembler::section_name(const std::string& name_key) const {
+    for (const auto* list : {&sections_, &prev_sections_})
+        for (std::size_t i = 1; i < list->size(); ++i)
+            if (key((*list)[i].name) == name_key) return true;
+    return false;
+}
+
+// A PUBLIC or GLOBAL name must be a label, an EQU, BIT, DEFR, DEFA or DEFB
+// symbol, or a predefined register, that no other module also exports.
+void Assembler::check_public(const Token& name, Reporter& rep) {
+    const std::string k = key(name.text), u = upper(name.text);
+    auto illegal = [&](const std::string& why) {
+        rep.error("A39", "illegal PUBLIC/GLOBAL symbol: '" + std::string(name.text) + "' " + why, name.column);
+    };
+    if (isa::is_mnemonic(u) || contains(kKeywords, u)) return illegal("is a reserved word");
+    if (section_name(k)) return illegal("is a section");
+    if (auto it = symbols_.find(k); it != symbols_.end() && it->second.pass >= pass_ - 1) {
+        const Symbol& sym = it->second.sym;
+        if (sym.kind == SymbolKind::Set) return illegal("is a SET symbol");
+        if (sym.kind == SymbolKind::Lit) return illegal("is a LIT");
+        if (sym.kind == SymbolKind::Extern) return illegal("is EXTERN");
+        if (sym.value.external()) return illegal("depends on an EXTERN symbol");
+    } else if (!predefined(name.text, cpu_, sys166_)) {
+        return rep.error("A42", "undefined identifier '" + std::string(name.text) + "'", name.column);
+    }
+    if (auto p = link_.publics.find(k); p != link_.publics.end() && p->second.module != module_)
+        rep.error("OC16", "'" + std::string(name.text) + "' is also PUBLIC or GLOBAL in " +
+                              link_.modules[p->second.module],
+                  name.column);
 }
 
 // A section name stands for the section's start address. Keil applies the
@@ -1944,6 +2200,10 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     else  // the first pass: a guess that the following passes correct
         s.base = align_up(std::max(free_, s.align_type == "BITADDRESSABLE" ? kBitAreaStart : std::int64_t{0}), s.align);
     s.loc = s.base;
+    if (final_) {
+        s.listing = res_.listing.size();
+        s.column = name.column;
+    }
     sections_.push_back(s);
     cur_ = sections_.size() - 1;
     open_.push_back(cur_);
@@ -1955,82 +2215,6 @@ std::optional<std::int64_t> Assembler::option_address(const std::string& name_ke
     for (auto it = given.rbegin(); it != given.rend(); ++it)
         if (key(it->first) == name_key) return it->second;
     return std::nullopt;
-}
-
-// Puts the sections without AT where L166 would by default: in the order in
-// which they first appear, each at the lowest suitably aligned address from
-// the origin on where it fits between the sections and code placed so far,
-// without crossing the page or segment boundary its type forbids. Sections
-// with an address in AssembleOptions::section_addresses go there first. The
-// next pass assembles with these addresses.
-void Assembler::locate_sections() {
-    auto report = [&](Severity sev, const char* code, std::string msg) {
-        if (final_) res_.diagnostics.push_back({sev, code, std::move(msg), opt_.file_name, 0, 0});
-    };
-    const std::int64_t top = segmented_ ? kAddressLimit : 0x10000;
-    std::vector<std::pair<std::int64_t, std::int64_t>> used = outside_;
-    for (std::size_t i = 1; i < sections_.size(); ++i) {
-        const Section& s = sections_[i];
-        const std::optional<std::int64_t> given = option_address(key(s.name));
-        if (s.absolute) {
-            if (given)
-                report(Severity::Error, "OC14", "section '" + s.name + "' has an AT address; it cannot also be placed at " +
-                                                   hex(*given, 6) + "H");
-        } else if (given) {
-            layout_[key(s.name)] = *given;
-            const bool bit = s.align_type == "BITADDRESSABLE";
-            if (*given < 0 || *given + s.size > top)
-                report(Severity::Error, "OC14", "section '" + s.name + "' cannot be placed at " + hex(*given, 6) +
-                                                   "H: it would end beyond " + hex(top - 1, 6) + "H" +
-                                                   (segmented_ ? "" : " (higher addresses need $SEGMENTED)"));
-            else if (*given % s.align || (bit && (*given < kBitAreaStart || *given + s.size > kBitAreaEnd)))
-                report(Severity::Warning, "OC13", "section '" + s.name + "' is placed at " + hex(*given, 6) +
-                                                     "H, which does not suit its alignment " + s.align_type);
-        } else {
-            continue;
-        }
-        const std::int64_t start = s.absolute ? s.base : *given;
-        if (s.size > 0) used.emplace_back(start, start + s.size);
-    }
-    std::set<std::string> unknown;
-    for (const auto& [name, address] : opt_.section_addresses) {
-        bool found = false;
-        for (std::size_t i = 1; i < sections_.size() && !found; ++i) found = key(sections_[i].name) == key(name);
-        if (!found && unknown.insert(key(name)).second)
-            report(Severity::Warning, "OC13", "an address is given for section '" + name + "', which does not exist");
-    }
-
-    for (std::size_t i = 1; i < sections_.size(); ++i) {
-        const Section& s = sections_[i];
-        if (s.absolute || option_address(key(s.name))) continue;
-        const bool bit = s.align_type == "BITADDRESSABLE";
-        const std::int64_t from = bit ? kBitAreaStart : opt_.origin, to = bit ? kBitAreaEnd : top;
-        const std::int64_t boundary = section_boundary(s.type);
-        std::int64_t a = align_up(from, s.align);
-        bool fits = false;
-        while (a + s.size <= to) {
-            if (boundary && s.size > 0 && s.size <= boundary && a / boundary != (a + s.size - 1) / boundary) {
-                a = align_up((a / boundary + 1) * boundary, s.align);
-                continue;
-            }
-            auto clash = std::find_if(used.begin(), used.end(), [&](const auto& u) {
-                return u.first < a + std::max<std::int64_t>(s.size, 1) && a < u.second;
-            });
-            if (clash == used.end()) {
-                fits = true;
-                break;
-            }
-            a = align_up(clash->second, s.align);
-        }
-        if (!fits) {
-            report(Severity::Error, "OC12", "no room for section '" + s.name + "' (" + hex(s.size, 4) + "H bytes" +
-                                               (bit ? " in FD00H..FDFFH)" : ")"));
-            a = s.base;
-        } else if (s.size > 0) {
-            used.emplace_back(a, a + s.size);
-        }
-        layout_[key(s.name)] = a;
-    }
 }
 
 // Sections nest: ENDS closes the innermost open one, which may be the same
@@ -2182,8 +2366,313 @@ void Assembler::check_branch_target(const std::string& m, const std::vector<Oper
         rep.warning("A84", "near reference to far location", t.column);
     if (near_branch && is_data_type(t.value.ltype))
         rep.warning("A74", "operand type mismatch: branch to a data label", t.column);
-    if (m != "JMPR" && m != "CALLR" && t.value.known && (t.value.num & 1))
+    if (m != "JMPR" && m != "CALLR" && t.value.known && !t.value.external() && (t.value.num & 1))
         rep.warning("A134", "address alignment not sufficient: branch target is odd", t.column);
+}
+
+// Assembles the modules of a program together, as A166 would one after the
+// other and L166 would then link them. Each pass assembles every module
+// with the PUBLIC and GLOBAL symbols and the section addresses that the
+// previous pass found, then places the sections, until nothing moves.
+class Program {
+public:
+    explicit Program(const AssembleOptions& opt) : opt_(opt) {}
+    AssemblyResult run(const std::vector<Source>& sources);
+
+private:
+    // A section of one module.
+    struct Part {
+        Assembler* m = nullptr;
+        std::size_t index = 0;  // into m->sections_
+        std::int64_t offset = 0;  // from the start of the unit
+        const Section& section() const { return m->sections_[index]; }
+    };
+    // A section as L166 places it: the parts with the same name and class
+    // that the modules combine.
+    struct Unit {
+        std::vector<Part> parts;
+        std::int64_t base = 0;
+        std::int64_t size = 0;
+        int align = 1;
+        bool bit = false;  // BITADDRESSABLE
+    };
+
+    const AssembleOptions& opt_;
+    LinkState link_;
+    std::vector<std::unique_ptr<Assembler>> mods_;
+    std::vector<SectionInfo> infos_;  // of the final pass
+    std::vector<std::pair<std::int64_t, std::int64_t>> common_;  // [from, to) of combined COMMON sections
+
+    bool run_pass(int pass, bool final);
+    std::vector<Unit> units();
+    void locate(bool final);
+    bool update_publics();
+};
+
+AssemblyResult Program::run(const std::vector<Source>& sources) {
+    if (sources.empty()) return {};
+    for (const auto& src : sources) link_.modules.push_back(src.file_name);
+    for (std::size_t i = 0; i < sources.size(); ++i) {
+        mods_.push_back(std::make_unique<Assembler>(opt_, sources[i].file_name, i, link_));
+        mods_.back()->load(sources[i].text);
+    }
+    bool converged = false;
+    int pass = 1;
+    for (; pass <= kMaxPasses; ++pass) {
+        if (!run_pass(pass, false)) {
+            converged = true;
+            break;
+        }
+    }
+    if (!converged) pass = kMaxPasses;
+    ++pass;
+    run_pass(pass, true);
+
+    AssemblyResult out;
+    for (std::size_t i = 0; i < mods_.size(); ++i) {
+        Assembler& m = *mods_[i];
+        AssemblyResult& r = m.res_;
+        const std::size_t first_diag = out.diagnostics.size();
+        for (auto& d : r.diagnostics) out.diagnostics.push_back(std::move(d));
+        for (auto& l : r.listing) {
+            for (auto& d : l.diagnostics) d += first_diag;
+            l.module = static_cast<int>(i);
+            out.listing.push_back(std::move(l));
+        }
+        for (auto& c : r.chunks) out.chunks.push_back(std::move(c));
+        if (m.cpu_ == isa::Cpu::C167) out.cpu = isa::Cpu::C167;
+        std::set<std::string> exported;
+        for (const auto& [k, def] : m.exported()) exported.insert(k);
+        for (const auto& [k, e] : m.symbols_) {
+            out.symbols.push_back(e.sym);
+            out.symbols.back().module = static_cast<int>(i);
+            out.symbols.back().exported = exported.count(k) > 0;
+        }
+    }
+    out.passes = pass;
+    const std::string& main_name = link_.modules.front();
+    if (!converged)
+        out.diagnostics.push_back({Severity::Error, "A133",
+                                   "addresses do not settle; code size keeps changing between passes", main_name, 0, 0});
+    // Like L166, the first module sets the CPU mode of the program.
+    auto mode = [](const Assembler& m) { return m.segmented_ ? "SEGMENTED" : "NONSEGMENTED"; };
+    for (std::size_t i = 1; i < mods_.size(); ++i)
+        if (mods_[i]->segmented_ != mods_.front()->segmented_)
+            out.diagnostics.push_back({Severity::Warning, "OC20",
+                                       "this module is " + std::string(mode(*mods_[i])) + ", but " + main_name +
+                                           " is " + mode(*mods_.front()) + " (L166 warns L15: incompatible CPU mode)",
+                                       link_.modules[i], 0, 0});
+
+    // Parts of a COMMON section overlap on purpose: the last module's bytes
+    // win, as in L166.
+    auto in_common = [&](std::int64_t a) {
+        return std::any_of(common_.begin(), common_.end(), [&](const auto& c) { return c.first <= a && a < c.second; });
+    };
+    std::vector<const Chunk*> sorted;
+    for (const auto& c : out.chunks) sorted.push_back(&c);
+    std::stable_sort(sorted.begin(), sorted.end(), [](auto* a, auto* b) { return a->address < b->address; });
+    for (std::size_t i = 1; i < sorted.size(); ++i) {
+        std::int64_t prev_end = sorted[i - 1]->address + static_cast<std::int64_t>(sorted[i - 1]->bytes.size());
+        if (sorted[i]->address < prev_end && !in_common(sorted[i]->address))
+            out.diagnostics.push_back({Severity::Warning, "OC1",
+                                       "code or data overlaps at address " + hex(sorted[i]->address, 6) + "H",
+                                       main_name, 0, 0});
+    }
+
+    std::sort(out.symbols.begin(), out.symbols.end(), [](const Symbol& a, const Symbol& b) {
+        return a.name != b.name ? a.name < b.name : a.module < b.module;
+    });
+    out.sections = std::move(infos_);
+    out.modules = link_.modules;
+    return out;
+}
+
+bool Program::run_pass(int pass, bool final) {
+    for (auto& m : mods_) m->begin_pass(pass, final);
+    for (auto& m : mods_) m->run_lines();
+    locate(final);
+    bool changed = false;
+    for (auto& m : mods_) changed = m->finish_pass() || changed;
+    return update_publics() || changed;
+}
+
+// Takes the PUBLIC and GLOBAL symbols of this pass for the next one. If a
+// name is exported twice, the first module wins (check_public() reports
+// the others). Returns true if another module may now see other values.
+bool Program::update_publics() {
+    std::map<std::string, PublicDef> publics;
+    for (const auto& m : mods_)
+        for (auto& [k, def] : m->exported()) publics.try_emplace(k, std::move(def));
+    auto same = [](const auto& a, const auto& b) {
+        const Value &x = a.second.value, &y = b.second.value;
+        return a.first == b.first && a.second.module == b.second.module && a.second.kind == b.second.kind &&
+               x.type == y.type && x.known == y.known && x.ext == y.ext && x.bit == y.bit && x.num == y.num &&
+               x.ltype == y.ltype;
+    };
+    const bool changed = publics.size() != link_.publics.size() ||
+                         !std::equal(publics.begin(), publics.end(), link_.publics.begin(), same);
+    link_.publics = std::move(publics);
+    // A single module has no one to tell.
+    return changed && mods_.size() > 1;
+}
+
+// The sections of all modules in order of first appearance. Like L166,
+// parts with the same name and class are combined into one section if they
+// all have the same type and combine type PUBLIC, GLOBAL, COMMON, SYSSTACK
+// or USRSTACK: COMMON parts overlay each other, the others follow one
+// another, each aligned as its module asks.
+std::vector<Program::Unit> Program::units() {
+    std::vector<Unit> found;
+    std::map<std::pair<std::string, std::string>, std::size_t> index;
+    for (const auto& mp : mods_) {
+        Assembler& m = *mp;
+        for (std::size_t i = 1; i < m.sections_.size(); ++i) {
+            const Section& s = m.sections_[i];
+            auto [it, inserted] = index.try_emplace({m.key(s.name), m.key(s.class_name)}, found.size());
+            if (inserted) found.emplace_back();
+            found[it->second].parts.push_back(Part{&m, i, 0});
+        }
+    }
+    auto combinable = [](const std::string& c) {
+        return c == "PUBLIC" || c == "GLOBAL" || c == "COMMON" || c == "SYSSTACK" || c == "USRSTACK";
+    };
+    std::vector<Unit> out;
+    for (auto& u : found) {
+        const Section& first = u.parts[0].section();
+        bool ok = true;
+        for (const Part& p : u.parts) {
+            const Section& s = p.section();
+            ok = ok && !s.absolute && s.type == first.type && s.combine == first.combine && combinable(s.combine);
+        }
+        if (u.parts.size() > 1 && !ok) {
+            for (std::size_t j = 1; j < u.parts.size(); ++j) {
+                const Part& p = u.parts[j];
+                const Section& s = p.section();
+                p.m->report_at_section(
+                    p.index, Severity::Error, "OC19",
+                    "section '" + s.name + "' (" + s.type + ", " + s.combine + ") cannot be combined with '" +
+                        first.name + "' (" + first.type + ", " + first.combine + ") of " +
+                        link_.modules[u.parts[0].m->module_] +
+                        ": parts of a section must have the same type and combine type PUBLIC, GLOBAL, COMMON, "
+                        "SYSSTACK or USRSTACK");
+            }
+            for (const Part& p : u.parts) out.push_back(Unit{{p}});
+            continue;
+        }
+        out.push_back(std::move(u));
+    }
+    for (auto& u : out) {
+        const bool common = u.parts[0].section().combine == "COMMON";
+        for (Part& p : u.parts) {
+            const Section& s = p.section();
+            p.offset = common ? 0 : align_up(u.size, s.align);
+            u.size = common ? std::max(u.size, s.size) : p.offset + s.size;
+            u.align = std::max(u.align, s.align);
+            u.bit = u.bit || s.align_type == "BITADDRESSABLE";
+        }
+    }
+    return out;
+}
+
+// Puts the sections without AT where L166 would by default: in the order in
+// which they first appear, each at the lowest suitably aligned address from
+// the origin on where it fits between the sections and code placed so far,
+// without crossing the page or segment boundary its type forbids. Sections
+// with an address in AssembleOptions::section_addresses go there first. The
+// next pass assembles with these addresses.
+void Program::locate(bool final) {
+    std::vector<Unit> all = units();
+    std::vector<std::pair<std::int64_t, std::int64_t>> used;
+    for (const auto& m : mods_) used.insert(used.end(), m->outside_.begin(), m->outside_.end());
+    auto top_of = [](const Assembler& m) { return m.segmented_ ? kAddressLimit : std::int64_t{0x10000}; };
+
+    for (Unit& u : all) {
+        Assembler& m = *u.parts[0].m;
+        const Section& s = u.parts[0].section();
+        const std::int64_t top = top_of(m);
+        const std::optional<std::int64_t> given = m.option_address(m.key(s.name));
+        if (s.absolute) {
+            if (given)
+                m.report(Severity::Error, "OC14", "section '" + s.name + "' has an AT address; it cannot also be placed at " +
+                                                     hex(*given, 6) + "H");
+            u.base = s.base;
+        } else if (given) {
+            u.base = *given;
+            if (*given < 0 || *given + u.size > top)
+                m.report(Severity::Error, "OC14", "section '" + s.name + "' cannot be placed at " + hex(*given, 6) +
+                                                     "H: it would end beyond " + hex(top - 1, 6) + "H" +
+                                                     (m.segmented_ ? "" : " (higher addresses need $SEGMENTED)"));
+            else if (*given % u.align || (u.bit && (*given < kBitAreaStart || *given + u.size > kBitAreaEnd)))
+                m.report(Severity::Warning, "OC13", "section '" + s.name + "' is placed at " + hex(*given, 6) +
+                                                       "H, which does not suit its alignment " + s.align_type);
+        } else {
+            continue;
+        }
+        if (u.size > 0) used.emplace_back(u.base, u.base + u.size);
+    }
+    std::set<std::string> unknown;
+    for (const auto& [name, address] : opt_.section_addresses) {
+        bool found = false;
+        for (const auto& m : mods_)
+            for (std::size_t i = 1; i < m->sections_.size() && !found; ++i)
+                found = m->key(m->sections_[i].name) == m->key(name);
+        if (!found && unknown.insert(mods_[0]->key(name)).second)
+            mods_[0]->report(Severity::Warning, "OC13",
+                             "an address is given for section '" + name + "', which does not exist");
+    }
+
+    for (Unit& u : all) {
+        Assembler& m = *u.parts[0].m;
+        const Section& s = u.parts[0].section();
+        if (s.absolute || m.option_address(m.key(s.name))) continue;
+        const std::int64_t from = u.bit ? kBitAreaStart : opt_.origin, to = u.bit ? kBitAreaEnd : top_of(m);
+        const std::int64_t boundary = section_boundary(s.type);
+        if (boundary == 0x4000 && u.size > boundary && final)
+            m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
+                                "section '" + s.name + "' (" + hex(u.size, 4) + "H bytes) does not fit in one 16 KB data page "
+                                "(L166 reports L129)");
+        std::int64_t a = align_up(from, u.align);
+        bool fits = false;
+        while (a + u.size <= to) {
+            if (boundary && u.size > 0 && u.size <= boundary && a / boundary != (a + u.size - 1) / boundary) {
+                a = align_up((a / boundary + 1) * boundary, u.align);
+                continue;
+            }
+            auto clash = std::find_if(used.begin(), used.end(), [&](const auto& r) {
+                return r.first < a + std::max<std::int64_t>(u.size, 1) && a < r.second;
+            });
+            if (clash == used.end()) {
+                fits = true;
+                break;
+            }
+            a = align_up(clash->second, u.align);
+        }
+        if (!fits) {
+            m.report(Severity::Error, "OC12", "no room for section '" + s.name + "' (" + hex(u.size, 4) + "H bytes" +
+                                                 (u.bit ? " in FD00H..FDFFH)" : ")"));
+            a = s.base;
+        } else if (u.size > 0) {
+            used.emplace_back(a, a + u.size);
+        }
+        u.base = a;
+    }
+
+    for (const Unit& u : all)
+        for (const Part& p : u.parts)
+            if (!p.section().absolute) p.m->layout_[p.m->key(p.section().name)] = u.base + p.offset;
+
+    if (!final) return;
+    infos_.clear();
+    common_.clear();
+    for (const Unit& u : all) {
+        const Section& s = u.parts[0].section();
+        infos_.push_back({s.name, s.type, s.align_type, s.base, u.size,
+                          s.absolute ? SectionInfo::Placement::At
+                          : s.placed ? SectionInfo::Placement::Given
+                                     : SectionInfo::Placement::Located,
+                          s.class_name});
+        if (u.parts.size() > 1 && s.combine == "COMMON") common_.emplace_back(s.base, s.base + u.size);
+    }
 }
 
 }  // namespace
@@ -2196,7 +2685,11 @@ std::size_t AssemblyResult::error_count() const {
 std::size_t AssemblyResult::warning_count() const { return diagnostics.size() - error_count(); }
 
 AssemblyResult assemble(std::string_view source, const AssembleOptions& options) {
-    return Assembler(options).run(source);
+    return Program(options).run({Source{options.file_name, std::string(source)}});
+}
+
+AssemblyResult assemble(const std::vector<Source>& sources, const AssembleOptions& options) {
+    return Program(options).run(sources);
 }
 
 FlatImage flat_image(const AssemblyResult& result, std::optional<std::int64_t> base, std::uint8_t fill) {
@@ -2233,18 +2726,29 @@ std::string format_diagnostic(const Diagnostic& d) {
 
 std::string format_listing(const AssemblyResult& result) {
     std::vector<bool> shown_diag(result.diagnostics.size());
-    const std::string main_file = result.listing.empty() ? std::string() : result.listing.front().file;
-    std::string out = "LOC       OBJ                  LINE  SOURCE\n\n";
+    const bool multi = result.modules.size() > 1;
+    std::string main_file = result.listing.empty() ? std::string() : result.listing.front().file;
+    static constexpr const char* kHeader = "LOC       OBJ                  LINE  SOURCE\n\n";
+    std::string out = multi ? "" : kHeader;
     auto print = [&](std::size_t i) {
         const Diagnostic& d = result.diagnostics[i];
         shown_diag[i] = true;
         out += "*** ";
         out += d.severity == Severity::Error ? "ERROR " : "WARNING ";
         out += d.code + ": " + d.message;
-        if (d.line && d.file != main_file) out += " (" + d.file + ", line " + std::to_string(d.line) + ")";
+        if (d.line && d.file != main_file)
+            out += " (" + d.file + ", line " + std::to_string(d.line) + ")";
+        else if (!d.line && multi && !d.file.empty())
+            out += " (" + d.file + ")";
         out += "\n";
     };
+    int module = -1;
     for (const auto& l : result.listing) {
+        if (multi && l.module != module) {
+            module = l.module;
+            if (static_cast<std::size_t>(module) < result.modules.size()) main_file = result.modules[module];
+            out += std::string(out.empty() ? "" : "\n") + "MODULE " + main_file + "\n\n" + kHeader;
+        }
         if (l.hidden && l.diagnostics.empty()) continue;
         std::string loc = l.has_address ? hex(l.address, 8) : l.value ? "=" + value_text(*l.value) : "";
         std::string obj;
@@ -2269,12 +2773,18 @@ std::string format_listing(const AssemblyResult& result) {
         }
         for (auto i : l.diagnostics) print(i);
     }
+    if (multi) {
+        main_file.clear();
+        bool any = false;
+        for (std::size_t i = 0; i < result.diagnostics.size(); ++i) any = any || !shown_diag[i];
+        if (any) out += "\n";
+    }
     for (std::size_t i = 0; i < result.diagnostics.size(); ++i)
         if (!shown_diag[i]) print(i);
 
     out += "\nSYMBOLS\n\n";
     for (const auto& s : result.symbols) {
-        static constexpr const char* kKinds[] = {"LABEL", "EQU", "SET", "BIT", "LIT"};
+        static constexpr const char* kKinds[] = {"LABEL", "EQU", "SET", "BIT", "LIT", "EXTERN"};
         std::string value;
         switch (s.value.type) {
         case VType::Number: value = s.value.known ? hex(s.value.num, 8) + "H" : "?"; break;
@@ -2284,8 +2794,14 @@ std::string format_listing(const AssemblyResult& result) {
         case VType::Sfr: value = "SFR " + hex(s.value.num, 4) + "H"; break;
         case VType::Cc: value = "cc " + std::to_string(s.value.num); break;
         }
-        if (s.value.ltype != LType::None) value += std::string(" ") + type_name(s.value.ltype);
+        if (s.kind == SymbolKind::Extern)
+            value += " " + s.text;
+        else if (s.value.ltype != LType::None)
+            value += std::string(" ") + type_name(s.value.ltype);
         if (s.kind == SymbolKind::Lit) value = "\"" + s.text + "\"";
+        if (s.exported) value += " PUBLIC";
+        if (multi && static_cast<std::size_t>(s.module) < result.modules.size())
+            value += "  (" + result.modules[s.module] + ")";
         char row[160];
         std::snprintf(row, sizeof row, "%-32s %-6s %s\n", s.name.c_str(), kKinds[static_cast<int>(s.kind)], value.c_str());
         out += row;
@@ -2295,10 +2811,12 @@ std::string format_listing(const AssemblyResult& result) {
         for (const auto& s : result.sections) {
             static constexpr const char* kPlacement[] = {"AT", "given", "located"};
             char row[160];
-            std::snprintf(row, sizeof row, "%-32s %-6s %-14s %sH  size %sH  %s\n", s.name.c_str(), s.type.c_str(),
+            std::snprintf(row, sizeof row, "%-32s %-6s %-14s %sH  size %sH  %s", s.name.c_str(), s.type.c_str(),
                           s.align.c_str(), hex(s.address, 6).c_str(), hex(s.size, 4).c_str(),
                           kPlacement[static_cast<int>(s.placement)]);
             out += row;
+            if (!s.class_name.empty()) out += "  class '" + s.class_name + "'";
+            out += "\n";
         }
     }
     out += "\n" + std::to_string(result.error_count()) + " error(s), " + std::to_string(result.warning_count()) +

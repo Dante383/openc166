@@ -3,6 +3,7 @@
 
 #include "predef.hpp"
 
+#include <cstdio>
 #include <string>
 
 namespace oc166 {
@@ -28,6 +29,7 @@ struct FieldMatch {
     const char* code = nullptr;  // Bad: error code and message
     const char* message = nullptr;
     bool quiet = false;  // Trunc chosen on purpose (DATAn): no warning
+    int link_width = 0;  // an external value that L166 would not accept in a field this wide
 };
 
 FieldMatch fits(Fit f, std::int64_t field, Space space = Space::None) {
@@ -35,6 +37,13 @@ FieldMatch fits(Fit f, std::int64_t field, Space space = Space::None) {
 }
 
 FieldMatch bad(const char* code, const char* message) { return FieldMatch{Fit::Bad, 0, Space::None, code, message}; }
+
+// A number as Keil writes it: 0FFH, -12H.
+std::string hex_text(std::int64_t v) {
+    char digits[24];
+    std::snprintf(digits, sizeof digits, "%llX", static_cast<unsigned long long>(v < 0 ? -v : v));
+    return std::string(v < 0 ? "-" : "") + (digits[0] > '9' ? "0" : "") + digits + "H";
+}
 
 // Short bit offsets 80h..EFh address SFR words; F0h..FFh are GPRs.
 Space bitoff_space(std::int64_t off, bool ext) {
@@ -67,6 +76,8 @@ Paged paged(const Value& v, const EncodeContext& ctx) {
     }
     // Keil does not ask for a DPP for a section name inside an AT section.
     p.missing = v.section == 0 || v.rel != Rel::None;
+    // The linker uses DPP0 for an external address without one.
+    if (p.missing && v.external()) p.value.num = v.num & 0x3FFF;
     return p;
 }
 
@@ -92,16 +103,34 @@ bool word_memory(std::string_view mnemonic, std::size_t operand) {
     return mnemonic.back() != 'B' || mnemonic == "SUB";
 }
 
+// L166 checks that an external value fits a 3-, 4- or 8-bit data field or
+// a trap number, but keeps the low bits of wider fields without complaint.
+FieldMatch link_checked(FieldMatch m, const Value& v, int width) {
+    if (v.external() && v.known && width < 16 && !link_fits(v.num, width)) m.link_width = width;
+    return m;
+}
+
 FieldMatch match_immediate(Cls cls, const Value& v) {
     if (v.data_bits && (cls == Cls::D3 || cls == Cls::D4 || cls == Cls::D8 || cls == Cls::D16 || cls == Cls::M8)) {
         // DATAn: the shortest form with at least n bits, else the longest form.
         const int w = cls == Cls::D3 ? 3 : cls == Cls::D4 ? 4 : cls == Cls::D16 ? 16 : 8;
         FieldMatch m = fits(v.data_bits <= w ? Fit::Strict : Fit::Trunc, v.known ? v.num & ((1 << w) - 1) : 0);
         m.quiet = true;
-        return m;
+        return v.data_bits <= w ? link_checked(m, v, w) : m;
     }
     if (!v.known) return fits(Fit::Strict, 0);
     std::int64_t n = v.num;
+    if (v.external()) {
+        switch (cls) {
+        case Cls::D8:
+        case Cls::M8: return link_checked(fits(Fit::Strict, n & 0xFF), v, 8);
+        case Cls::Seg8: return fits(Fit::Strict, n & 0xFF);
+        case Cls::D16: return fits(Fit::Strict, n & 0xFFFF);
+        case Cls::Trap7: return link_checked(fits(Fit::Strict, n & 0x7F), v, 7);
+        case Cls::Pag10: return fits(Fit::Strict, n & 0x3FFF);
+        default: break;
+        }
+    }
     switch (cls) {
     case Cls::D3:
     case Cls::D4: {
@@ -167,7 +196,7 @@ FieldMatch match(Cls cls, const Operand& op, const EncodeContext& ctx, std::int6
         return fits(Fit::Strict, op.reg);
     case Cls::IndDisp: {
         if (op.mode != OpMode::IndDisp || v.type != VType::Number) return {};
-        Fit f = !v.known || fits_width(v, 16) ? Fit::Strict : Fit::Trunc;
+        Fit f = !v.known || v.external() || fits_width(v, 16) ? Fit::Strict : Fit::Trunc;
         return fits(f, (std::int64_t{op.reg} << 16) | (v.num & 0xFFFF));
     }
     case Cls::Reg:
@@ -181,7 +210,7 @@ FieldMatch match(Cls cls, const Operand& op, const EncodeContext& ctx, std::int6
         // Keil refuses a DATAn size on the address of a label.
         if (v.data_bits && v.relocatable()) return {};
         if (!v.known) return fits(Fit::Strict, 0);
-        if (missing) return fits(Fit::Strict, v.num & 0xFFFF);
+        if (missing || v.external()) return fits(Fit::Strict, v.num & 0xFFFF);
         return fits(v.num >= 0 && v.num <= 0xFFFF ? Fit::Strict : Fit::Trunc, v.num & 0xFFFF);
     case Cls::BitOff: {
         if (!direct) return {};
@@ -224,11 +253,11 @@ FieldMatch match(Cls cls, const Operand& op, const EncodeContext& ctx, std::int6
     case Cls::Caddr:
         if (!direct || v.type != VType::Number) return {};
         if (!v.known) return fits(Fit::Strict, 0);
-        return fits(v.num >= 0 && v.num <= 0xFFFF ? Fit::Strict : Fit::Trunc, v.num & 0xFFFF);
+        return fits(v.external() || (v.num >= 0 && v.num <= 0xFFFF) ? Fit::Strict : Fit::Trunc, v.num & 0xFFFF);
     case Cls::Seg:
         if (!direct || v.type != VType::Number) return {};
         if (!v.known) return fits(Fit::Strict, 0);
-        return fits(v.num >= 0 && v.num <= 0xFF ? Fit::Strict : Fit::Trunc, v.num & 0xFF);
+        return fits(v.external() || (v.num >= 0 && v.num <= 0xFF) ? Fit::Strict : Fit::Trunc, v.num & 0xFF);
     }
     return {};
 }
@@ -321,11 +350,15 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
                 if (!ctx.ext_page) rep.warning("A77", "missing 'DPP' information", col);
                 continue;
             }
-            if (v.known && m.fit != Fit::Trunc && (p.value.num & 1) && !ops[i].unchecked &&
+            if (v.known && !v.external() && m.fit != Fit::Trunc && (p.value.num & 1) && !ops[i].unchecked &&
                 word_memory(form->mnemonic, i))
                 rep.warning("A134", "address alignment not sufficient", col);
             if (ops[i].unchecked) continue;
         }
+        if (m.link_width)
+            rep.error("OC18", "the external value " + hex_text(ops[i].value.num) + " does not fit in " +
+                                  std::to_string(m.link_width) + " bits (L166 reports L121: improper fixup)",
+                      col);
         if (m.fit != Fit::Trunc || m.quiet) continue;
         if (form->ops[i] == Cls::Irang2) {
             rep.error("A19", "numeric value out of range (1..4)", col);

@@ -102,6 +102,7 @@ public:
                 throw AsmError(e.code(), e.message(), t.column);
             }
             if (v) {
+                if (v->external()) ctx_.external_used(*v, t.column);
                 // A GPR's address is that of its short register number F0H + n.
                 if (immediate_ && (v->type == VType::Gpr || v->type == VType::GprB)) {
                     v->num = 0xFE00 + 2 * (0xF0 + v->num);
@@ -206,7 +207,8 @@ private:
         BitAddr b = oc166::bit_select(base, pos.num, dot.column, pos_column);
         if (b.ext && !ctx_.has_esfr())
             throw AsmError("A68", "invalid base in bit address: extended SFRs need $MOD167", dot.column);
-        return bit_value(b);
+        // A bit of an EXTERN BITWORD is still the linker's business.
+        return base.external() ? moving_with(bit_value(b), base) : bit_value(b);
     }
 
     static Value bit_value(const BitAddr& b) {
