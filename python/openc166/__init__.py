@@ -390,8 +390,10 @@ def assemble(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    dialect: str = "keil",
+    controls: Iterable[str] = (),
 ) -> Result:
-    """Assembles Keil A166 source text.
+    """Assembles Keil A166 (or TASKING a166) source text.
 
     source        the text. A str is encoded as UTF-8; pass bytes to keep
                   another encoding (Keil sources are often Windows-1252).
@@ -406,6 +408,12 @@ def assemble(
                   like the SECTIONS control of Keil's L166:
                   {"MYDATA": 0xF600}. The other sections go in order of
                   appearance to the first free place from the origin on.
+    dialect       "keil" (the default) for Keil A166 sources, or "tasking"
+                  for TASKING a166 sources, which first pass through
+                  openc166's m166 preprocessor (@SET, @IF, ...). TASKING
+                  sources are always for the C167.
+    controls      controls read before the source, as on the assembler's
+                  command line: ["CASE", "STDNAMES(reg.def)"].
     """
     source = _source_bytes(source)
     name = os.fsencode(os.fspath(file_name)) if file_name is not None else None
@@ -415,6 +423,8 @@ def assemble(
         origin,
         include_dirs,
         sections,
+        dialect,
+        controls,
     )
 
 
@@ -426,7 +436,7 @@ def _source_bytes(source: SourceText) -> bytes:
     return bytes(source)
 
 
-def _run(call, cpu, origin, include_dirs, sections) -> Result:
+def _run(call, cpu, origin, include_dirs, sections, dialect, controls) -> Result:
     """Makes the options, calls call(options) and wraps the result."""
     opts = _lib.oc166_options_new()
     if not opts:
@@ -434,6 +444,13 @@ def _run(call, cpu, origin, include_dirs, sections) -> Result:
     try:
         if cpu is not None and _lib.oc166_options_set_cpu(opts, cpu.encode("ascii", "replace")) != 0:
             raise ValueError("unknown CPU {!r} (use 'c166' or 'c167')".format(cpu))
+        if _lib.oc166_options_set_dialect(opts, str(dialect).encode("ascii", "replace")) != 0:
+            raise ValueError("unknown dialect {!r} (use 'keil' or 'tasking')".format(dialect))
+        if isinstance(controls, (str, bytes)):
+            raise TypeError("controls must be a list of strings, not a single string")
+        for c in controls:
+            if _lib.oc166_options_add_control(opts, str(c).encode("utf-8")) != 0:
+                raise MemoryError("cannot add control")
         if _lib.oc166_options_set_origin(opts, origin) != 0:
             raise ValueError("origin must not be negative")
         for d in include_dirs:
@@ -460,6 +477,8 @@ def assemble_file(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    dialect: str = "keil",
+    controls: Iterable[str] = (),
 ) -> Result:
     """Reads and assembles a source file. See assemble() for the options."""
     with open(path, "rb") as f:
@@ -471,6 +490,8 @@ def assemble_file(
         origin=origin,
         include_dirs=include_dirs,
         sections=sections,
+        dialect=dialect,
+        controls=controls,
     )
 
 
@@ -481,6 +502,8 @@ def assemble_many(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    dialect: str = "keil",
+    controls: Iterable[str] = (),
 ) -> Result:
     """Assembles several modules and links them into one program.
 
@@ -517,6 +540,8 @@ def assemble_many(
         origin,
         include_dirs,
         sections,
+        dialect,
+        controls,
     )
 
 
@@ -527,6 +552,8 @@ def assemble_files(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    dialect: str = "keil",
+    controls: Iterable[str] = (),
 ) -> Result:
     """Reads source files and assembles them as modules of one program.
 
@@ -536,4 +563,12 @@ def assemble_files(
     for path in paths:
         with open(path, "rb") as f:
             items.append((path, f.read()))
-    return assemble_many(items, cpu=cpu, origin=origin, include_dirs=include_dirs, sections=sections)
+    return assemble_many(
+        items,
+        cpu=cpu,
+        origin=origin,
+        include_dirs=include_dirs,
+        sections=sections,
+        dialect=dialect,
+        controls=controls,
+    )

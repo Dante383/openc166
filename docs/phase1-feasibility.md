@@ -5,7 +5,9 @@ Infineon C166/C167 family, producing raw binary images of small ECU payloads at
 explicit load/execution addresses, for integration into the Python-based OpenGK
 (gkflasher).
 
-Status: research only — no implementation.
+Status: Phase 1 research, kept as originally written. Implementation has since
+started; the [README](../README.md) shows what works today, and the notes below
+record where the implementation departed from this plan.
 
 > **Later decision (implementation):** the Python package talks to the C API
 > through **ctypes** instead of a nanobind module. The package is plain
@@ -333,6 +335,8 @@ Investigating gkflasher showed that all of its ECU-side code comes from **Infine
 
 AT1–AT3 use © Infineon sources and stay in a local, uncommitted corpus. AT4 is public (gkflasher, GPL-3.0); only the expected bytes and independently written `.a66` sources go into the openc166 repository.
 
+**Result (Phase 2):** AT1–AT3 pass. `tests/acceptance/minimon.py` rebuilds all 25 MiniMon HEX files (the monitor in four variants, its RSTCON patch, and every C166-family flash driver; the XC16x driver uses a different toolchain) byte for byte from their TASKING sources; see [tasking.md](tasking.md). AT4 is covered by the `mtos_*` tests in `tests/CMakeLists.txt`.
+
 ---
 
 ## 7. Licensing and compatibility concerns
@@ -384,6 +388,10 @@ Estimates are for one experienced developer. The exit criteria are measurable.
 | **Tier 2** (optional) | Full M166 macro language, `MACRO`/`REPT`/`IRP`, `PECDEF`, WASM build for a browser playground | +3–5 wk | The remaining MiniMon drivers reproduce their shipped `.hex` |
 
 **Tier 1 total: about 13–15 person-weeks.**
+
+> **Progress note:** M4b's exit criterion is met (AT1–AT3, see §6.1). The
+> MiniMon drivers that the Tier 2 row expected to need the full M166 macro
+> language also reproduce already, because they use only the m166 subset.
 
 ---
 

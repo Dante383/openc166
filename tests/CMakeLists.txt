@@ -16,7 +16,8 @@ add_executable(openc166_tests
     unit/test_link.cpp
     unit/test_groups.cpp
     unit/test_bits.cpp
-    unit/test_macros.cpp)
+    unit/test_macros.cpp
+    unit/test_tasking.cpp)
 target_include_directories(openc166_tests PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
 # doctest's own declarations of std types break with newer MSVC libraries.
 target_compile_definitions(openc166_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
@@ -136,4 +137,16 @@ if(TARGET openc166_cli)
     string(REPEAT "ff" 204 driver_gap)  # 0F63AH..0F705H is not part of the patch
     add_binary_test(mtos_driver_patch mtos/driver_patch.a66
         "a758a7a7" "dc02" "a851" "cb00" ${driver_gap} "bb94" "cc00")
+
+    # Rebuilds Infineon MiniMon from its TASKING sources and compares the
+    # bytes with its HEX files. MiniMon is not part of openc166: the test
+    # is skipped unless the environment variable MINIMON_DIR names it.
+    find_package(Python3 3.9 COMPONENTS Interpreter)
+    if(Python3_FOUND)
+        add_test(NAME minimon_acceptance
+            COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/acceptance/minimon.py
+                --openc166 $<TARGET_FILE:openc166_cli>)
+        set_tests_properties(minimon_acceptance PROPERTIES SKIP_RETURN_CODE 77)
+    endif()
 endif()

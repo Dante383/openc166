@@ -16,12 +16,13 @@
 
 namespace {
 
-constexpr const char* kUsage = R"(usage: openc166 [options] SOURCE...
+constexpr const char* kUsage = R"usage(usage: openc166 [options] SOURCE...
 
-Assembles Keil A166 assembly for the Infineon C166/C167 into a raw binary,
-Intel HEX or Motorola S-record file. Several sources are linked into one
-program, as L166 would: EXTERN symbols take the values that other sources
-make PUBLIC or GLOBAL, and sections of the same name and class are combined.
+Assembles Keil A166 (or TASKING a166) assembly for the Infineon C166/C167
+into a raw binary, Intel HEX or Motorola S-record file. Several sources are
+linked into one program, as L166 would: EXTERN symbols take the values that
+other sources make PUBLIC or GLOBAL, and sections of the same name and class
+are combined.
 
 options:
   -o, --output FILE   output file (default: the first SOURCE with the extension of the format)
@@ -30,6 +31,10 @@ options:
                       .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
   -l, --listing FILE  write a listing
       --cpu CPU       c166 (default) or c167; $MOD167 in the source also selects c167
+      --dialect D     keil (default): Keil A166 sources; tasking: TASKING a166
+                      sources, run through openc166's m166 preprocessor (C167 only)
+  -c, --control TEXT  controls read before the sources, as on the command line of
+                      the assembler, e.g. -c CASE -c "STDNAMES(reg.def)" (may be repeated)
       --origin ADDR   address of code outside sections, and the lowest address for
                       sections without AT (default 0)
       --section NAME=ADDR
@@ -45,7 +50,7 @@ options:
 Numbers may be written as 0C000h, 0xC000 or decimal.
 
 exit status: 0 success, 1 assembly errors, 2 usage or file errors
-)";
+)usage";
 
 struct UsageError : std::runtime_error {
     using std::runtime_error::runtime_error;
@@ -158,6 +163,16 @@ int run(int argc, char** argv) {
                 opt.cpu = oc166::isa::Cpu::C167;
             else
                 throw UsageError("unknown CPU '" + v + "' (use c166 or c167)");
+        } else if (is("", "--dialect")) {
+            std::string v = lower(value());
+            if (v == "keil" || v == "a166")
+                opt.dialect = oc166::Dialect::Keil;
+            else if (v == "tasking")
+                opt.dialect = oc166::Dialect::Tasking;
+            else
+                throw UsageError("unknown dialect '" + v + "' (use keil or tasking)");
+        } else if (is("-c", "--control")) {
+            opt.controls.emplace_back(value());
         } else if (is("", "--origin")) {
             opt.origin = parse_number(value(), "origin");
         } else if (is("", "--section")) {

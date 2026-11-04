@@ -139,6 +139,46 @@ static void test_diagnostics(void) {
     oc166_result_free(r);
 }
 
+/* TASKING sources: the m166 preprocessor, and controls from the caller. */
+static void test_dialect(void) {
+    static const uint8_t expected[] = {0xE0, 0x51, 0xCB, 0x00}; /* MOV R1,#5; RET */
+    static const char src[] = "@IF(@DEFINED(V))\n MOV R1,#@V\n@ENDI\n RET\n END\n";
+    oc166_options *opts = oc166_options_new();
+    oc166_result *r;
+    oc166_image image;
+    oc166_diagnostic d;
+    CHECK(oc166_options_set_dialect(opts, "TASKING") == 0);
+    CHECK(oc166_options_set_dialect(opts, "gnu") == -1);
+    CHECK(oc166_options_set_dialect(opts, NULL) == -1);
+    CHECK(oc166_options_set_dialect(NULL, "keil") == -1);
+    CHECK(oc166_options_add_control(opts, "DEFINE(V,5) CASE") == 0);
+    CHECK(oc166_options_add_control(opts, NULL) == -1);
+    CHECK(oc166_options_add_control(NULL, "CASE") == -1);
+    r = assemble_text(opts, src);
+    CHECK(r != NULL);
+    CHECK(oc166_result_error_count(r) == 0);
+    CHECK(strcmp(oc166_result_cpu(r), "c167") == 0);
+    CHECK(oc166_result_image(r, 0, 0, 0xFF, &image) == 0);
+    CHECK(image.size == sizeof expected && memcmp(image.data, expected, sizeof expected) == 0);
+    oc166_result_free(r);
+
+    /* A control the assembler does not know is reported against the
+     * command line. */
+    CHECK(oc166_options_add_control(opts, "NOSUCHCONTROL") == 0);
+    r = assemble_text(opts, src);
+    CHECK(oc166_result_error_count(r) == 1);
+    CHECK(oc166_result_diagnostic(r, 0, &d) == 0);
+    CHECK(strcmp(d.code, "A16") == 0 && strcmp(d.file, "<command line>") == 0);
+    oc166_result_free(r);
+
+    /* Keil A166 has no m166: '@' is not part of its language. */
+    CHECK(oc166_options_set_dialect(opts, "keil") == 0);
+    r = assemble_text(NULL, src);
+    CHECK(oc166_result_error_count(r) > 0);
+    oc166_result_free(r);
+    oc166_options_free(opts);
+}
+
 static void test_symbols(void) {
     oc166_symbol s;
     oc166_options *opts = oc166_options_new();
@@ -370,6 +410,7 @@ int main(void) {
     test_options();
     test_code_and_image();
     test_diagnostics();
+    test_dialect();
     test_symbols();
     test_sections();
     test_bit_sections();

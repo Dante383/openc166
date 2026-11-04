@@ -369,6 +369,9 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
                                   std::to_string(m.link_width) + " bits (L166 reports L121: improper fixup)",
                       col);
         if (m.fit != Fit::Trunc || m.quiet) continue;
+        // Keil keeps the low 16 bits of a JMPA, CALLA or PCALL target without
+        // a word; only JMPS and CALLS, which name the segment too, warn.
+        if (form->ops[i] == Cls::Caddr && form->ops[0] != Cls::Seg) continue;
         if (form->ops[i] == Cls::Irang2) {
             rep.error("A19", "numeric value out of range (1..4)", col);
         } else if (form->ops[i] == Cls::Rel) {

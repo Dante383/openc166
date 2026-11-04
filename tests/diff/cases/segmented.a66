@@ -156,4 +156,20 @@ Q       PROC NEAR
         DW      PSW
 Q       ENDP
 CS2     ENDS
+
+; Code above 64 KB: JMPA and CALLA hold the low 16 bits of the target
+; without a warning, as the CPU keeps the current code segment.
+CS3     SECTION CODE AT 10000H
+Q3      PROC FAR
+L1:     NOP
+L2      LABEL NEAR
+        NOP
+        DS      400
+        JMPA    cc_UC, L1
+        CALLA   cc_UC, L2
+        JMP     L2
+        JMPA    cc_UC, L1+2
+        RETS
+Q3      ENDP
+CS3     ENDS
         END

@@ -69,6 +69,13 @@ Early development (version 0.x). What works today:
   that is not `PUBLIC` stays private to its file.
 - Register banks (`REGBANK`/`REGDEF`), placed in `0FC00H..0FDFFH` as L166
   places them, and the `NAME`, `SSKDEF`, `PECDEF` and `TYPEDEC` directives.
+- **TASKING sources** (`--dialect tasking`): the common part of TASKING's
+  m166 preprocessor (`@SET`, `@EVAL`, `@IF`/`@ELSE`/`@ENDI`, `@DEFINED`),
+  TASKING's controls and `STDNAMES` register files, and the places where
+  its assembler differs from Keil's. Infineon's MiniMon monitor and flash
+  drivers, which gkflasher's ECU code comes from, rebuild byte for byte
+  from their TASKING sources. See
+  [docs/tasking.md](https://github.com/Dante383/openc166/blob/main/docs/tasking.md).
 - A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:
@@ -76,7 +83,8 @@ Not done yet:
 - Keil's MPL macro language (`%DEFINE` and the like); put `$NOMPL` at the
   top of the file to use `%` as text
 - OMF-166 object files and libraries
-- the TASKING assembler dialect
+- TASKING's m166 macros with parameters (`@DEFINE`), loops and string
+  functions
 
 See [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md) for exact behaviour and
 the few places where openc166 deliberately differs from Keil.
@@ -141,6 +149,8 @@ carry the address of every record, so they hold only the bytes used.
 | `--record-size N` | HEX and S-records: data bytes per record (default 16) |
 | `--cpu c166\|c167` | instruction set (`$MOD167` in the source also selects C167) |
 | `-I DIR` | also search `DIR` for `$INCLUDE` files (may be repeated) |
+| `--dialect D` | `keil` (default) or `tasking`, for TASKING a166 sources |
+| `-c, --control TEXT` | controls read before the sources, e.g. `-c "CASE STDNAMES(reg167.def)"` (may be repeated) |
 
 Sections without `AT` go in order of first appearance to the first free,
 suitably aligned place from the origin on, as L166 places them by default.
@@ -187,9 +197,11 @@ image.base                 # 0xE000, the address of image.data[0]
 image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
 ```
 
-- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=(), sections=None)`
+- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=(), sections=None, dialect="keil", controls=())`
   assembles a `str` or `bytes`. `sections` gives addresses for sections
-  without `AT`, e.g. `{"VARS": 0xF600}`. `openc166.assemble_file(path, ...)`
+  without `AT`, e.g. `{"VARS": 0xF600}`. `dialect="tasking"` reads TASKING
+  source; `controls` is a list of controls read before the source, as with
+  `-c`. `openc166.assemble_file(path, ...)`
   reads a file; `$INCLUDE` then also searches the file's directory.
 - The result has `ok`, `diagnostics` (each with `severity`, `code`,
   `message`, `file`, `line`, `column`; `str()` gives the usual one-line
@@ -229,6 +241,10 @@ an example of a complete binding.
 
 - `ctest --test-dir build` runs the unit tests, the C API test and the
   Python package tests, and assembles the examples, checking every byte.
+- `tests/acceptance/minimon.py` rebuilds Infineon's MiniMon from its
+  TASKING sources and compares the result with its HEX files. MiniMon is
+  not included; set `MINIMON_DIR` to its directory (the one that holds
+  `MCPROG` and `Driver`) and `ctest` runs it too.
 - `tests/diff/` contains the differential test against Keil A166. Keil is
   **not** included. If you have your own copy, run:
 

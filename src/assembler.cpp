@@ -5,6 +5,7 @@
 #include "encode.hpp"
 #include "expr.hpp"
 #include "lexer.hpp"
+#include "m166.hpp"
 #include "operand.hpp"
 #include "predef.hpp"
 
@@ -448,6 +449,11 @@ bool contains(const std::string_view (&list)[N], std::string_view upper_name) {
     return std::find(std::begin(list), std::end(list), upper_name) != std::end(list);
 }
 
+template <typename T>
+bool contains(const std::vector<T>& list, const T& item) {
+    return std::find(list.begin(), list.end(), item) != list.end();
+}
+
 // IF, ELSEIF, ELSE and ENDIF, as statements and as $ controls.
 constexpr std::string_view kCondKeywords[] = {"IF", "ELSEIF", "ELSE", "ENDIF"};
 
@@ -627,6 +633,50 @@ constexpr PrimaryChoice kPrimaryChoices[] = {
 
 constexpr std::string_view kIgnoredControls[] = {
     "LIST", "LI", "NOLIST", "NOLI", "TITLE", "TT", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "REGUSE",
+};
+
+// TASKING a166 controls, by full name: abbreviations that differ from
+// Keil's are turned into these first.
+constexpr std::pair<std::string_view, std::string_view> kTaskingAbbreviations[] = {
+    {"CA", "CASE"},      {"NOCA", "NOCASE"},     {"RE", "RESTORE"},   {"SN", "STDNAMES"},
+    {"EX", "EXTEND"},    {"EX1", "EXTEND1"},     {"EX2", "EXTEND2"},  {"EX22", "EXTEND22"},
+    {"XC", "EXTMAC"},    {"DEF", "DEFINE"},      {"OP", "OPTIMIZE"},  {"NOOP", "NOOPTIMIZE"},
+    {"M166", "MOD166"},  {"NOM166", "NOMOD166"},
+};
+
+// TASKING controls allowed only before the first statement.
+constexpr std::string_view kTaskingPrimary[] = {
+    "ABSOLUTE", "AB", "NOABSOLUTE", "NOAB", "CASE", "NOCASE", "DATE", "DA", "DEBUG", "DB", "NODEBUG",
+    "NODB", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP", "EXPANDREGBANK", "XRB", "NOEXPANDREGBANK", "NOXRB",
+    "EXTEND", "EXTEND1", "EXTEND2", "EXTEND22", "EXTMAC", "EXTPEC16", "EP16", "NOEXTPEC16", "NOEP16", "GSO",
+    "HEADER", "HD", "NOHEADER", "NOHD", "LISTALL", "LA", "NOLISTALL", "NOLA", "MISRAC", "MC", "MOD166",
+    "NOMOD166", "MODEL", "MD", "OBJECT", "OJ", "NOOBJECT", "NOOJ", "PAGELENGTH", "PL", "PAGEWIDTH", "PW",
+    "PAGING", "PA", "NOPAGING", "NOPA", "PRINT", "PR", "NOPRINT", "NOPR", "SEGMENTED", "SG", "NONSEGMENTED",
+    "NOSG", "STDNAMES", "STRICTTASK", "ST", "NOSTRICTTASK", "NOST", "SYMBOLS", "SB", "NOSYMBOLS", "NOSB",
+    "TABS", "TA", "TYPE", "TY", "NOTYPE", "NOTY", "XREF", "XR", "NOXREF", "NOXR", "DEFINE",
+};
+
+// TASKING controls that only affect the listing, the object file or
+// checks, so openc166 ignores them. CHECK... and NOCHECK... controls are
+// ignored too.
+constexpr std::string_view kTaskingIgnored[] = {
+    "ABSOLUTE", "AB", "NOABSOLUTE", "NOAB", "ASMLINEINFO", "A", "NOASMLINEINFO", "NOA", "DATE", "DA",
+    "DEBUG", "DB", "NODEBUG", "NODB", "EJECT", "EJ", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP",
+    "EXPANDREGBANK", "XRB", "NOEXPANDREGBANK", "NOXRB", "EXTPEC16", "EP16", "NOEXTPEC16", "NOEP16", "FLOAT",
+    "FL", "GSO", "HEADER", "HD", "NOHEADER", "NOHD", "LINES", "LN", "NOLINES", "NOLN", "LIST", "LI",
+    "NOLIST", "NOLI", "LISTALL", "LA", "NOLISTALL", "NOLA", "LOCALS", "LC", "NOLOCALS", "NOLC", "MISRAC",
+    "MC", "MODEL", "MD", "OBJECT", "OJ", "NOOBJECT", "NOOJ", "OPTIMIZE", "PAGELENGTH", "PL", "PAGEWIDTH",
+    "PW", "PAGING", "PA", "NOPAGING", "NOPA", "PEC", "PC", "NOPEC", "NOPC", "PRINT", "PR", "NOPRINT", "NOPR",
+    "RETCHECK", "RC", "NORETCHECK", "NORC", "STRICTTASK", "ST", "NOSTRICTTASK", "NOST", "SYMB", "SM",
+    "NOSYMB", "NOSM", "SYMBOLS", "SB", "NOSYMBOLS", "NOSB", "TITLE", "TT", "TYPE", "TY", "NOTYPE", "NOTY",
+    "WARNING", "WA", "NOWARNING", "NOWA", "WARNINGASERROR", "WAE", "NOWARNINGASERROR", "NOWAE", "XREF", "XR",
+    "NOXREF", "NOXR", "MOD166", "NOMOD166",
+};
+
+// TASKING controls that work as in Keil.
+constexpr std::string_view kTaskingShared[] = {
+    "INCLUDE", "IC", "CASE", "NOCASE", "SEGMENTED", "SG", "NONSEGMENTED", "NOSG", "SAVE", "SA", "RESTORE",
+    "GEN", "GE", "NOGEN", "NOGE", "GENONLY", "GO", "TABS", "TA",
 };
 
 enum class ProcKind : std::uint8_t { None, Near, Far, Interrupt };
@@ -889,6 +939,19 @@ private:
 
     AssemblyResult res_;
 
+    // TASKING dialect: the m166 preprocessor runs on each line first.
+    const bool tasking_ = opt_.dialect == Dialect::Tasking;
+    M166 m166_;
+    Reporter m166_rep_;  // m166's problems with the current line
+    bool m166_skipped_ = false;  // m166 dropped the whole line: list it as skipped
+    std::string m166_source_;  // the line as written, listed when m166 left nothing of it
+    std::ptrdiff_t commanded_ = 0;  // include files from command-line controls, waiting to be read
+    std::vector<std::string> stdnames_;  // STDNAMES files given, in upper case
+    std::vector<std::size_t> stdnames_files_;  // and the files read for them
+
+    std::optional<Value> predef(std::string_view name) const {
+        return tasking_ ? predefined_tasking(name) : predefined(name, cpu_, sys166_);
+    }
     bool active() const { return conds_.empty() || conds_.back().active; }
     void process_line(std::string_view text);
     bool expand_lits(std::string_view text, std::string& out, std::vector<std::string>& open,
@@ -896,6 +959,8 @@ private:
     std::size_t add_file(std::string name, std::string text);
     void statement(std::string_view text, Reporter& rep, ListingLine& lst);
     void controls(std::string_view text, std::size_t from, Reporter& rep);
+    bool tasking_control(const std::string& name, bool paren, std::string_view arg, int column, Reporter& rep);
+    void command_control(const std::string& text);
     void cond_statement(const std::string& kw, std::string_view text, std::size_t after, Reporter& rep);
     void cond_control(const std::string& kw, std::string_view text, std::size_t after, int column, bool misplaced,
                       Reporter& rep);
@@ -945,7 +1010,7 @@ private:
     std::int64_t bit_section_at(TokenCursor& cur, Reporter& rep);
     void section_end(const Token& name, Reporter& rep);
     std::optional<std::size_t> find_section(const std::string& name_key) const;
-    void regbank_directive(const Token* name, TokenCursor& cur);
+    void regbank_directive(const Token* name, TokenCursor& cur, bool regdef);
     void module_name(TokenCursor& cur, Reporter& rep);
     void stack_size(TokenCursor& cur, Reporter& rep);
     void pec_channels(TokenCursor& cur);
@@ -959,6 +1024,7 @@ private:
     std::int64_t absolute(TokenCursor& cur, const char* what, bool offset = false);
     void expect_end(TokenCursor& cur);
     void access_attribute(TokenCursor& cur);
+    void tasking_definition_fields(TokenCursor& cur);
     void emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst);
     void advance(std::int64_t n);
     void align(int n);
@@ -983,7 +1049,7 @@ private:
 };
 
 std::optional<Value> Assembler::lookup(std::string_view name) {
-    if (auto p = predefined(name, cpu_, sys166_)) return p;
+    if (auto p = predef(name)) return p;
     auto it = symbols_.find(key(name));
     if (it == symbols_.end()) {
         if (auto v = section_value(name)) return v;
@@ -1010,7 +1076,7 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
     if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
         throw AsmError("A4", "illegal use of a reserved word", name.column);
     auto repeat = [&](const Value& old) { return same_ok && v.known && old.known && same_value(old, v); };
-    if (auto p = predefined(name.text, cpu_, sys166_)) {
+    if (auto p = predef(name.text)) {
         if (repeat(*p)) return;
         throw AsmError("A25", "symbol redefinition", name.column);
     }
@@ -1096,7 +1162,20 @@ void Assembler::access_attribute(TokenCursor& cur) {
         cur.next();
         return;
     }
+    if (tasking_) {
+        // The attribute is optional before the TASKING tool fields.
+        while (!cur.at_end()) cur.next();
+        return;
+    }
     throw AsmError("A6", "syntax error: access attribute R, RW or W expected", t.column);
+}
+
+// TASKING lets DEFR, DEFA, DEFX and DEFB end in fields for its EDE and
+// CrossView Pro tools (initialisation method, reset value, comment); the
+// assembler ignores them.
+void Assembler::tasking_definition_fields(TokenCursor& cur) {
+    if (!tasking_ || !cur.accept_op(",")) return;
+    while (!cur.at_end()) cur.next();
 }
 
 void Assembler::expect_end(TokenCursor& cur) {
@@ -1194,8 +1273,10 @@ void Assembler::begin_pass(int pass, bool final) {
 }
 
 void Assembler::run_lines() {
-    cpu_ = opt_.cpu;
-    sys166_ = cpu_ == isa::Cpu::C166;
+    // TASKING's a166 uses the C167 instruction set unless told otherwise
+    // (EXTEND), and predefines only the core SFRs.
+    cpu_ = tasking_ ? isa::Cpu::C167 : opt_.cpu;
+    sys166_ = !tasking_ && cpu_ == isa::Cpu::C166;
     case_ = false;
     sections_.assign(1, Section{});
     sections_[0].loc = opt_.origin;
@@ -1234,10 +1315,19 @@ void Assembler::run_lines() {
     locals_ = 0;
     gen_ = false;
     macro_ = true;
-    mpl_ = initial_mpl(files_[0]->lines);
+    // TASKING has no MPL: '%' is the remainder operator.
+    mpl_ = !tasking_ && initial_mpl(files_[0]->lines);
     primary_seen_.clear();
     tabs_ = 8;
     saved_gen_.clear();
+    m166_.reset();
+    m166_rep_ = Reporter{};
+    m166_skipped_ = false;
+    m166_source_.clear();
+    commanded_ = 0;
+    stdnames_.clear();
+    stdnames_files_.clear();
+    for (const auto& c : opt_.controls) command_control(c);
     // Keil joins the last line of an include file that does not end with a
     // newline to the line read after it.
     std::string carry;
@@ -1299,6 +1389,15 @@ void Assembler::run_lines() {
         }
         include_.reset();
         expansion_.reset();
+        m166_skipped_ = false;
+        m166_source_.clear();
+        if (tasking_ && macro_level_ == 0) {
+            M166::Line l = m166_.process(text, case_, m166_rep_);
+            const bool blank = trim(l.text).empty();
+            m166_skipped_ = blank && !l.active_before && !l.active_after;
+            if (blank && (l.calls || m166_skipped_)) m166_source_ = text;
+            text = std::move(l.text);
+        }
         process_line(text);
         if (include_) stack_.push_back(Frame{*include_, 0, level_ + 1, nullptr});
         if (expansion_) stack_.push_back(Frame{0, 0, 0, std::move(expansion_)});
@@ -1360,6 +1459,9 @@ bool Assembler::finish_pass() {
         res_.diagnostics.push_back({sev, code, std::move(msg), file, line, 0});
     };
     if (block_) add(Severity::Error, "A120", "macro terminated by end of file: ENDM missing");
+    if (m166_.open_ifs() > 0)
+        add(Severity::Error, "OC30", "m166: " + std::to_string(m166_.open_ifs()) +
+                                         " @IF block(s) not closed by @ENDI");
     if (!ended_) add(Severity::Warning, "A89", "premature end of file (no END statement)");
     if (!conds_.empty())
         add(Severity::Error, "A12", "unbalanced IF-ENDIF: " + std::to_string(conds_.size()) +
@@ -1384,7 +1486,7 @@ std::vector<std::pair<std::string, PublicDef>> Assembler::exported() const {
                 continue;
             def.value = sym.value;
             def.kind = sym.kind;
-        } else if (auto p = predefined(e.name, cpu_, sys166_)) {
+        } else if (auto p = predef(e.name)) {
             def.value = *p;
         } else {
             continue;
@@ -1416,13 +1518,14 @@ void Assembler::process_line(std::string_view text) {
     lst.file_line = file_line_;
     lst.level = level_;
     lst.macro_level = macro_level_;
-    lst.source = std::string(text);
+    lst.source = m166_source_.empty() ? std::string(text) : m166_source_;
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
+        m166_rep_ = Reporter{};
         if (final_) res_.listing.push_back(std::move(lst));
         return;
     }
-    Reporter rep;
+    Reporter rep = std::exchange(m166_rep_, Reporter{});
     rep_ = &rep;
     if (!joined_.empty())
         rep.warning("OC8", "the last line of '" + joined_ +
@@ -1431,7 +1534,7 @@ void Assembler::process_line(std::string_view text) {
     const bool control_line = lead != std::string_view::npos && text[lead] == '$';
     const bool was_active = active();
     try {
-        statement(text, rep, lst);
+        if (!m166_skipped_) statement(text, rep, lst);
     } catch (const AsmError& e) {
         rep.error(e.code(), e.message(), e.column());
     }
@@ -1439,7 +1542,7 @@ void Assembler::process_line(std::string_view text) {
     // it are assembled, an IF statement when the lines before it are.
     // $NOCOND leaves out every line after which assembly is off.
     const bool now_active = active();
-    lst.skipped = !(control_line ? now_active : was_active);
+    lst.skipped = m166_skipped_ || !(control_line ? now_active : was_active);
     lst.hidden = (!now_active && !cond_listing_) || (macro_level_ > 0 && !gen_);
     rep_ = nullptr;
     if (!final_) return;
@@ -1529,6 +1632,9 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     }
     std::size_t lead = text.find_first_not_of(" \t");
     if (lead == std::string_view::npos) return;
+    // TASKING a166 skips lines that start with '#', such as the line
+    // markers of a C preprocessor.
+    if (tasking_ && text[lead] == '#') return;
     // Like Keil, replace LIT names before reading the line, in $ controls too,
     // and list the result. Lines that a false IF block skips stay as they are.
     std::string expanded;
@@ -1574,7 +1680,8 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     auto toks = tokenize(mw == MacroWord::None ? text : text.substr(0, head));
     TokenCursor cur(toks);
     if (cur.at_end() && mw == MacroWord::None) return;
-    primary_done_ = true;
+    // TASKING reads STDNAMES files before the source.
+    if (!contains(stdnames_files_, file_)) primary_done_ = true;
 
     if (cur.peek().kind == TokKind::Ident && cur.peek(1).is_op(":")) {
         const Token& label = cur.next();
@@ -1606,10 +1713,20 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         }
         mark_address(lst);
         // Keil gives plain labels outside CODE sections the type BYTE. In a
-        // BIT section they, and labels of DS, are bits.
+        // BIT section they, and labels of DS, are bits. In TASKING, a label
+        // in a CODE section takes the type of the procedure, and
+        // 'label: NEAR' or 'label: FAR' sets it.
+        LType code_type = LType::Near;
+        if (tasking_) {
+            if (proc_ == ProcKind::Far) code_type = LType::Far;
+            if ((next == "NEAR" || next == "FAR") && cur.peek(1).kind == TokKind::End) {
+                code_type = next == "FAR" ? LType::Far : LType::Near;
+                cur.next();
+            }
+        }
         LType type = data_follows && data_need(next) ? data_type(next)
                    : section().bits                  ? LType::None
-                   : section().code                  ? LType::Near
+                   : section().code                  ? code_type
                                                      : LType::Byte;
         define(label, SymbolKind::Label, here(type));
         if (!data_follows && section().code) check_alignment(2, label, rep);
@@ -1637,7 +1754,8 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     if (first.kind != TokKind::Ident) throw AsmError("A6", "syntax error", first.column);
     if (cur.peek(1).kind == TokKind::Ident) {
         std::string dir = upper(cur.peek(1).text);
-        if (contains(kNamedDirectives, dir)) {
+        if (contains(kNamedDirectives, dir) ||
+            (tasking_ && (dir == "COMREG" || dir == "DEFX" || dir == "DEFBF"))) {
             cur.next();
             cur.next();
             named_directive(first, dir, cur, rep, lst);
@@ -1646,7 +1764,7 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     }
     cur.next();
     std::string kw = upper(first.text);
-    if (isa::is_mnemonic(kw))
+    if (isa::is_mnemonic(kw) || (tasking_ && (kw == "RETN" || kw == "RETV")))
         instruction(kw, cur, rep, lst);
     else
         directive(kw, first, cur, rep, lst);
@@ -1690,6 +1808,9 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
         c.column = static_cast<int>(i) + 1;
         c.name = read_name();
         if (c.name.empty()) throw AsmError("A16", "unknown control or bad argument(s)", c.column);
+        if (tasking_)
+            for (const auto& [abbr, full] : kTaskingAbbreviations)
+                if (c.name == abbr) c.name = std::string(full);
         if (contains(kCondKeywords, c.name)) {
             c.arg = i;
             cond = std::move(c);
@@ -1739,8 +1860,8 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
     // Primary controls must come before the first statement; otherwise Keil
     // ignores the whole line (though it still uses INCDIR directories).
     if (primary_done_) {
-        auto primary = std::find_if(list.begin(), list.end(), [](const Control& c) {
-            return contains(kPrimaryControls, c.name);
+        auto primary = std::find_if(list.begin(), list.end(), [&](const Control& c) {
+            return contains(kPrimaryControls, c.name) || (tasking_ && contains(kTaskingPrimary, c.name));
         });
         if (primary != list.end()) {
             for (const auto& c : list)
@@ -1754,7 +1875,8 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
     for (std::size_t k = 0; k < list.size(); ++k) {
         const std::string& name = list[k].name;
         int column = list[k].column;
-        const bool contradicted = contradicts(name);
+        if (tasking_ && tasking_control(list[k].name, list[k].paren, arg(list[k]), column, rep)) continue;
+        const bool contradicted = !tasking_ && contradicts(name);
         if (name == "INCLUDE" || name == "IC") {
             if (k > 0) {
                 // Keil silently skips an INCLUDE that follows another control.
@@ -1832,6 +1954,78 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
                            column);
     }
     if (cond) cond_control(cond->name, text, cond->arg, cond->column, true, rep);
+}
+
+// A control in a TASKING source. Returns false for those that work as in
+// Keil, which controls() handles.
+bool Assembler::tasking_control(const std::string& name, bool paren, std::string_view arg, int column,
+                                Reporter& rep) {
+    if (contains(kTaskingShared, name)) return false;
+    if (name == "STDNAMES") {
+        if (!paren || trim(arg).empty()) throw AsmError("A22", "'(' expected: STDNAMES takes a file name", column);
+        // The same file again, as on the command line and in the source,
+        // changes nothing.
+        const std::string file = upper(portable_path(trim(arg)));
+        if (contains(stdnames_, file)) return true;
+        stdnames_.push_back(file);
+        // TASKING reads the file before the source; openc166 reads it as an
+        // include file, or its own C167 register file if it is missing.
+        try {
+            include(trim(arg), column);
+        } catch (const AsmError& e) {
+            if (e.code() != "OC5") throw;
+            fatal_ = false;
+            rep.warning("OC32", "STDNAMES file '" + std::string(trim(arg)) +
+                                    "' not found: using openc166's built-in C167 register names (REG167.INC)",
+                        column);
+            include("REG167.INC", column);
+        }
+        stdnames_files_.push_back(*include_);
+    } else if (name == "EXTEND") {
+        cpu_ = isa::Cpu::C167;
+    } else if (name == "EXTEND1" || name == "EXTEND2" || name == "EXTEND22" || name == "EXTMAC") {
+        cpu_ = isa::Cpu::C167;
+        rep.warning("OC2", name + ": the extensions of this core are not supported; using the C167 instruction set",
+                    column);
+    } else if (name == "DEFINE") {
+        const std::size_t comma = arg.find(',');
+        const std::string_view macro = trim(arg.substr(0, comma));
+        if (!paren || macro.empty() || !ident_start(macro[0]) ||
+            !std::all_of(macro.begin(), macro.end(), [](char c) { return ident_char(c) && c != '?'; }))
+            throw AsmError("A16", "bad argument: DEFINE takes a macro name and, optionally, its text", column);
+        m166_.define(macro, comma == std::string_view::npos ? "1" : std::string(trim(arg.substr(comma + 1))), case_);
+    } else if (name == "NOOPTIMIZE") {
+        rep.warning("OC31", "NOOPTIMIZE is not supported: generic JMP and CALL still use the shortest form", column);
+    } else if (!contains(kTaskingIgnored, name) && name.rfind("CHECK", 0) != 0 && name.rfind("NOCHECK", 0) != 0) {
+        throw AsmError("A16", "unknown control '" + name + "'", column);
+    }
+    return true;
+}
+
+// A control from AssembleOptions::controls, read like a $ line before the
+// first line of the source.
+void Assembler::command_control(const std::string& text) {
+    Reporter rep;
+    rep_ = &rep;
+    file_ = 0;
+    level_ = 0;
+    include_.reset();
+    try {
+        controls(text, 0, rep);
+    } catch (const AsmError& e) {
+        rep.error(e.code(), e.message(), e.column());
+    }
+    rep_ = nullptr;
+    // Files from earlier controls are read first.
+    if (include_) stack_.insert(stack_.end() - commanded_, Frame{*include_, 0, 1, nullptr}), ++commanded_;
+    include_.reset();
+    if (!final_) return;
+    for (auto& d : rep.items()) {
+        d.file = "<command line>";
+        d.message += " (control '" + text + "')";
+        d.column = 0;
+        res_.diagnostics.push_back(std::move(d));
+    }
 }
 
 // Records the setting of a primary control; true if it contradicts a setting
@@ -2109,6 +2303,9 @@ void Assembler::include(std::string_view name, int column) {
         throw AsmError("OC5", "cannot open include file '" + std::string(name) + "'", column);
     }
     include_ = static_cast<std::size_t>(it->second);
+    // A file read from a STDNAMES file is part of it.
+    if (contains(stdnames_files_, file_) && !contains(stdnames_files_, *include_))
+        stdnames_files_.push_back(*include_);
 }
 
 // What the first words of a line, read as text, mean to standard macros. A
@@ -2556,19 +2753,26 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
     } else if (dir == "ENDS") {
         expect_end(cur);
         section_end(name, rep);
+        // TASKING has no error for a procedure without ENDP (MiniMon's
+        // rstcon.a66 has one): the end of its section ends it.
+        if (tasking_ && open_.empty()) {
+            proc_ = ProcKind::None;
+            proc_name_.clear();
+        }
     } else if (dir == "PROC") {
         if (section().bits) {
             undefine(name);
             throw AsmError("A6", "syntax error: a BIT section holds no procedures", name.column);
         }
         if (proc_ != ProcKind::None) throw AsmError("A75", "can't nest procedures", name.column);
-        ProcKind kind = ProcKind::Near;
+        // TASKING's default is FAR in $SEGMENTED mode.
+        ProcKind kind = tasking_ && segmented_ ? ProcKind::Far : ProcKind::Near;
         if (cur.accept_keyword("FAR"))
             kind = ProcKind::Far;
         else if (cur.accept_keyword("INTERRUPT") || cur.accept_keyword("TASK"))
             kind = ProcKind::Interrupt;
-        else
-            cur.accept_keyword("NEAR");
+        else if (cur.accept_keyword("NEAR"))
+            kind = ProcKind::Near;
         // Interrupt names, numbers and USING clauses only matter to the linker.
         mark_address(lst);
         define(name, SymbolKind::Label, here(kind == ProcKind::Far ? LType::Far : LType::Near));
@@ -2581,10 +2785,13 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A29", "unmatched ENDS/ENDP", name.column);
         proc_ = ProcKind::None;
         proc_name_.clear();
-    } else if (dir == "DEFR" || dir == "DEFA") {
+    } else if (dir == "DEFR" || dir == "DEFA" || dir == "DEFX") {
         // DEFR names an SFR (FE00H..FFDEH, or an extended SFR at F000H..F1DEH
-        // on the C167); DEFA names a word of internal RAM (FA00H..FDFEH).
+        // on the C167); DEFA names a word of internal RAM (FA00H..FDFEH). In
+        // TASKING a DEFA address may be anywhere in the system page
+        // (C000H..FFFEH) except the PEC pointers, and DEFX takes any address.
         const bool sfr = dir == "DEFR";
+        const bool any = dir == "DEFX";
         const char* code = sfr ? "A101" : "A102";
         const std::string what = sfr ? "invalid system address" : "invalid internal RAM address";
         int column = cur.peek().column;
@@ -2597,12 +2804,18 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw;
         }
         const std::int64_t a = v.num;
-        if (v.known && (v.type != VType::Number || (a & 1) ||
-                        !(sfr ? (a >= 0xFE00 && a <= 0xFFDE) || (cpu_ == isa::Cpu::C167 && a >= 0xF000 && a <= 0xF1DE)
-                              : a >= 0xFA00 && a <= 0xFDFE))) {
+        const bool in_range =
+            any ? a >= 0 && a < kAddressLimit
+            : sfr ? (a >= 0xFE00 && a <= 0xFFDE) || (cpu_ == isa::Cpu::C167 && a >= 0xF000 && a <= 0xF1DE)
+            : tasking_ ? a >= 0xC000 && a <= 0xFFFE && !(a >= 0xFCE0 && a <= 0xFCFE)
+                       : a >= 0xFA00 && a <= 0xFDFE;
+        if (v.known && (v.type != VType::Number || (a & 1 && !any) || !in_range)) {
             undefine(name);
-            throw AsmError(code, what + (sfr ? ": expected an even SFR address" : ": expected an even address in FA00H..FDFEH"),
-                           column);
+            const char* expected = any ? ": expected an address below 1000000H"
+                                   : sfr ? ": expected an even SFR address"
+                                   : tasking_ ? ": expected an even address in C000H..FFFEH outside the PEC pointers"
+                                              : ": expected an even address in FA00H..FDFEH";
+            throw AsmError(any ? "A102" : code, (any ? std::string("invalid address") : what) + expected, column);
         }
         Value d = Value::number(a);
         d.known = v.known;
@@ -2619,6 +2832,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         else
             define(name, SymbolKind::Equ, d, sfr);
         access_attribute(cur);
+        tasking_definition_fields(cur);
         expect_end(cur);
     } else if (dir == "DEFB") {
         int column = cur.peek().column;
@@ -2638,7 +2852,11 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         if (v->known) lst.value = *v;
         if (forward_ref_) rep.error("A103", "invalid bit address: forward reference not permitted", column);
         access_attribute(cur);
+        tasking_definition_fields(cur);
         expect_end(cur);
+    } else if (dir == "DEFBF") {
+        // A bit field for the CrossView Pro debugger: TASKING ignores it.
+        while (!cur.at_end()) cur.next();
     } else if (dir == "LIT") {
         const Token& t = cur.peek();
         if (t.kind != TokKind::String) throw AsmError("A6", "syntax error: LIT expects a quoted string", t.column);
@@ -2665,7 +2883,10 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
     } else if (dir == "DGROUP" || dir == "CGROUP") {
         group(name, dir == "CGROUP", cur, rep);
     } else if (dir == "REGDEF" || dir == "REGBANK") {
-        regbank_directive(&name, cur);
+        regbank_directive(&name, cur, dir == "REGDEF");
+    } else if (dir == "COMREG" && tasking_) {
+        // A COMMON register range of TASKING: only the linker cares.
+        regbank_directive(nullptr, cur, false);
     } else if (dir == "MACRO") {
         throw AsmError("A6", "syntax error: an instruction name cannot be a macro name", name.column);
     } else {
@@ -2710,7 +2931,7 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
     } else if (kw == "PUBLIC" || kw == "GLOBAL") {
         public_directive(kw == "GLOBAL", cur, rep);
     } else if (kw == "REGDEF" || kw == "REGBANK") {
-        regbank_directive(nullptr, cur);
+        regbank_directive(nullptr, cur, kw == "REGDEF");
     } else if (kw == "NAME") {
         module_name(cur, rep);
     } else if (kw == "SSKDEF") {
@@ -2730,6 +2951,9 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         throw AsmError("A6", "syntax error: MACRO needs the name of the macro in front", tok.column);
     } else if (kw == "COMREG") {
         throw AsmError("A6", kComregMessage, tok.column);
+    } else if (tasking_ && kw == "DEFVAL") {
+        // A bit field value for the CrossView Pro debugger: TASKING ignores it.
+        while (!cur.at_end()) cur.next();
     } else if (contains(kKeywords, kw)) {
         throw AsmError("OC3", "directive " + kw + " is not supported yet", tok.column);
     } else {
@@ -2894,7 +3118,7 @@ void Assembler::extern_directive(TokenCursor& cur, Reporter& rep) {
         // A register in front of ':' selects the data page, so it must be DPP0..DPP3.
         if (const Token& t = cur.peek(); t.kind == TokKind::Ident && cur.peek(1).is_op(":")) {
             const int n = dpp_number(t.text);
-            const std::optional<Value> pre = predefined(t.text, cpu_, sys166_);
+            const std::optional<Value> pre = predef(t.text);
             if (n >= 0 || (pre && (pre->type == VType::Gpr || pre->type == VType::GprB))) {
                 if (n < 0) {
                     rep.error("A35", "'DPPn' expected", t.column);
@@ -3066,7 +3290,7 @@ void Assembler::check_public(const Token& name, Reporter& rep) {
         if (sym.kind == SymbolKind::Lit) return illegal("is a LIT");
         if (sym.kind == SymbolKind::Extern) return illegal("is EXTERN");
         if (sym.value.external()) return illegal("depends on an EXTERN symbol");
-    } else if (!predefined(name.text, cpu_, sys166_)) {
+    } else if (!predef(name.text)) {
         return rep.error("A42", "undefined identifier '" + std::string(name.text) + "'", name.column);
     }
     if (auto p = link_.publics.find(k); p != link_.publics.end() && p->second.module != module_)
@@ -3181,7 +3405,7 @@ void Assembler::group(const Token& name, bool code, TokenCursor& cur, Reporter& 
     const char* kw = code ? "CGROUP" : "DGROUP";
     check_section_name(name);
     const std::string k = key(name.text);
-    if (auto it = symbols_.find(k); predefined(name.text, cpu_, sys166_) ||
+    if (auto it = symbols_.find(k); predef(name.text) ||
                                     (it != symbols_.end() && it->second.pass == pass_) || find_group(k, false))
         throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is already defined", name.column);
     for (std::size_t i = 1; i < sections_.size(); ++i)
@@ -3213,7 +3437,7 @@ void Assembler::group(const Token& name, bool code, TokenCursor& cur, Reporter& 
         for (std::size_t i = 0; i < index && !other; ++i)
             if (std::find(groups_[i].members.begin(), groups_[i].members.end(), mk) != groups_[i].members.end())
                 other = i;
-        if ((!s && (predefined(t.text, cpu_, sys166_) || symbols_.count(mk) || find_group(mk, true))) ||
+        if ((!s && (predef(t.text) || symbols_.count(mk) || find_group(mk, true))) ||
             (s && s->bank)) {
             rep.error("A25", "symbol redefinition: '" + std::string(t.text) + "' is not a section", t.column);
         } else if (other) {
@@ -3321,7 +3545,7 @@ void Assembler::assume(TokenCursor& cur, Reporter& rep) {
 // syntax errors.
 void Assembler::check_section_name(const Token& name) const {
     const std::string u = upper(name.text);
-    const std::optional<Value> pre = predefined(name.text, cpu_, sys166_);
+    const std::optional<Value> pre = predef(name.text);
     if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u) || contains(kSectionTypes, u) ||
         (pre && pre->type == VType::Cc))
         throw AsmError("A6", "syntax error: '" + std::string(name.text) + "' is a reserved word", name.column);
@@ -3331,7 +3555,7 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     // As in Keil, a name already taken by a symbol, register, flag or other
     // predefined name or group is a redefinition, and the section is not opened.
     check_section_name(name);
-    if (auto it = symbols_.find(key(name.text)); predefined(name.text, cpu_, sys166_) ||
+    if (auto it = symbols_.find(key(name.text)); predef(name.text) ||
                                                  (it != symbols_.end() && it->second.pass == pass_) ||
                                                  find_group(key(name.text), false))
         throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is already defined", name.column);
@@ -3544,20 +3768,22 @@ std::optional<std::size_t> Assembler::find_section(const std::string& name_key) 
 // even address in FC00H..FDFFH, and the name stands for the bank's address
 // (for MOV CP, #name). Banks with the same name in several modules are one
 // bank, as large as the largest of them.
-void Assembler::regbank_directive(const Token* name, TokenCursor& cur) {
+void Assembler::regbank_directive(const Token* name, TokenCursor& cur, bool regdef) {
     if (name) {
         const std::string u = upper(name->text), k = key(name->text);
         if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
             throw AsmError("A4", "illegal use of a reserved word", name->column);
         auto it = symbols_.find(k);
-        if (predefined(name->text, cpu_, sys166_) || (it != symbols_.end() && it->second.pass == pass_) ||
+        if (predef(name->text) || (it != symbols_.end() && it->second.pass == pass_) ||
             find_group(k, false) || find_section(k))
             throw AsmError("A5", "symbol or label redefinition: '" + std::string(name->text) + "' is already defined",
                            name->column);
     }
     int highest = -1;
+    // In TASKING, REGDEF alone means R0-R15, and REGBANK alone no registers.
+    if (tasking_ && cur.at_end()) highest = regdef ? 15 : -1;
     // Like Keil, only a named bank may list no registers.
-    if (!name || !cur.at_end()) {
+    else if (!name || !cur.at_end()) {
         auto reg = [&] {
             const Token& t = cur.peek();
             int n = -1;
@@ -3577,6 +3803,13 @@ void Assembler::regbank_directive(const Token* name, TokenCursor& cur) {
                 if (last < first) throw AsmError("A52", "invalid register range: the higher register comes first", column);
             }
             highest = std::max(highest, last);
+            // TASKING: the type of the range. Only the linker cares.
+            if (tasking_ && regdef && !cur.accept_keyword("PRIVATE") && cur.accept_keyword("COMMON")) {
+                cur.expect_op("=");
+                if (cur.peek().kind != TokKind::Ident)
+                    throw AsmError("A23", "identifier expected: the name of the COMMON range", cur.peek().column);
+                cur.next();
+            }
         } while (cur.accept_op(","));
         expect_end(cur);
     }
@@ -3673,7 +3906,14 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         std::string m = mnemonic;
         if (isa::is_branch(m)) branch(m, ops, pc, rep);
         check_branch_target(m, ops, rep);
-        if (m == "RET") {
+        if (m == "RETV") {
+            // TASKING's virtual return: no code.
+            if (!ops.empty()) throw AsmError("A73", "number of operands does not match instruction");
+            return;
+        }
+        if (m == "RETN") {
+            m = "RET";  // TASKING's name for the near return
+        } else if (m == "RET") {
             m = proc_ == ProcKind::Far ? "RETS" : proc_ == ProcKind::Interrupt ? "RETI" : "RET";
         } else if (m == "RETS" && proc_ != ProcKind::Far) {
             rep.warning("A78", "'far return' in non far procedure");
@@ -3707,6 +3947,8 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         throw;
     }
 }
+
+bool in_jmpr_range(std::int64_t disp) { return !(disp & 1) && disp >= -256 && disp <= 254; }
 
 // Resolves Keil's JMP and CALL to a hardware branch:
 //   [Rw] target                          JMPI / CALLI
@@ -3746,7 +3988,10 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
     if (v.type == VType::Bit) throw AsmError("A70", "invalid type of expression", target.column);
     if (v.type != VType::Number) throw AsmError("A74", "operand type mismatch", target.column);
 
-    if (!has_cc && v.ltype == LType::Far && !v.short_jump) {
+    // TASKING gives the labels of a FAR procedure the type FAR, but jumps
+    // to them with JMPR or JMPA inside the section.
+    const bool far = v.ltype == LType::Far && !(tasking_ && !call && v.rel == Rel::Addr && v.section == cur_);
+    if (!has_cc && far && !v.short_jump) {
         m = call ? "CALLS" : "JMPS";
         Operand seg = target, off = target;
         seg.value = Value::number((v.num >> 16) & 0xFF);
@@ -3758,12 +4003,11 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
     }
     const bool unconditional = cc.value.num == 0;
     bool relative = v.short_jump;
-    if (!relative && v.known && v.ltype != LType::Far) {
+    if (!relative && v.known && (v.ltype != LType::Far || tasking_)) {
         // Keil only measures the distance when it does not depend on the
         // linker: numbers, the same section, or two sections with AT addresses.
         bool measurable = v.rel != Rel::Addr || v.section == cur_ || (v.fixed && location_fixed());
-        std::int64_t disp = v.num - (pc + 2);
-        relative = measurable && !(disp & 1) && disp >= -256 && disp <= 254;
+        relative = measurable && in_jmpr_range(v.num - (pc + 2));
     }
     if (call && !unconditional) relative = false;
     if (relative) {
@@ -3785,7 +4029,8 @@ void Assembler::check_branch_target(const std::string& m, const std::vector<Oper
     if (!near_branch && m != "JMPS" && m != "CALLS") return;
     if (ops.empty() || ops.back().mode != OpMode::Direct) return;
     const Operand& t = ops.back();
-    if (near_branch && t.value.ltype == LType::Far && !t.value.short_jump)
+    // TASKING's FAR labels inside FAR procedures are normal jump targets.
+    if (near_branch && t.value.ltype == LType::Far && !t.value.short_jump && !tasking_)
         rep.warning("A84", "near reference to far location", t.column);
     if (near_branch && is_data_type(t.value.ltype))
         rep.warning("A74", "operand type mismatch: branch to a data label", t.column);

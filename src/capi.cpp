@@ -155,6 +155,29 @@ int oc166_options_set_cpu(oc166_options* opts, const char* cpu) {
     return 0;
 }
 
+int oc166_options_set_dialect(oc166_options* opts, const char* dialect) {
+    if (!opts || !dialect) return -1;
+    std::string v(dialect);
+    for (auto& c : v) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (v == "keil" || v == "a166")
+        opts->opt.dialect = oc166::Dialect::Keil;
+    else if (v == "tasking")
+        opts->opt.dialect = oc166::Dialect::Tasking;
+    else
+        return -1;
+    return 0;
+}
+
+int oc166_options_add_control(oc166_options* opts, const char* controls) {
+    if (!opts || !controls) return -1;
+    try {
+        opts->opt.controls.emplace_back(controls);
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
 int oc166_options_set_origin(oc166_options* opts, int64_t origin) {
     if (!opts || origin < 0) return -1;
     opts->opt.origin = origin;

@@ -168,6 +168,28 @@ Table build(isa::Cpu cpu, bool sys166) {
     return m;
 }
 
+// TASKING a166 predefines fewer names than Keil: the core SFRs and PSW bits
+// below; the rest come from its STDNAMES file.
+constexpr Sfr kTaskingSfrs[] = {
+    {"DPP0", 0xFE00}, {"DPP1", 0xFE02}, {"DPP2", 0xFE04}, {"DPP3", 0xFE06}, {"CSP", 0xFE08},
+    {"MDH", 0xFE0C},  {"MDL", 0xFE0E},  {"CP", 0xFE10},   {"SP", 0xFE12},   {"STKOV", 0xFE14},
+    {"STKUN", 0xFE16}, {"MDC", 0xFF0E}, {"PSW", 0xFF10},  {"ZEROS", 0xFF1C}, {"ONES", 0xFF1E},
+};
+
+constexpr BitDef kTaskingBits[] = {
+    {"N", 0xFF10, 0}, {"C", 0xFF10, 1},     {"V", 0xFF10, 2},    {"Z", 0xFF10, 3},     {"E", 0xFF10, 4},
+    {"MULIP", 0xFF10, 5}, {"USR0", 0xFF10, 6}, {"HLDEN", 0xFF10, 10}, {"IEN", 0xFF10, 11},
+};
+
+Table build_tasking() {
+    Table m;
+    for (auto& [name, v] : build(isa::Cpu::C167, false))
+        if (v.type == VType::Gpr || v.type == VType::GprB || v.type == VType::Cc) m[name] = v;
+    for (const auto& s : kTaskingSfrs) m[s.name] = make_sfr(s.addr);
+    for (const auto& b : kTaskingBits) m[b.name] = make_bit(b.word, b.pos);
+    return m;
+}
+
 const Table& table(isa::Cpu cpu, bool sys166) {
     static const Table tables[2][2] = {
         {build(isa::Cpu::C166, false), build(isa::Cpu::C166, true)},
@@ -186,6 +208,13 @@ std::string upper(std::string_view s) {
 
 std::optional<Value> predefined(std::string_view name, isa::Cpu cpu, bool sys166) {
     const auto& t = table(cpu, sys166);
+    auto it = t.find(upper(name));
+    if (it == t.end()) return std::nullopt;
+    return it->second;
+}
+
+std::optional<Value> predefined_tasking(std::string_view name) {
+    static const Table t = build_tasking();
     auto it = t.find(upper(name));
     if (it == t.end()) return std::nullopt;
     return it->second;

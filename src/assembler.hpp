@@ -20,12 +20,26 @@ namespace oc166 {
 // Reads a file, or returns std::nullopt if it cannot be read.
 using FileReader = std::function<std::optional<std::string>(const std::string& path)>;
 
+// The assembler whose language a source is written in.
+enum class Dialect : std::uint8_t {
+    Keil,     // Keil A166
+    Tasking,  // TASKING a166, with the part of its m166 preprocessor that openc166 supports
+};
+
 struct AssembleOptions {
+    // The language of the source. See docs/compatibility.md for what the
+    // TASKING dialect covers.
+    Dialect dialect = Dialect::Keil;
+    // Controls read before the first line of each source, as if given on
+    // the assembler's command line: "MOD167", "CASE", "SET(DEBUG=1)" or, for
+    // TASKING sources, "STDNAMES(reg.def)" and m166's "DEFINE(name,text)".
+    // They are written without the '$'.
+    std::vector<std::string> controls;
     // Name of the source file, used in diagnostics. $INCLUDE also searches
     // the directory of this file.
     std::string file_name = "<input>";
     // CPU selected before the source is read; $MOD167 in the source also
-    // selects the C167.
+    // selects the C167. TASKING sources always use the C167 (EXTEND).
     isa::Cpu cpu = isa::Cpu::C166;
     // Address of code outside any section, and the lowest address used for
     // sections without AT (see section_addresses).

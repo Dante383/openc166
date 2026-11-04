@@ -75,6 +75,19 @@ OC166_API void oc166_options_free(oc166_options *opts);
  * the source selects the C167 too. Returns 0, or -1 for an unknown name. */
 OC166_API int oc166_options_set_cpu(oc166_options *opts, const char *cpu);
 
+/* The assembly language of the sources: "keil" (the default) for Keil
+ * A166, or "tasking" for TASKING a166, whose sources pass through the
+ * m166 macro preprocessor first (openc166 supports @SET, @EVAL, @IF,
+ * @DEFINED and macro calls). TASKING sources are always for the C167.
+ * Returns 0, or -1 for an unknown name. */
+OC166_API int oc166_options_set_dialect(oc166_options *opts, const char *dialect);
+
+/* Adds controls as they would be given on the assembler's command line,
+ * e.g. "CASE" or "STDNAMES(reg.def) DEFINE(KLINE,1)". They are read before
+ * the source, in the order added, like a $ line at the top of it.
+ * Returns 0, or -1 on failure. */
+OC166_API int oc166_options_add_control(oc166_options *opts, const char *controls);
+
 /* Address of code outside any section, and of the first section without an
  * AT address. Returns 0, or -1 if 'origin' is negative. */
 OC166_API int oc166_options_set_origin(oc166_options *opts, int64_t origin);

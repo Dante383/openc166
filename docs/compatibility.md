@@ -1,6 +1,8 @@
 # Compatibility with Keil A166
 
 openc166 targets the syntax and output of Keil A166 (checked against V5.38).
+It also reads TASKING a166 sources; [tasking.md](tasking.md) describes how
+they differ.
 
 ## The rule
 
@@ -485,7 +487,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | Code | Kind | Meaning |
 |---|---|---|
 | OC1 | warning | two pieces of code or data overlap in the image |
-| OC2 | warning | `$MODV2`: the XC16x/Super10 extensions are not supported |
+| OC2 | warning | `$MODV2`, or TASKING's `EXTEND1`, `EXTEND2`, `EXTEND22` or `EXTMAC`: the XC16x/Super10 extensions are not supported |
 | OC3 | error | a control or directive that openc166 does not support yet, or a `%` that starts an MPL call under `$MPL` |
 | OC4 | | no longer used (was: external symbols, before linking was supported) |
 | OC5 | error | an include file cannot be opened; the assembly stops |
@@ -512,6 +514,10 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC26 | warning | a `%` macro argument that Keil reads in a surprising way (see [Macros](#macros)) |
 | OC27 | warning | a macro argument `!;` or a `!` at the end of the line, which Keil garbles |
 | OC28 | error | a register bank with no room left in `0FC00H..0FDFFH` (L166: L123) |
+| OC29 | error | TASKING: an m166 function that openc166 does not support, such as `@DEFINE` (see [tasking.md](tasking.md#m166)) |
+| OC30 | error | TASKING: a mistake in m166 text, such as an undefined macro or an `@ENDI` without `@IF` |
+| OC31 | warning | TASKING: `NOOPTIMIZE`, which openc166 does not support |
+| OC32 | warning | TASKING: a `STDNAMES` file that cannot be found; openc166's built-in `REG167.INC` is used instead |
 
 ## Sections
 
@@ -931,6 +937,11 @@ Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
 for a near jump or call to a FAR label, A134 for an odd target. Like Keil,
 openc166 does not check the alignment of a target that the linker places (a
 label in a section without `AT`, plus or minus a number).
+
+`JMPA`, `CALLA` and `PCALL` hold only the low 16 bits of the target: the CPU
+stays in the current code segment. Like Keil, openc166 drops the higher
+bits without a warning, so `JMPA cc_UC, L1` works for code above 64 KB.
+`JMPS` and `CALLS` warn (A62) about a target or segment that does not fit.
 
 ## Segmented mode and DPPs
 

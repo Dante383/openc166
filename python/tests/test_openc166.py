@@ -155,6 +155,32 @@ class AssembleTest(unittest.TestCase):
         self.assertEqual(result.image().data, b"")
 
 
+class DialectTest(unittest.TestCase):
+    SRC = "@IF(@DEFINED(V))\n MOV R1,#@V\n@ENDI\n RET\n END\n"
+
+    def test_tasking(self):
+        result = openc166.assemble(self.SRC, dialect="tasking", controls=["DEFINE(V,5)", "CASE"])
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.cpu, "c167")
+        self.assertEqual(result.image().data.hex(), "e051cb00")
+        self.assertEqual(openc166.assemble(self.SRC, dialect="TASKING").image().data.hex(), "cb00")
+
+    def test_keil_has_no_m166(self):
+        self.assertFalse(openc166.assemble(self.SRC).ok)
+
+    def test_bad_arguments(self):
+        with self.assertRaises(ValueError):
+            openc166.assemble(self.SRC, dialect="gnu")
+        with self.assertRaises(TypeError):
+            openc166.assemble(self.SRC, dialect="tasking", controls="CASE")
+
+    def test_unknown_control(self):
+        result = openc166.assemble(self.SRC, dialect="tasking", controls=["NOSUCHCONTROL"])
+        self.assertFalse(result.ok)
+        self.assertEqual(result.diagnostics[0].code, "A16")
+        self.assertEqual(result.diagnostics[0].file, "<command line>")
+
+
 class DiagnosticTest(unittest.TestCase):
     def setUp(self):
         self.result = openc166.assemble(" NOP\n MOV R1, NOWHERE\n", file_name="t.a66")

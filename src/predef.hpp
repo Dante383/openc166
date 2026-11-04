@@ -17,6 +17,10 @@ namespace oc166 {
 // $NOMOD166 is given.
 std::optional<Value> predefined(std::string_view name, isa::Cpu cpu, bool sys166);
 
+// The names TASKING a166 predefines: GPRs, condition codes and the CPU core
+// SFRs and PSW bits.
+std::optional<Value> predefined_tasking(std::string_view name);
+
 // GPRs and condition codes are reserved words; SFR and bit names are
 // predefined symbols that the source may not redefine.
 bool is_reserved_word(std::string_view name);

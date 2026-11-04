@@ -124,6 +124,12 @@ D4      LABEL   DWORD
 D5      LABEL   DWORD
 M2:     NOP
         JMP     D1
+; Targets wider than 16 bits: only JMPS and CALLS warn.
+        JMPA    cc_UC, 12346H
+        CALLA   cc_Z, -2
+        PCALL   R1, 12346H
+        JMPS    1, 12346H
+        CALLS   2, 1FFFEH
 P2      ENDP
 S2      ENDS
         END
