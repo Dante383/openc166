@@ -56,12 +56,16 @@ Early development (version 0.x). What works today:
   the Keil manual.
 - Raw binary, Intel HEX and Motorola S-record output. The HEX records match
   Keil OH166's `H167` format.
+- Several source files linked into one program, as L166 does: `EXTERN`,
+  `PUBLIC` and `GLOBAL` symbols, and sections of the same name combined
+  across files. Each file is assembled separately (a "module"), so a name
+  that is not `PUBLIC` stays private to its file.
 - A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:
 
 - macros
-- linking several source files, and OMF-166 object files
+- OMF-166 object files and libraries
 - the TASKING assembler dialect
 
 See [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md) for exact behaviour and
@@ -86,7 +90,26 @@ openc166 payload.a66                       # writes payload.bin
 openc166 payload.a66 -o out.bin -l out.lst # choose names, add a listing
 openc166 payload.a66 -o payload.hex        # Intel HEX
 openc166 payload.a66 -o payload.s19        # S-records (S1)
+openc166 main.a66 lib.a66 -o payload.bin   # link two source files
 ```
+
+Several source files are linked into one program, the way Keil's L166
+linker joins the object files of A166:
+
+- An `EXTERN` name in one file takes the value of the `PUBLIC` or `GLOBAL`
+  name in another. A name that no file exports is an error.
+- Sections with the same name and class are joined into one: the parts of
+  a `PUBLIC` or `GLOBAL` section follow one another, the parts of a
+  `COMMON` section lie on top of each other.
+- Without `-o`, the output is named after the first file. With `-l`, the
+  listing has one part per file and a symbol table that names the file
+  each symbol comes from.
+- Code outside sections starts at `--origin` in every file, so normally
+  each file puts its code in sections.
+
+`$INCLUDE` looks in each file's own directory.
+[docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md#linking-several-files)
+has the exact rules.
 
 The output format follows the extension of the `-o` file: `.hex`, `.h86`
 and `.ihx` give Intel HEX; `.srec`, `.s19`, `.s28`, `.s37`, `.mot` and
@@ -165,6 +188,14 @@ image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
   ignoring case), `sections` (a dict of name to `Section`: `type`, `align`,
   `address`, `size`, and `placement`, which is `"at"`, `"given"` or
   `"located"`), `listing` and `cpu`.
+- `openc166.assemble_many({"main.a66": text1, "lib.a66": text2}, ...)`
+  links several sources into one program, like several files on the
+  command line; `openc166.assemble_files([path1, path2], ...)` reads them
+  from files. Each `Symbol` then says which file defines it (`module`) and
+  whether it is `PUBLIC` or `GLOBAL` (`exported`). `result.modules` lists
+  the file names; `result.symbols` holds one symbol per name (the exported
+  one if there is one), `result.all_symbols` all of them. Each `Section`
+  has its `class_name`.
 - `result.image(base=None, fill=0xFF)` lays all code out as one block, like
   the command-line tool.
 - `result.intel_hex(record_size=16)` and
@@ -180,8 +211,9 @@ every Python version.
 [include/openc166/openc166.h](https://github.com/Dante383/openc166/blob/main/include/openc166/openc166.h) declares a plain C
 interface, exported by the shared library (`libopenc166.so`,
 `libopenc166.dylib` or `openc166.dll`). Any language that can call C can
-use it. The header documents every function; the Python package is an
-example of a complete binding.
+use it: `oc166_assemble` assembles one source, `oc166_assemble_many`
+links several. The header documents every function; the Python package is
+an example of a complete binding.
 
 ## Testing
 
@@ -200,6 +232,14 @@ example of a complete binding.
   to list lines where both assemblers report an error but with different
   codes. Lines marked `; DIVERGES:` are deliberate differences (see
   [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md)) and are skipped.
+
+  Given a directory instead of a file, it treats each `.a66` file in it as
+  one module, links Keil's objects with L166, and compares the linked
+  image and the linker's errors with openc166's:
+
+  ```sh
+  KEIL_A166=/path/to/A166.EXE python3 tests/diff/keil_diff.py tests/diff/cases/link/*/
+  ```
 
   On Linux and macOS, Keil runs under Wine. To generate test lines that
   cover the whole instruction set, run

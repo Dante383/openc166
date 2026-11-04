@@ -18,7 +18,8 @@ The differential test in `tests/diff/` checks rules 1 and 2 line by line.
 With `--image` it also links Keil's output with L166 and OH166 and compares
 the complete memory image with openc166's Intel HEX output.
 
-openc166 writes what L166 and OH166 would make of the module: a raw binary,
+openc166 writes what L166 and OH166 would make of the module, or of several
+modules linked together (see [Linking several files](#linking-several-files)): a raw binary,
 or Intel HEX in the format of `OH166 ... H167` (type 04 records for
 addresses above 64 KB; OH166 without `H167` writes type 02 records, which
 hold the same data). Records may break at different places than OH166's,
@@ -56,9 +57,11 @@ since OH166 starts a new record at each section.
   the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, and `$COND`/`$NOCOND`. See
   [Conditional assembly](#conditional-assembly).
 - **Text replacement:** `name LIT 'text'`. See [LIT](#lit).
+- **Several modules:** `EXTERN`/`EXTRN`, `PUBLIC` and `GLOBAL`, with
+  sections combined across modules as L166 combines them. See
+  [Linking several files](#linking-several-files).
 - **Accepted and ignored:** these only matter to a linker or debugger.
-  - Directives: `NAME`, `PUBLIC`, `GLOBAL`, `REGDEF`, `REGBANK`, `SSKDEF`,
-    `PECDEF`, `TYPEDEC`.
+  - Directives: `NAME`, `REGDEF`, `REGBANK`, `SSKDEF`, `PECDEF`, `TYPEDEC`.
   - Listing and object-file controls: `$NOLIST`, `$TITLE(...)`, `$DEBUG`,
     and similar.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
@@ -68,11 +71,9 @@ since OH166 starts a new record at each section.
 
 ## Not supported yet
 
-These produce error OC3 (or OC4 for externals), so a missing feature is never
-silently skipped:
+These produce error OC3, so a missing feature is never silently skipped:
 
 - `MACRO` and the other macro facilities
-- `EXTERN`/`EXTRN` (a raw image has no linker to resolve them)
 - `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
 - the XC16x/Super10 extended instruction set
 
@@ -336,7 +337,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC1 | warning | two pieces of code or data overlap in the image |
 | OC2 | warning | `$MODV2`: the XC16x/Super10 extensions are not supported |
 | OC3 | error | a control or directive that openc166 does not support yet |
-| OC4 | error | external symbols, which need a linker |
+| OC4 | | no longer used (was: external symbols, before linking was supported) |
 | OC5 | error | an include file cannot be opened; the assembly stops |
 | OC6 | error | include files nested too deeply; the assembly stops |
 | OC7 | warning | `$INCLUDE` that is not the first control on its line, ignored |
@@ -347,6 +348,13 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC12 | error | no room for a section without `AT` |
 | OC13 | warning | a given section address that does not suit the section's alignment, or names no section |
 | OC14 | error | a given section address for a section with `AT`, or one that runs past the address space |
+| OC15 | error | an `EXTERN` name that no other module makes `PUBLIC` or `GLOBAL` (L166: L127) |
+| OC16 | error | a name that two modules make `PUBLIC` or `GLOBAL` (L166: L104) |
+| OC17 | warning | a `NEAR` or `FAR` external that is not a code label in its module (L166: L21) |
+| OC18 | error | a use of an external whose value does not suit its type or the place it is used (L166: L121) |
+| OC19 | error | parts of a section in different modules that cannot be combined (L166: L101) |
+| OC20 | warning | a module whose `$SEGMENTED` setting differs from the first module's (L166: L15) |
+| OC21 | error | a `DATA` or `CONST` section without `AT` that is bigger than a 16 KB page (L166: L129) |
 
 ## Sections
 
@@ -368,8 +376,9 @@ name ENDS
   does not suit the section gives A43, as in Keil (`CODE BYTE`,
   `CONST BITADDRESSABLE`).
 - **Combine types** (`PUBLIC`, `PRIVATE`, `COMMON`, `GLOBAL`, `SYSSTACK`,
-  `USRSTACK`) and **class names** only matter to a linker joining several
-  modules. They are checked and otherwise ignored.
+  `USRSTACK`) and **class names** decide how sections of several modules
+  are joined; see [Linking several files](#linking-several-files). In a
+  single module they make no difference.
 - **Reopening** a section continues it. The attributes must match what came
   before: A30 (type), A31 (align type), A32 (combine type or `AT` address),
   A33 (class).
@@ -385,7 +394,7 @@ name ENDS
 ### Where sections without AT go
 
 Keil leaves the address of a section without `AT` to its linker, L166.
-openc166 has no linker, so it places these sections itself, as L166 does by
+openc166 places these sections itself, as L166 does by
 default:
 
 - in order of first appearance;
@@ -440,6 +449,87 @@ of these, each plus or minus a plain number.
   immediate. Keil still emits the instruction; openc166 does too.
 - **`ORG`** in a section without `AT` takes an offset in the section:
   `ORG $ + 2` and `ORG X + 10H` work as in Keil.
+
+## Linking several files
+
+Keil assembles each source file into an object file with A166, then joins
+the object files with its linker, L166. openc166 does both in one step when
+it gets several sources: `openc166 main.a66 lib.a66`, `assemble_many()` in
+Python, `oc166_assemble_many()` in C. Each source is a **module**. It is
+assembled on its own, as A166 would, and the modules are then joined as
+L166 joins them by default. The link cases in `tests/diff/cases/link/`
+compare the result, and the linker's errors, with L166's.
+
+Messages and the listing name the module they belong to. `$INCLUDE`
+searches the directory of the module's own file first. Each module chooses
+its instruction set with `$MOD167` (or `--cpu`); the first module decides
+segmented or not for the program, as in L166 (OC20 for a module that
+differs, L15 in L166).
+
+### Sharing symbols
+
+- **`PUBLIC name, ...`** and **`GLOBAL name, ...`** let other modules use
+  names of this one: labels, `PROC` names, `EQU`, `BIT`, `DEFR`, `DEFA`
+  and `DEFB` symbols, and predefined registers. As in Keil, they are
+  checked at the end of the module, with errors on the `PUBLIC` line: A42
+  for an unknown name, and A39 for a `SET` symbol, a `LIT`, a section name,
+  a reserved word, an `EXTERN` name or a value computed from one. Naming a
+  symbol both `PUBLIC` and `GLOBAL` gives A25. Otherwise openc166 treats
+  `PUBLIC` and `GLOBAL` names the same.
+- **`EXTERN [DPPn:]name:type, ...`** (or `EXTRN`) uses a name that another
+  module exports. The types are `NEAR`, `FAR`, `BYTE`, `WORD`, `DWORD`,
+  `BIT`, `BITWORD`, `DATA3`, `DATA4`, `DATA8`, `DATA16` and `INTNO`. The
+  type, not the value, decides the code, as in Keil:
+  - `CALL` and `JMP` to a `NEAR` external are `CALLA` and `JMPA`; to a
+    `FAR` one, `CALLS` and `JMPS`;
+  - only `DATA3` and `DATA4` externals use the short immediate forms;
+  - memory operands use the long forms;
+  - in `$SEGMENTED` mode, `DPPn:` says which data page pointer the
+    address goes through (without it, warning A77 and DPP0, as in Keil);
+    otherwise `DPPn:` gives warning A55 and is ignored.
+
+  As in Keil, an error stops the rest of the list, except a `REGBANK`
+  type (A113). An external counts as a value that moves with its section
+  (see [above](#values-that-move-with-their-section)): `#Ext * 2` and
+  `ORG Ext` give A63, `DS Ext` gives A72.
+- **Unresolved names:** an `EXTERN` name that no other module exports is
+  error OC15, even if it is never used, as L166 gives L127. A name that two
+  modules export is error OC16 in the second (L104).
+- **Wrong types:** a `NEAR` or `FAR` external that is not a code label in
+  its own module gives warning OC17 (L21). A value that does not suit the
+  type gives error OC18 at each place it is used, as L166 gives L121 at
+  each fixup: a `BIT` external that is not a bit, a `BITWORD` external that
+  is not a bit-addressable word, a `DATA4` external of 20, an `INTNO` over
+  7FH, a `DB` of 300H. Word-sized externals are cut to 16 bits without a
+  message, as in L166.
+- Code bytes in the listing show the final values of externals, where
+  Keil's listing shows zeros for the linker to fill in.
+
+### Joining sections
+
+- A section is known by its **name and class**. `Code SECTION CODE 'ROM'`
+  in two modules is one section; with different classes they are two
+  separate sections that happen to share a name.
+- Parts of a section in several modules are joined if they all have the
+  same type and the same combine type, which is `PUBLIC`, `GLOBAL`,
+  `COMMON`, `SYSSTACK` or `USRSTACK`. Each part is compared with the first
+  one, as in L166: a part that does not match is error OC19 (L101) and
+  stays a section of its own; the others still join. `PRIVATE` (the
+  default) and sections with `AT` are never joined.
+- **`PUBLIC`, `GLOBAL`, `SYSSTACK` and `USRSTACK`** parts follow one
+  another in module order, each aligned as its own module asks: a 1-byte
+  `BYTE` part followed by a `WORD` part puts the second one at offset 2.
+- **`COMMON`** parts lie on top of each other. The section is as long as
+  its longest part, and where parts overlap, the bytes of the later module
+  win, as in L166. This gives no OC1 warning.
+- The joined sections are placed as described in
+  [Where sections without AT go](#where-sections-without-at-go), in order
+  of first appearance over all modules. A `DATA` or `CONST` section
+  without `AT` that ends up bigger than a 16 KB page, in one module or
+  joined from several, is error OC21 (L129).
+- Code outside sections starts at `--origin` in every module, so it
+  overlaps (OC1) if more than one module has some. Keil does not allow
+  such code at all (A44).
 
 ## Data alignment
 
@@ -660,7 +750,7 @@ follow are unchanged. Other bad items are dropped.
 | error A171 after a bad `$INCLUDE` line | reported on the following line | reported on the `$INCLUDE` line |
 | missing include file | fatal error, no listing | error OC5; the listing stops at that line |
 | `$ABSOLUTE`, `$NOABSOLUTE` | documented, but A16 in V5.38 | accepted and ignored |
-| `IF` condition with a label, register, SFR or bit | silently false | error A11 |
+| `IF` condition with a label, register, SFR, bit or external | silently false | error A11 |
 | stray `ENDIF`, second `ELSE`, `ELSEIF` after `ELSE`, text after a condition | silently accepted | accepted with warning OC9 |
 | two conditional keywords on one line (`ELSE ELSE`, `ENDIF IF 0`) | sometimes A6, sometimes silent; can leave the nesting confused | error A6; the line is ignored |
 | `$INCLUDE` of a missing file after `END` | fatal error | ignored, like every line after `END` |
@@ -672,6 +762,9 @@ follow are unchanged. Other bad items are dropped.
 | `X + X`, with `X` in a section without `AT` | twice the offset of `X` in its section | error A63 |
 | `POF X - POF Y`, `SEG X + SEG X` (sections without `AT`) | silently 0 | error A63 |
 | `IF X EQ 2`, with `X` in a section without `AT` | compares the offset in the section | error A63 |
+| `EXTERN PSW:WORD`, or another predefined register as an external | accepted | error A25 |
+| sections with `AT` and the same name in two modules | L166 error L113 | error OC19 (and OC1 if they overlap) |
+| code outside sections in several modules | error A44 | each module's starts at `--origin`; overlaps give OC1 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to
