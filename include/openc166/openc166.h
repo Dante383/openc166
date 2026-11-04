@@ -268,6 +268,10 @@ OC166_API int oc166_result_section(const oc166_result *r, size_t index, oc166_se
  * "" if it has none, or NULL if 'index' is out of range. */
 OC166_API const char *oc166_result_section_class(const oc166_result *r, size_t index);
 
+/* The DGROUP or CGROUP that section 'index' belongs to, "" if none, or NULL
+ * if 'index' is out of range. */
+OC166_API const char *oc166_result_section_group(const oc166_result *r, size_t index);
+
 #ifdef __cplusplus
 }
 #endif

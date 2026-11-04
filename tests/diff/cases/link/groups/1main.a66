@@ -1,0 +1,45 @@
+; Link case: groups of the same name in two modules become one group. L166
+; places the sections of the joined group largest first, whatever module
+; they come from, and the group name stands for the same page or segment
+; in both modules.
+$MOD167
+$SEGMENTED
+EXTERN  BigW:WORD, Helper:NEAR
+PUBLIC  SmallW, Start
+
+; Page 0 keeps too little room for the group, so it goes to page 1.
+Fill    SECTION DATA AT 0010H
+        DS      3FD0H
+Fill    ENDS
+
+SmallD  SECTION DATA
+SmallW: DW      0A1A1H
+SmallD  ENDS
+
+MidC    SECTION CONST
+MidW:   DW      1, 2, 3, 4
+MidC    ENDS
+
+        ASSUME  DPP2:SHARED
+SHARED  DGROUP  SmallD, MidC
+
+Main    SECTION CODE
+Start   PROC    NEAR
+        MOV     R1, SmallW
+        MOV     R2, MidW
+        MOV     R3, #POF BigW
+        MOV     R4, #PAG BigW
+        MOV     R5, #SHARED
+        MOV     R6, #PAG SHARED
+        MOV     R7, #SEG CODES
+        CALL    CC_UC, Helper
+        RET
+Start   ENDP
+Main    ENDS
+CODES   CGROUP  Main
+
+Ptrs    SECTION CONST
+        DW      SHARED, PAG SHARED, SOF SHARED, CODES, SOF CODES
+        DW      SOF SmallW, SOF MidW, SOF BigW, PAG BigW
+Ptrs    ENDS
+        END

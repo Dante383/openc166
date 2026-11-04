@@ -140,6 +140,7 @@ _declare("oc166_result_module", _str, _p, _size)
 _declare("oc166_result_symbol_module", _int, _p, _size)
 _declare("oc166_result_symbol_exported", _int, _p, _size)
 _declare("oc166_result_section_class", _str, _p, _size)
+_declare("oc166_result_section_group", _str, _p, _size)
 
 if lib.oc166_api_version() != API_VERSION:
     raise ImportError(

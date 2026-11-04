@@ -46,6 +46,8 @@ since OH166 starts a new record at each section.
 - **Sections:** `SECTION` with or without `AT`, with Keil's types, align
   types, combine types and class names. Sections without `AT` are placed as
   L166 would place them. See [Sections](#sections).
+- **Groups:** `DGROUP` and `CGROUP`, which keep sections together in one
+  data page or code segment. See [Groups](#groups).
 - **Directives:** `SECTION` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
   / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DB`, `DW`, `DD`, `DS`, `DSB`, `DSW`,
   `DSD`, `DPPTR`, `DSPTR`, `DBPTR`, `ASSUME`, `ORG`, `EVEN` and `END`.
@@ -75,7 +77,7 @@ since OH166 starts a new record at each section.
 These produce error OC3, so a missing feature is never silently skipped:
 
 - `MACRO` and the other macro facilities
-- `DBIT`, `DGROUP`, `CGROUP`, `COMREG`, and BIT sections
+- `DBIT`, `COMREG`, and BIT sections
 - the XC16x/Super10 extended instruction set
 
 ## Register definitions
@@ -356,6 +358,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC19 | error | parts of a section in different modules that cannot be combined (L166: L101) |
 | OC20 | warning | a module whose `$SEGMENTED` setting differs from the first module's (L166: L15) |
 | OC21 | error | a `DATA` or `CONST` section without `AT` that is bigger than a 16 KB page (L166: L129) |
+| OC22 | error | a `DGROUP` bigger than a 16 KB page or a `CGROUP` bigger than a 64 KB segment (L166: L115, L116), or a section with no room in the page or segment its group is tied to (L112) |
 
 ## Sections
 
@@ -403,6 +406,7 @@ default:
   `--origin` on (default 0, as in L166), around the sections with `AT` and
   the code outside sections;
 - `BITADDRESSABLE` sections in `0FD00H..0FDFFH`;
+- the sections of [groups](#groups) first, then the others;
 - `DATA` and `CONST` sections inside one 16 KB data page, and `CODE`,
   `HDATA` and `HCONST` sections inside one 64 KB segment, unless they are
   bigger than that;
@@ -416,8 +420,8 @@ the align type, or a name that matches no section, gives warning OC13. A
 section that fits nowhere gives OC12.
 
 The listing ends with a table of every section: type, align type, address,
-size, and whether the address came from `AT`, from `--section`, or from
-openc166.
+size, whether the address came from `AT`, from `--section`, or from
+openc166, and its class and group if it has them.
 
 ### Values that move with their section
 
@@ -450,6 +454,51 @@ of these, each plus or minus a plain number.
   immediate. Keil still emits the instruction; openc166 does too.
 - **`ORG`** in a section without `AT` takes an offset in the section:
   `ORG $ + 2` and `ORG X + 10H` work as in Keil.
+
+### Groups
+
+```
+name DGROUP section, section, ...
+name CGROUP section, section, ...
+```
+
+A group keeps sections together so that one DPP (for data) or one segment
+register value (for code) reaches all of them. A `DGROUP` holds `DATA`
+and `CONST` sections, which must then share one 16 KB data page; a
+`CGROUP` holds `CODE` sections, which must share one 64 KB segment.
+
+**Placement**, as L166 does it:
+
+- all `DGROUP`s first, then all `CGROUP`s, then the sections outside
+  groups;
+- a group goes to the first page (or segment) from `--origin` on that has
+  room for all its sections. If one of its sections has `AT` or a
+  `--section` address, the group goes to that section's page instead;
+  with several such sections, the first one listed decides;
+- inside its page, the group's sections go largest first, each at the
+  lowest free address, so they fill gaps;
+- a group that is too big gives OC22 (L166: L115 or L116), and so does
+  each section that has no room in the page its group is tied to (L112).
+
+**The group name** stands for the start of its page or segment: `SEG`,
+`SOF` and `PAG` work on it, and `MOV R1, #name` gives the page start with
+the DPP that `ASSUME` gives the group. `POF` of a group is error A96, as
+in Keil. In `ASSUME`, a group and each of its sections are the same
+thing: `ASSUME DPP2:name` covers all its sections, and so does `ASSUME`
+on any one of them.
+
+**Errors**, as in Keil:
+
+- A25: the group name is already a label, constant, section or group, or
+  a later label or section takes it. A group cannot be extended by a
+  second line with the same name.
+- A53: a section that is already in a group.
+- A34: a section of the wrong type. It still joins the group.
+- A93: a name that is not a section; A25 if it is a symbol or a group.
+- A6: no group name, no sections, or a trailing comma; A39 for `PUBLIC`
+  of a group.
+
+A section named before its `SECTION` line is fine.
 
 ## Linking several files
 
@@ -528,6 +577,8 @@ differs, L15 in L166).
   of first appearance over all modules. A `DATA` or `CONST` section
   without `AT` that ends up bigger than a 16 KB page, in one module or
   joined from several, is error OC21 (L129).
+- Groups of the same name in several modules are one group, holding the
+  sections of all of them.
 - Code outside sections starts at `--origin` in every module, so it
   overlaps (OC1) if more than one module has some. Keil does not allow
   such code at all (A44).
@@ -636,12 +687,13 @@ DPP to use:
 - **`DPPn:address`** gives the DPP number in bits 15–14 and the offset
   (`address AND 3FFFH`) below it: `MOV R1, DPP2:1234H` reads `9234H`.
 - **`ASSUME DPPn:target, ...`** says that DPP *n* will point to the page of
-  `target`: a section, a label in a section, `SYSTEM` (the SFR page) or
-  `NOTHING`. Memory operands, immediates and `[Rw+#x]` displacements that
+  `target`: a section, a [group](#groups), a label in a section, `SYSTEM`
+  (the SFR page) or `NOTHING`. Memory operands, immediates and `[Rw+#x]` displacements that
   name a label of that section (or an SFR, for `SYSTEM`) then use DPP *n*.
   With `DS2` at `12340H` and `ASSUME DPP2:DS2`, `MOV R1, W1` (W1 at the
   start of DS2) gives `F2F140A3`.
-- A section, or `SYSTEM`, can belong to one DPP only (error A94).
+- A section, group, or `SYSTEM` can belong to one DPP only (error A94).
+  A group and its sections count as one.
   `ASSUME NOTHING` forgets all of them. An unknown name is silently
   ignored, as in Keil.
 - A label or SFR with no `ASSUME` for its section gives warning A77, and
@@ -797,6 +849,7 @@ follow are unchanged. Other bad items are dropped.
 | `EXTERN PSW:WORD`, or another predefined register as an external | accepted | error A25 |
 | sections with `AT` and the same name in two modules | L166 error L113 | error OC19 (and OC1 if they overlap) |
 | code outside sections in several modules | error A44 | each module's starts at `--origin`; overlaps give OC1 |
+| `EQU` or `SET` with the name of a group | A166 hangs | error A25 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

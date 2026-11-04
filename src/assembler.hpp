@@ -96,6 +96,7 @@ struct SectionInfo {
     std::int64_t size = 0;
     Placement placement = Placement::Located;
     std::string class_name;  // as in the SECTION line, or empty
+    std::string group;       // name of its DGROUP or CGROUP as first spelled, or empty
 };
 
 struct AssemblyResult {

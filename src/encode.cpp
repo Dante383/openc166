@@ -67,8 +67,9 @@ Paged paged(const Value& v, const EncodeContext& ctx) {
         return p;
     }
     if (!ctx.segmented || !v.known) return p;
-    const int key = v.section ? v.section : (v.type == VType::Sfr || v.system) ? kAssumeSystem : 0;
+    int key = v.section ? v.section : (v.type == VType::Sfr || v.system) ? kAssumeSystem : 0;
     if (key == 0) return p;
+    if (key > 0 && ctx.assume_key) key = ctx.assume_key(key);
     for (int d = 0; d < 4; ++d) {
         if (ctx.assume[d] != key) continue;
         p.value.num = (std::int64_t{d} << 14) | (v.num & 0x3FFF);

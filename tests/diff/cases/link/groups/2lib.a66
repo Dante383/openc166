@@ -1,0 +1,34 @@
+; Link case: the second module for 1main.a66, with the largest section of
+; the joined group.
+$MOD167
+$SEGMENTED
+EXTERN  SmallW:WORD
+PUBLIC  BigW, Helper
+
+BigD    SECTION DATA
+BigW:   DW      0B2B2H
+        DS      3EH
+BigD    ENDS
+
+TinyD   SECTION DATA
+TinyW:  DB      5
+TinyD   ENDS
+
+        ASSUME  DPP1:TinyD
+SHARED  DGROUP  BigD, TinyD
+
+Aux     SECTION CODE
+Helper  PROC    NEAR
+        MOV     R1, #SOF CODES
+        MOV     R2, #POF SmallW
+        MOV     R3, BigW
+        MOVB    RL4, TinyW
+        RET
+Helper  ENDP
+Aux     ENDS
+CODES   CGROUP  Aux
+
+Ptrs2   SECTION CONST
+        DW      SHARED, CODES, SOF TinyW, SOF BigW
+Ptrs2   ENDS
+        END

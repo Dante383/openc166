@@ -1,0 +1,80 @@
+; Mistakes with DGROUP and CGROUP, and with group names.
+$MOD167
+$SEGMENTED
+
+SecA    SECTION DATA
+VarA:   DW      1
+SecA    ENDS
+SecB    SECTION DATA
+VarB:   DW      2
+SecB    ENDS
+SecC    SECTION DATA
+VarC:   DW      3
+SecC    ENDS
+Ka      SECTION CONST
+        DW      4
+Ka      ENDS
+Ca      SECTION CODE
+Ca      ENDS
+Ha      SECTION HDATA
+Ha      ENDS
+Xa      SECTION XDATA
+Xa      ENDS
+Hk      SECTION HCONST
+Hk      ENDS
+Xk      SECTION XCONST
+Xk      ENDS
+
+Grp1    DGROUP  SecA
+; A group cannot be extended, and a section belongs to one group only.
+Grp1    DGROUP  SecB
+Grp2    DGROUP  SecA
+; Listing a section twice in one group is fine.
+Grp3    DGROUP  Ka, Ka
+; Section types a group does not take: the section still joins it.
+Grp4    DGROUP  Ca
+Grp5    CGROUP  SecC
+Grp6    DGROUP  Ha
+Grp7    DGROUP  Xa
+Grp8    CGROUP  Hk
+Grp9    DGROUP  Xk
+Grp10   CGROUP  Ca, SecC
+; Names that are not sections, or are taken.
+Grp11   DGROUP  Nowhere
+SecA    DGROUP  SecB
+VarA    DGROUP  SecB
+Grp12   CGROUP  Grp1
+Grp13   DGROUP  VarB
+Grp14   DGROUP  Later
+Later   SECTION DATA
+Later   ENDS
+; Syntax.
+Grp15   DGROUP
+Grp16   DGROUP  SecB,
+Grp17   DGROUP  SecB SecC
+Grp18   DGROUP  5
+        DGROUP  SecB
+; A group name is taken for sections and labels too. (Keil A166 hangs on
+; an EQU or SET with the name of a group.)
+Grp3    SECTION DATA
+Grp3    ENDS
+Num     EQU     6
+Num     DGROUP  SecB
+
+; ASSUME treats a group and its sections as one.
+        ASSUME  DPP1:Grp1
+        ASSUME  DPP2:SecA
+        ASSUME  DPP3:Grp3
+
+Prog    SECTION CODE
+Run     PROC    NEAR
+Grp3:   NOP
+        MOV     R1, #POF Grp1
+        MOV     R2, #POF VarA
+        MOV     R3, #PAG Grp1
+        MOV     R4, VarA
+        RET
+Run     ENDP
+Prog    ENDS
+        PUBLIC  Grp3
+        END

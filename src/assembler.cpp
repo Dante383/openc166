@@ -381,6 +381,18 @@ std::string length_overflow(const Section& s, std::int64_t loc) {
         return "a " + s.type + " section must not be longer than 64 KB";
     return {};
 }
+
+// name DGROUP sections or name CGROUP sections: the linker keeps the DATA
+// and CONST sections of a DGROUP in one 16 KB data page, and the CODE
+// sections of a CGROUP in one 64 KB segment.
+struct Group {
+    std::string name;
+    bool code = false;  // CGROUP
+    std::vector<std::string> members;  // section keys, in the order listed
+    // Final pass: the listing line and column of the group line.
+    std::size_t listing = SIZE_MAX;
+    int column = 0;
+};
 struct PublicDef {
     std::string name;  // as written
     Value value;
@@ -482,6 +494,9 @@ private:
     std::vector<Section> sections_;  // [0] holds code outside any section
     std::vector<Section> prev_sections_;  // sections_ of the previous pass, for forward section names
     std::map<std::string, std::int64_t> layout_;  // section key -> address chosen after the previous pass
+    std::vector<Group> groups_;  // of this pass, in order of definition
+    std::vector<Group> prev_groups_;  // of the previous pass, for group names used before their group line
+    std::map<std::string, std::int64_t> group_layout_;  // group key -> its page or segment after the previous pass
     std::vector<std::pair<std::int64_t, std::int64_t>> outside_;  // [from, to) used outside any section
     std::size_t cur_ = 0;
     bool segmented_ = false;  // $SEGMENTED: DPPn: prefixes and ASSUME take effect
@@ -543,8 +558,16 @@ private:
     void check_public(const Token& name, Reporter& rep);
     bool section_name(const std::string& name_key) const;
     void report(Severity sev, const char* code, std::string msg);
-    void report_at_section(std::size_t index, Severity sev, const char* code, std::string msg);
+    void report_at(std::size_t listing, int column, Severity sev, const char* code, std::string msg);
+    void report_at_section(std::size_t index, Severity sev, const char* code, std::string msg) {
+        report_at(sections_[index].listing, sections_[index].column, sev, code, std::move(msg));
+    }
     std::optional<Value> section_value(std::string_view name);
+    void group(const Token& name, bool code, TokenCursor& cur, Reporter& rep);
+    std::optional<std::size_t> find_group(const std::string& name_key, bool forward) const;
+    std::optional<std::size_t> group_of(const std::string& section_key) const;
+    int assume_key(int id) const;
+    std::optional<Value> group_value(std::string_view name);
     void assumed_section_page(Value& v) const;
     void check_section_name(const Token& name) const;
     void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
@@ -576,7 +599,10 @@ private:
 std::optional<Value> Assembler::lookup(std::string_view name) {
     if (auto p = predefined(name, cpu_, sys166_)) return p;
     auto it = symbols_.find(key(name));
-    if (it == symbols_.end()) return section_value(name);
+    if (it == symbols_.end()) {
+        if (auto v = section_value(name)) return v;
+        return group_value(name);
+    }
     // expand_lits() leaves a LIT name in place when the LIT line comes later
     // or the text leads back to the name. Keil reports both as A60.
     if (it->second.sym.kind == SymbolKind::Lit) {
@@ -605,6 +631,8 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
     for (std::size_t i = 1; i < sections_.size(); ++i)
         if (key(sections_[i].name) == key(name.text))
             throw AsmError("A25", "symbol redefinition: '" + sections_[i].name + "' is a section", name.column);
+    if (auto g = find_group(key(name.text), false))
+        throw AsmError("A25", "symbol redefinition: '" + groups_[*g].name + "' is a group", name.column);
     auto [it, inserted] = symbols_.try_emplace(key(name.text));
     Entry& e = it->second;
     if (!inserted && e.pass == pass_ && !(kind == SymbolKind::Set && e.sym.kind == SymbolKind::Set)) {
@@ -746,6 +774,7 @@ void Assembler::run_lines() {
     sections_.assign(1, Section{});
     sections_[0].loc = opt_.origin;
     sections_[0].absolute = true;
+    groups_.clear();
     outside_.clear();
     cur_ = 0;
     open_.clear();
@@ -832,6 +861,14 @@ bool Assembler::finish_pass() {
          !std::equal(sections_.begin(), sections_.end(), located.begin(), same)))
         changed_ = true;
     prev_sections_ = std::move(located);
+    // ASSUME and group names may come before the group line.
+    auto same_group = [](const Group& a, const Group& b) {
+        return a.name == b.name && a.code == b.code && a.members == b.members;
+    };
+    if (groups_.size() != prev_groups_.size() ||
+        !std::equal(groups_.begin(), groups_.end(), prev_groups_.begin(), same_group))
+        changed_ = true;
+    prev_groups_ = groups_;
 
     if (!final_ || fatal_) return changed_;
     // Like Keil, report problems found at the end on the last line of the
@@ -885,14 +922,14 @@ void Assembler::report(Severity sev, const char* code, std::string msg) {
     if (final_) res_.diagnostics.push_back({sev, code, std::move(msg), main_name_, 0, 0});
 }
 
-// Reports a problem with a section on its first SECTION line.
-void Assembler::report_at_section(std::size_t index, Severity sev, const char* code, std::string msg) {
+// Reports a problem on a line of the final pass, such as the first SECTION
+// line of a section.
+void Assembler::report_at(std::size_t listing, int column, Severity sev, const char* code, std::string msg) {
     if (!final_) return;
-    const Section& s = sections_[index];
-    if (s.listing >= res_.listing.size()) return report(sev, code, std::move(msg));
-    ListingLine& l = res_.listing[s.listing];
+    if (listing >= res_.listing.size()) return report(sev, code, std::move(msg));
+    ListingLine& l = res_.listing[listing];
     l.diagnostics.push_back(res_.diagnostics.size());
-    res_.diagnostics.push_back({sev, code, std::move(msg), l.file, l.file_line, s.column});
+    res_.diagnostics.push_back({sev, code, std::move(msg), l.file, l.file_line, column});
 }
 
 void Assembler::process_line(std::string_view text) {
@@ -1636,6 +1673,8 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         lst.address = location();
         define(name, SymbolKind::Label, here(data_type(dir)));
         data(dir, cur, rep, lst);
+    } else if (dir == "DGROUP" || dir == "CGROUP") {
+        group(name, dir == "CGROUP", cur, rep);
     } else if (contains(kIgnoredDirectives, dir)) {
         // REGDEF and REGBANK name register banks for the linker.
     } else {
@@ -1683,6 +1722,8 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         throw AsmError("A6", "syntax error: " + kw + " needs the name of the " +
                                  (kw == "ENDS" ? "section" : "procedure"),
                        tok.column);
+    } else if (kw == "DGROUP" || kw == "CGROUP") {
+        throw AsmError("A6", "syntax error: " + kw + " needs the name of the group", tok.column);
     } else if (contains(kKeywords, kw)) {
         throw AsmError("OC3", "directive " + kw + " is not supported yet", tok.column);
     } else {
@@ -1981,6 +2022,7 @@ void Assembler::check_public(const Token& name, Reporter& rep) {
     };
     if (isa::is_mnemonic(u) || contains(kKeywords, u)) return illegal("is a reserved word");
     if (section_name(k)) return illegal("is a section");
+    if (find_group(k, true)) return illegal("is a group");
     if (auto it = symbols_.find(k); it != symbols_.end() && it->second.pass >= pass_ - 1) {
         const Symbol& sym = it->second.sym;
         if (sym.kind == SymbolKind::Set) return illegal("is a SET symbol");
@@ -2020,13 +2062,135 @@ std::optional<Value> Assembler::section_value(std::string_view name) {
     return std::nullopt;
 }
 
+// Section types a group takes: DATA and CONST for a DGROUP, CODE for a CGROUP.
+bool group_type_ok(bool code, const std::string& type) {
+    return code ? type == "CODE" : type == "DATA" || type == "CONST";
+}
+
+// The group with this name: defined in this pass, or, with 'forward', in
+// the previous pass (named before its group line). Groups are numbered in
+// order of definition, which is the same in every pass.
+std::optional<std::size_t> Assembler::find_group(const std::string& name_key, bool forward) const {
+    for (std::size_t i = 0; i < groups_.size(); ++i)
+        if (key(groups_[i].name) == name_key) return i;
+    if (forward)
+        for (std::size_t i = groups_.size(); i < prev_groups_.size(); ++i)
+            if (key(prev_groups_[i].name) == name_key) return i;
+    return std::nullopt;
+}
+
+// The group a section belongs to, even if its group line comes later.
+std::optional<std::size_t> Assembler::group_of(const std::string& section_key) const {
+    for (const auto* list : {&groups_, &prev_groups_})
+        for (std::size_t i = 0; i < list->size(); ++i) {
+            const auto& m = (*list)[i].members;
+            if (std::find(m.begin(), m.end(), section_key) != m.end()) return i;
+        }
+    return std::nullopt;
+}
+
+// ASSUME ties a DPP to a whole group: assuming one section of a group
+// assumes all of them. Maps a section index to its group's number, if it
+// is in one.
+int Assembler::assume_key(int id) const {
+    if (id <= 0 || id >= Value::kGroupBase) return id;
+    const auto i = static_cast<std::size_t>(id);
+    const std::vector<Section>& list = i < sections_.size() ? sections_ : prev_sections_;
+    if (i >= list.size()) return id;
+    if (auto g = group_of(key(list[i].name))) return Value::kGroupBase + static_cast<int>(*g);
+    return id;
+}
+
+// A group name stands for the start of the 16 KB page (DGROUP) or 64 KB
+// segment (CGROUP) that the linker puts the group in. Like the name of a
+// data section, a DGROUP name takes the DPP that ASSUME ties to the group.
+std::optional<Value> Assembler::group_value(std::string_view name) {
+    const std::string k = key(name);
+    std::optional<std::size_t> g = find_group(k, false);
+    if (!g) {
+        g = find_group(k, true);
+        if (!g) return std::nullopt;
+        forward_ref_ = true;
+        ++forward_count_;
+    }
+    const bool code = *g < groups_.size() ? groups_[*g].code : prev_groups_[*g].code;
+    auto it = group_layout_.find(k);
+    Value v = Value::number(it != group_layout_.end() ? it->second : 0);
+    v.rel = Rel::Addr;
+    v.unsig = true;
+    const auto id = static_cast<std::uint16_t>(Value::kGroupBase + *g);
+    v.section = code ? 0 : id;
+    v.movable = id;
+    return v;
+}
+
+// name DGROUP section, ... or name CGROUP section, ...: see Group. As in
+// Keil, sections may be defined after the group line, a group cannot be
+// extended by another line with its name, and a section belongs to one
+// group only. A section of the wrong type is reported but still joins.
+void Assembler::group(const Token& name, bool code, TokenCursor& cur, Reporter& rep) {
+    const char* kw = code ? "CGROUP" : "DGROUP";
+    check_section_name(name);
+    const std::string k = key(name.text);
+    if (auto it = symbols_.find(k); predefined(name.text, cpu_, sys166_) ||
+                                    (it != symbols_.end() && it->second.pass == pass_) || find_group(k, false))
+        throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is already defined", name.column);
+    for (std::size_t i = 1; i < sections_.size(); ++i)
+        if (key(sections_[i].name) == k)
+            throw AsmError("A25", "symbol redefinition: '" + sections_[i].name + "' is a section", name.column);
+    if (cur.at_end())
+        throw AsmError("A6", std::string("syntax error: ") + kw + " needs section names", cur.peek().column);
+    Group g;
+    g.name = std::string(name.text);
+    g.code = code;
+    if (final_) {
+        g.listing = res_.listing.size();
+        g.column = name.column;
+    }
+    groups_.push_back(std::move(g));
+    const std::size_t index = groups_.size() - 1;
+    do {
+        const Token& t = cur.peek();
+        if (t.kind == TokKind::Number) throw AsmError("A23", "identifier expected", t.column);
+        if (t.kind != TokKind::Ident) throw AsmError("A6", "syntax error: section name expected", t.column);
+        check_section_name(t);
+        cur.next();
+        const std::string mk = key(t.text);
+        const Section* s = nullptr;
+        for (const auto* list : {&sections_, &prev_sections_})
+            for (std::size_t i = 1; i < list->size() && !s; ++i)
+                if (key((*list)[i].name) == mk) s = &(*list)[i];
+        std::optional<std::size_t> other;
+        for (std::size_t i = 0; i < index && !other; ++i)
+            if (std::find(groups_[i].members.begin(), groups_[i].members.end(), mk) != groups_[i].members.end())
+                other = i;
+        if (!s && (predefined(t.text, cpu_, sys166_) || symbols_.count(mk) || find_group(mk, true))) {
+            rep.error("A25", "symbol redefinition: '" + std::string(t.text) + "' is not a section", t.column);
+        } else if (other) {
+            rep.error("A53", "section is already a member of group '" + groups_[*other].name + "'", t.column);
+        } else {
+            if (!s)
+                rep.error("A93", "name of a section expected: '" + std::string(t.text) + "' is not defined", t.column);
+            else if (!group_type_ok(code, s->type))
+                rep.error("A34", std::string("illegal section type: a ") + kw + " takes " +
+                                     (code ? "CODE sections" : "DATA and CONST sections") + ", not " + s->type,
+                          t.column);
+            auto& members = groups_[index].members;
+            if (std::find(members.begin(), members.end(), mk) == members.end()) members.push_back(mk);
+        }
+        if (!cur.at_end() && !cur.peek().is_op(","))
+            throw AsmError("A6", "syntax error: unexpected '" + std::string(cur.peek().text) + "'", cur.peek().column);
+    } while (cur.accept_op(","));
+}
+
 // In segmented mode, data directives store the name of a data section with a
 // fixed address (alone, in parentheses, or plus or minus a number) as the DPP
 // address that ASSUME gives the section. Labels keep their plain address.
 void Assembler::assumed_section_page(Value& v) const {
     if (!segmented_ || !v.known || v.rel != Rel::None || v.section == 0 || v.dpp >= 0) return;
+    const int k = assume_key(v.section);
     for (int d = 0; d < 4; ++d) {
-        if (assume_[d] != v.section) continue;
+        if (assume_[d] != k) continue;
         v.num = (std::int64_t{d} << 14) | (v.num & 0x3FFF);
         return;
     }
@@ -2069,10 +2233,12 @@ void Assembler::assume(TokenCursor& cur, Reporter& rep) {
                 const Value& v = it->second.sym.value;
                 if (it->second.sym.kind == SymbolKind::Label && v.section) target = v.section;
             }
+            if (auto g = find_group(k, true); !target && g) target = Value::kGroupBase + static_cast<int>(*g);
             for (std::size_t i = 1; i < prev_sections_.size() && !target; ++i)
                 if (key(prev_sections_[i].name) == k) target = static_cast<int>(i);
             // Keil quietly ignores a name it does not know.
             if (!target && pass_ == 1) changed_ = true;
+            if (target) target = assume_key(*target);
         }
         if (target) {
             bool taken = false;
@@ -2105,10 +2271,11 @@ void Assembler::check_section_name(const Token& name) const {
 
 void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep) {
     // As in Keil, a name already taken by a symbol, register, flag or other
-    // predefined name is a redefinition, and the section is not opened.
+    // predefined name or group is a redefinition, and the section is not opened.
     check_section_name(name);
-    if (auto it = symbols_.find(key(name.text));
-        predefined(name.text, cpu_, sys166_) || (it != symbols_.end() && it->second.pass == pass_))
+    if (auto it = symbols_.find(key(name.text)); predefined(name.text, cpu_, sys166_) ||
+                                                 (it != symbols_.end() && it->second.pass == pass_) ||
+                                                 find_group(key(name.text), false))
         throw AsmError("A25", "symbol redefinition: '" + std::string(name.text) + "' is already defined", name.column);
     const Token& type_tok = cur.peek();
     if (type_tok.kind != TokKind::Ident || !contains(kSectionTypes, upper(type_tok.text)))
@@ -2276,6 +2443,7 @@ void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Repor
         ctx.ext_sfr = ext_left_ > 0 && ext_esfr_;
         ctx.segmented = segmented_;
         ctx.assume = assume_;
+        ctx.assume_key = [this](int id) { return assume_key(id); };
         ctx.ext_page = ext_left_ > 0 && ext_page_;
         Encoding e = encode(m, ops, ctx, rep);
         if (align_offset() & 1) rep.error("A134", "improper address alignment: instruction at an odd address");
@@ -2635,56 +2803,196 @@ void Program::locate(bool final) {
                              "an address is given for section '" + name + "', which does not exist");
     }
 
-    for (Unit& u : all) {
+    // The lowest address in [from, to) from which u fits between the ranges
+    // in 'taken', suitably aligned and without crossing a multiple of
+    // 'boundary' (0: none).
+    auto first_fit = [](const Unit& u, std::int64_t from, std::int64_t to, std::int64_t boundary,
+                        const std::vector<std::pair<std::int64_t, std::int64_t>>& taken) -> std::optional<std::int64_t> {
+        std::int64_t a = align_up(from, u.align);
+        while (a + u.size <= to) {
+            if (boundary && u.size > 0 && u.size <= boundary && a / boundary != (a + u.size - 1) / boundary) {
+                a = align_up((a / boundary + 1) * boundary, u.align);
+                continue;
+            }
+            auto clash = std::find_if(taken.begin(), taken.end(), [&](const auto& r) {
+                return r.first < a + std::max<std::int64_t>(u.size, 1) && a < r.second;
+            });
+            if (clash == taken.end()) return a;
+            a = align_up(clash->second, u.align);
+        }
+        return std::nullopt;
+    };
+    std::vector<bool> done(all.size());
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        const Assembler& m = *all[i].parts[0].m;
+        const Section& s = all[i].parts[0].section();
+        done[i] = s.absolute || m.option_address(m.key(s.name));
+    }
+
+    // Groups of the same name in different modules are one group. Like
+    // L166, place all DGROUPs and then all CGROUPs, each in order of first
+    // definition, before the other sections. A group goes to the first 16 KB
+    // page (DGROUP) or 64 KB segment (CGROUP) from the origin on that has
+    // room for all its members, or to the page or segment of its first
+    // member with a fixed address. Its members go there one by one, largest
+    // first, each at the lowest address where it fits.
+    struct LinkGroup {
+        std::vector<std::pair<Assembler*, std::size_t>> defs;  // module and index into its groups_
+        bool code = false;
+        std::vector<std::size_t> members;  // into all, in the order listed
+        std::int64_t base = 0;
+        bool placed = false;
+    };
+    std::map<std::pair<const Assembler*, std::size_t>, std::size_t> unit_of;
+    for (std::size_t i = 0; i < all.size(); ++i)
+        for (const Part& p : all[i].parts) unit_of[{p.m, p.index}] = i;
+    std::vector<LinkGroup> groups;
+    std::map<std::string, std::size_t> group_index;
+    std::vector<bool> grouped(all.size());
+    for (const auto& mp : mods_) {
+        Assembler& m = *mp;
+        for (std::size_t gi = 0; gi < m.groups_.size(); ++gi) {
+            const Group& g = m.groups_[gi];
+            auto [it, inserted] = group_index.try_emplace(m.key(g.name), groups.size());
+            if (inserted) {
+                groups.emplace_back();
+                groups.back().code = g.code;
+            }
+            LinkGroup& lg = groups[it->second];
+            lg.defs.emplace_back(&m, gi);
+            for (const std::string& member : g.members)
+                for (std::size_t i = 1; i < m.sections_.size(); ++i) {
+                    if (m.key(m.sections_[i].name) != member || !group_type_ok(lg.code, m.sections_[i].type)) continue;
+                    const std::size_t u = unit_of.at({&m, i});
+                    if (grouped[u]) continue;
+                    grouped[u] = true;
+                    lg.members.push_back(u);
+                }
+        }
+    }
+    for (const bool code : {false, true}) {
+        for (LinkGroup& g : groups) {
+            if (g.code != code || g.members.empty()) continue;
+            Assembler& m = *g.defs[0].first;
+            const Group& def = m.groups_[g.defs[0].second];
+            const std::int64_t region = code ? 0x10000 : 0x4000;
+            const std::string what = std::string(code ? "CGROUP" : "DGROUP") + " '" + def.name + "'";
+            std::int64_t total = 0;
+            for (std::size_t u : g.members) total += all[u].size;
+            if (total > region) {
+                m.report_at(def.listing, def.column, Severity::Error, "OC22",
+                            what + " (" + hex(total, 4) + "H bytes) does not fit in one " +
+                                (code ? "64 KB segment (L166 reports L116)" : "16 KB data page (L166 reports L115)"));
+                continue;
+            }
+            std::vector<std::size_t> order = g.members;
+            std::stable_sort(order.begin(), order.end(),
+                             [&](std::size_t a, std::size_t b) { return all[a].size > all[b].size; });
+            // Like L166, the first member listed with a fixed address decides
+            // the page or segment; other fixed members may lie elsewhere.
+            std::optional<std::int64_t> pinned;
+            for (std::size_t u : g.members)
+                if (done[u]) {
+                    pinned = all[u].base / region * region;
+                    break;
+                }
+            const std::int64_t top = top_of(m);
+            for (std::int64_t page = pinned ? *pinned : opt_.origin / region * region;
+                 page < top && (!pinned || page == *pinned) && !g.placed; page += region) {
+                auto trial = used;
+                std::vector<std::pair<std::size_t, std::int64_t>> bases;
+                std::vector<std::size_t> left_out;
+                bool fits = true;
+                for (std::size_t u : order) {
+                    if (done[u]) continue;
+                    const Unit& un = all[u];
+                    const std::int64_t from = std::max(page, un.bit ? kBitAreaStart : opt_.origin);
+                    const std::int64_t to = std::min(page + region, un.bit ? kBitAreaEnd : top);
+                    std::optional<std::int64_t> a = first_fit(un, from, to, 0, trial);
+                    if (!a && pinned) {
+                        // Like L166 (L112), a member without room in the page
+                        // or segment the group is tied to is left out.
+                        const Part& p = un.parts[0];
+                        p.m->report_at_section(p.index, Severity::Error, "OC22",
+                                               "section '" + p.section().name + "' does not fit in the " +
+                                                   (code ? "segment" : "data page") + " of " + what +
+                                                   " (L166 reports L112)");
+                        left_out.push_back(u);
+                        continue;
+                    }
+                    if (!a) {
+                        fits = false;
+                        break;
+                    }
+                    bases.emplace_back(u, *a);
+                    if (un.size > 0) trial.emplace_back(*a, *a + un.size);
+                }
+                if (!fits) continue;
+                used = std::move(trial);
+                for (const auto& [u, a] : bases) {
+                    all[u].base = a;
+                    done[u] = true;
+                }
+                for (std::size_t u : left_out) done[u] = true;
+                g.base = page;
+                g.placed = true;
+            }
+            if (!g.placed)
+                m.report_at(def.listing, def.column, Severity::Error, "OC22",
+                            "no room for " + what + " (" + hex(total, 4) + "H bytes) in one " +
+                                (code ? "64 KB segment" : "16 KB data page"));
+        }
+    }
+
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        if (done[i]) continue;
+        Unit& u = all[i];
         Assembler& m = *u.parts[0].m;
         const Section& s = u.parts[0].section();
-        if (s.absolute || m.option_address(m.key(s.name))) continue;
         const std::int64_t from = u.bit ? kBitAreaStart : opt_.origin, to = u.bit ? kBitAreaEnd : top_of(m);
         const std::int64_t boundary = section_boundary(s.type);
         if (boundary == 0x4000 && u.size > boundary && final)
             m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
                                 "section '" + s.name + "' (" + hex(u.size, 4) + "H bytes) does not fit in one 16 KB data page "
                                 "(L166 reports L129)");
-        std::int64_t a = align_up(from, u.align);
-        bool fits = false;
-        while (a + u.size <= to) {
-            if (boundary && u.size > 0 && u.size <= boundary && a / boundary != (a + u.size - 1) / boundary) {
-                a = align_up((a / boundary + 1) * boundary, u.align);
-                continue;
-            }
-            auto clash = std::find_if(used.begin(), used.end(), [&](const auto& r) {
-                return r.first < a + std::max<std::int64_t>(u.size, 1) && a < r.second;
-            });
-            if (clash == used.end()) {
-                fits = true;
-                break;
-            }
-            a = align_up(clash->second, u.align);
-        }
-        if (!fits) {
+        std::optional<std::int64_t> a = first_fit(u, from, to, boundary, used);
+        if (!a) {
             m.report(Severity::Error, "OC12", "no room for section '" + s.name + "' (" + hex(u.size, 4) + "H bytes" +
                                                  (u.bit ? " in FD00H..FDFFH)" : ")"));
             a = s.base;
         } else if (u.size > 0) {
-            used.emplace_back(a, a + u.size);
+            used.emplace_back(*a, *a + u.size);
         }
-        u.base = a;
+        u.base = *a;
     }
 
     for (const Unit& u : all)
         for (const Part& p : u.parts)
             if (!p.section().absolute) p.m->layout_[p.m->key(p.section().name)] = u.base + p.offset;
+    for (LinkGroup& g : groups) {
+        const std::int64_t region = g.code ? 0x10000 : 0x4000;
+        if (!g.placed && !g.members.empty()) g.base = all[g.members[0]].base / region * region;
+        for (const auto& [m, gi] : g.defs) {
+            auto [it, inserted] = m->group_layout_.try_emplace(m->key(m->groups_[gi].name), g.base);
+            if (inserted ? g.base != 0 : it->second != g.base) m->changed_ = true;
+            it->second = g.base;
+        }
+    }
 
     if (!final) return;
+    std::vector<std::string> group_names(all.size());
+    for (const LinkGroup& g : groups)
+        for (std::size_t u : g.members) group_names[u] = g.defs[0].first->groups_[g.defs[0].second].name;
     infos_.clear();
     common_.clear();
-    for (const Unit& u : all) {
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        const Unit& u = all[i];
         const Section& s = u.parts[0].section();
         infos_.push_back({s.name, s.type, s.align_type, s.base, u.size,
                           s.absolute ? SectionInfo::Placement::At
                           : s.placed ? SectionInfo::Placement::Given
                                      : SectionInfo::Placement::Located,
-                          s.class_name});
+                          s.class_name, group_names[i]});
         if (u.parts.size() > 1 && s.combine == "COMMON") common_.emplace_back(s.base, s.base + u.size);
     }
 }
@@ -2830,6 +3138,7 @@ std::string format_listing(const AssemblyResult& result) {
                           kPlacement[static_cast<int>(s.placement)]);
             out += row;
             if (!s.class_name.empty()) out += "  class '" + s.class_name + "'";
+            if (!s.group.empty()) out += "  group " + s.group;
             out += "\n";
         }
     }

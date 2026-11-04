@@ -27,7 +27,8 @@ Early development (version 0.x). What works today:
 - Sections with an address (`SECTION CODE AT 0E000H`) and without one.
   openc166 places sections without `AT` as Keil's L166 linker would, or at
   addresses you give (`--section NAME=ADDR`), so code that leaves placement
-  to the linker can still be assembled straight to a binary.
+  to the linker can still be assembled straight to a binary. `DGROUP` and
+  `CGROUP` keep sections in one data page or code segment, as in L166.
 - `PROC`/`ENDP`, `ORG`, `EVEN`, `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`,
   `DS`/`DSB`/`DSW`/`DSD`, and `DPPTR`/`DSPTR`/`DBPTR`, including Keil's
   automatic alignment of word data.
@@ -195,7 +196,7 @@ image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
   whether it is `PUBLIC` or `GLOBAL` (`exported`). `result.modules` lists
   the file names; `result.symbols` holds one symbol per name (the exported
   one if there is one), `result.all_symbols` all of them. Each `Section`
-  has its `class_name`.
+  has its `class_name` and `group`.
 - `result.image(base=None, fill=0xFF)` lays all code out as one block, like
   the command-line tool.
 - `result.intel_hex(record_size=16)` and

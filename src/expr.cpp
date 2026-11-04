@@ -228,6 +228,8 @@ private:
                 cur_.next();
                 Value a = resolved(segment_ops());
                 require_number(a, t.column);
+                if (which == 3 && a.group())
+                    throw AsmError("A96", "invalid component: POF of a group", t.column);
                 U x = static_cast<U>(a.num);
                 U r = which == 0 ? x >> 16 : which == 1 ? x >> 14 : which == 2 ? x & 0xFFFF : x & 0x3FFF;
                 Value v = moving_with(num(a, a, r), a);

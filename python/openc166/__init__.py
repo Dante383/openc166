@@ -155,6 +155,7 @@ class Section:
     (AT in the source), "given" (the 'sections' argument of assemble()) or
     "located" (by openc166, in the first free place from the origin on).
     class_name is the class from the SECTION line ('ROM' gives "ROM"), or "".
+    group is the DGROUP or CGROUP the section belongs to, or "".
     """
 
     name: str
@@ -164,6 +165,7 @@ class Section:
     size: int
     placement: str
     class_name: str = ""
+    group: str = ""
 
     @property
     def end(self) -> int:
@@ -273,6 +275,7 @@ class Result:
                 size=sec.size,
                 placement=_text(sec.placement),
                 class_name=_text(_lib.oc166_result_section_class(handle, i)),
+                group=_text(_lib.oc166_result_section_group(handle, i)),
             )
 
     @property

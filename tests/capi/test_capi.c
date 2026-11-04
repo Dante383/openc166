@@ -210,9 +210,13 @@ static void test_sections(void) {
                       "FIXED  SECTION CONST AT 0A000H\n"
                       "       DB 1\n"
                       "FIXED  ENDS\n"
+                      "VARGRP DGROUP VARS\n"
                       "       END\n");
     CHECK(oc166_result_error_count(r) == 0);
     CHECK(oc166_result_section_count(r) == 3);
+    CHECK(strcmp(oc166_result_section_group(r, 0), "") == 0);
+    CHECK(strcmp(oc166_result_section_group(r, 1), "VARGRP") == 0);
+    CHECK(oc166_result_section_group(r, 3) == NULL);
     CHECK(oc166_result_section(r, 0, &s) == 0);
     CHECK(strcmp(s.name, "PROG") == 0 && strcmp(s.type, "CODE") == 0 && strcmp(s.align, "WORD") == 0);
     CHECK(s.address == 0x8000 && s.size == 6 && strcmp(s.placement, "located") == 0);

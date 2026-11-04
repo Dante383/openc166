@@ -1,0 +1,108 @@
+; Groups: a DGROUP keeps DATA and CONST sections in one 16 KB data page, a
+; CGROUP keeps CODE sections in one 64 KB segment. L166 places the groups
+; before the other sections, DGROUPs first, each one's sections largest
+; first, and fills gaps. A group name stands for the start of its page or
+; segment, and ASSUME on any section of a group covers all of it. Run with
+; --image to compare the placement with L166.
+$MOD167
+$SEGMENTED
+
+; Page 0 keeps only 20H bytes free at each end, too little for the largest
+; section of PARAMS, so PARAMS goes to the next page.
+Fill    SECTION DATA AT 0020H
+        DS      3FC0H
+Fill    ENDS
+
+; Placed after the groups, although it comes first.
+Lone    SECTION DATA
+LoneW:  DW      0BEEFH
+Lone    ENDS
+
+Small   SECTION DATA
+SmallW: DW      0A1A1H
+Small   ENDS
+
+Large   SECTION DATA
+LargeW: DW      0B2B2H
+        DS      2EH
+Large   ENDS
+
+Table   SECTION CONST
+TableW: DW      1234H, 5678H
+        DS      0CH
+Table   ENDS
+
+; The group is named in ASSUME before its line.
+        ASSUME  DPP2:PARAMS
+PARAMS  DGROUP  Small, Large, Table
+
+; A section with AT ties its group to its page: the other section of the
+; group fills the gap in front of it, then follows it.
+Fixed   SECTION DATA AT 8004H
+FixedW: DW      77H
+Fixed   ENDS
+
+Loose   SECTION DATA
+LooseW: DW      88H
+        DS      6
+Loose   ENDS
+
+Buf     SECTION DATA
+BufW:   DW      99H
+Buf     ENDS
+
+; ASSUME on one section covers the others of its group.
+        ASSUME  DPP1:Loose
+WORK    DGROUP  Loose, Fixed, Buf
+
+; With sections at fixed addresses in different pages, the first one listed
+; decides the page of the group.
+PinHi   SECTION DATA AT 10100H
+PinHiW: DW      0AAH
+PinHi   ENDS
+PinLo   SECTION DATA AT 0C100H
+PinLoW: DW      0BBH
+PinLo   ENDS
+Spare   SECTION DATA
+SpareW: DW      0CCH
+Spare   ENDS
+SPLIT   DGROUP  PinHi, Spare, PinLo
+
+Main    SECTION CODE
+Start   PROC    NEAR
+        MOV     R1, SmallW
+        MOV     R2, LargeW
+        MOV     R3, TableW
+        MOV     R4, FixedW
+        MOV     R5, LooseW
+        MOV     R6, BufW
+        MOV     R7, #PARAMS
+        MOV     R8, PARAMS
+        MOV     R9, #WORK
+        MOV     R10, #SEG PARAMS
+        MOV     R11, #PAG PARAMS
+        MOV     R12, #SOF PARAMS
+        MOV     R13, #SOF LoneW
+        MOV     R14, #POF LooseW
+        CALL    CC_UC, Helper
+        RET
+Start   ENDP
+Main    ENDS
+
+Aux     SECTION CODE
+Helper  PROC    NEAR
+        MOV     R1, #SOF CODES
+        RET
+Helper  ENDP
+Aux     ENDS
+
+CODES   CGROUP  Aux, Main
+
+Ptrs    SECTION CONST
+        DW      PARAMS, WORK, CODES
+        DW      SEG CODES, SOF CODES, PAG WORK, SOF WORK
+        DW      SOF SmallW, SOF LargeW, SOF TableW, SOF LoneW
+        DW      SOF FixedW, SOF LooseW, SOF BufW
+        DW      PAG SPLIT, SOF SPLIT, SOF SpareW, SOF PinLoW
+Ptrs    ENDS
+        END

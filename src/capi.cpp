@@ -338,4 +338,9 @@ const char* oc166_result_section_class(const oc166_result* r, size_t index) {
     return r->res.sections[index].class_name.c_str();
 }
 
+const char* oc166_result_section_group(const oc166_result* r, size_t index) {
+    if (!r || index >= r->res.sections.size()) return nullptr;
+    return r->res.sections[index].group.c_str();
+}
+
 }  // extern "C"

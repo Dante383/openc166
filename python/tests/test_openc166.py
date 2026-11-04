@@ -320,6 +320,13 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(result.sections["Vars"].placement, "given")
         self.assertEqual(result.chunks[0].data[:6].hex(), "e6f400f6cb00")
 
+    def test_group(self):
+        source = self.SOURCE.replace("       END\n", "VarGrp DGROUP Vars\n       END\n")
+        result = openc166.assemble(source, origin=0x8000)
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.sections["Vars"].group, "VarGrp")
+        self.assertEqual(result.sections["PROG"].group, "")
+
     def test_given_problems(self):
         result = openc166.assemble(self.SOURCE, sections={"FIXED": 0x100, "NONE": 0x200})
         self.assertEqual([d.code for d in result.errors], ["OC14"])

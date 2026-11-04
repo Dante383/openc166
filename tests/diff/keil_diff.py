@@ -13,7 +13,7 @@ With --image, sources that both assemblers accept without errors are also
 linked with Keil L166 and converted with OH166, and the resulting memory
 image is compared byte for byte with the openc166 binary, including which
 addresses are left empty. The messages L166 gives are compared with the
-openc166 codes for the same problems (OC15..OC21, see LINK_CODES); A166
+openc166 codes for the same problems (OC15..OC22, see LINK_CODES); A166
 cannot report those, so they are not compared line by line.
 
 Sources may use $INCLUDE and $INCDIR. Lines are numbered across all files
@@ -401,7 +401,8 @@ def compare_image(source, keil, tool, workdir, link_codes=()):
 # errors that openc166 does not repeat: L118 and L128 at each reference to a
 # duplicate or missing external, L120 for content of a section that failed.
 LINK_CODES = {"L15": "OC20", "L21": "OC17", "L101": "OC19", "L104": "OC16", "L121": "OC18",
-              "L127": "OC15", "L129": "OC21", "L118": None, "L120": None, "L128": None}
+              "L127": "OC15", "L129": "OC21", "L112": "OC22", "L115": "OC22", "L116": "OC22", "L118": None,
+              "L119": None, "L120": None, "L128": None}
 LINK_ONLY = {c for c in LINK_CODES.values() if c}
 KEIL_MESSAGE = re.compile(r"\*\*\* (ERROR|WARNING) #?([AL]\d+)")
 OPENC166_MESSAGE = re.compile(r"\b(error|warning) ([A-Z]+\d+):")

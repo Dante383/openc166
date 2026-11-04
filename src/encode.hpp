@@ -8,12 +8,14 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <string_view>
 #include <vector>
 
 namespace oc166 {
 
-// ASSUME DPPn:SYSTEM; other ASSUME targets are section indices.
+// ASSUME DPPn:SYSTEM; other ASSUME targets are section indices or group
+// numbers (Value::kGroupBase on).
 constexpr int kAssumeSystem = -2;
 
 struct EncodeContext {
@@ -22,9 +24,12 @@ struct EncodeContext {
     bool ext_sfr = false;  // inside an EXTR/EXTPR/EXTSR range
     // Segmented mode: memory operands, immediates and displacements of an
     // address get the page of the DPP that ASSUME ties to its section (or to
-    // SYSTEM for SFRs). assume[n] is a section index, kAssumeSystem or -1.
+    // SYSTEM for SFRs). assume[n] is a section index, a group number,
+    // kAssumeSystem or -1. assume_key maps the section of a value to what
+    // ASSUME ties: the group of a section in one, else the section itself.
     bool segmented = false;
     std::array<int, 4> assume{-1, -1, -1, -1};
+    std::function<int(int)> assume_key;
     bool ext_page = false;  // inside an EXTP/EXTPR range: the page is explicit
 };
 

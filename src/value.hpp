@@ -61,11 +61,15 @@ struct Value {
     // minus a number); 0 if none. Keil leaves such values to the linker.
     // External symbols (EXTERN) use the numbers from kExternBase on, one per
     // symbol, as their movable value and, for addresses, as their section.
+    // Groups (DGROUP, CGROUP) likewise use the numbers from kGroupBase on.
     std::uint16_t movable = 0;
 
+    static constexpr std::uint16_t kGroupBase = 0x4000;
     static constexpr std::uint16_t kExternBase = 0x8000;
 
     bool relocatable() const { return rel == Rel::Addr || rel == Rel::Seg || movable != 0; }
+    // The name of a group, plus or minus a number.
+    bool group() const { return movable >= kGroupBase && movable < kExternBase; }
     // Derived from an external symbol: the linker fills it in.
     bool external() const { return movable >= kExternBase; }
 
