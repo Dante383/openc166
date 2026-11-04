@@ -104,6 +104,25 @@ OC166_API oc166_result *oc166_assemble(const oc166_options *opts, const char *so
                                        const char *file_name);
 OC166_API void oc166_result_free(oc166_result *r);
 
+/* Assembles 'count' (at least 1) sources as separate modules and links
+ * them into one program, as Keil's A166 and L166 would: an EXTERN symbol
+ * takes the value of the PUBLIC or GLOBAL symbol of that name in another
+ * module, and sections with the same name and class are combined. Source i
+ * is 'lengths[i]' bytes at 'sources[i]', named 'file_names[i]'.
+ * 'file_names' may be NULL, and so may any name in it; such a module is
+ * called "moduleN.a66". The file name set in 'opts' is not used. Code
+ * outside sections starts at the origin in each module.
+ *
+ * Returns NULL only if out of memory or the arguments are not valid. */
+OC166_API oc166_result *oc166_assemble_many(const oc166_options *opts, size_t count, const char *const *sources,
+                                            const size_t *lengths, const char *const *file_names);
+
+/* The modules of the result: one for oc166_assemble(), one per source for
+ * oc166_assemble_many(). oc166_result_module() returns the file name of
+ * module 'index', or NULL if 'index' is out of range. */
+OC166_API size_t oc166_result_module_count(const oc166_result *r);
+OC166_API const char *oc166_result_module(const oc166_result *r, size_t index);
+
 OC166_API size_t oc166_result_error_count(const oc166_result *r);
 OC166_API size_t oc166_result_warning_count(const oc166_result *r);
 
@@ -189,7 +208,9 @@ OC166_API const char *oc166_result_listing(oc166_result *r);
 
 typedef struct oc166_symbol {
     const char *name;
-    /* How it was defined: "label", "equ", "set", "bit" or "lit". */
+    /* How it was defined: "label", "equ", "set", "bit", "lit" or "extern".
+     * An "extern" symbol has the value of the PUBLIC symbol it names; its
+     * 'text' is the type from the EXTERN line, such as "WORD" or "DATA8". */
     const char *kind;
     /* What the value is, and what 'value' holds:
      *   "number"    a number or address
@@ -205,15 +226,23 @@ typedef struct oc166_symbol {
     int64_t value;
     int bit;          /* bit number 0..15 for "bit", else 0 */
     int known;        /* 0 if the value could not be worked out (an error) */
-    const char *text; /* replacement text of a LIT, else "" */
-    int line;         /* listing line of the definition */
+    const char *text; /* replacement text of a LIT, type of an EXTERN, else "" */
+    int line;         /* listing line of the definition, counted in its module */
 } oc166_symbol;
 
 OC166_API size_t oc166_result_symbol_count(const oc166_result *r);
 
-/* Fills '*out' with symbol 'index' (sorted by name). Returns 0, or -1 if
- * 'index' is out of range. */
+/* Fills '*out' with symbol 'index' (sorted by name, then module). Returns
+ * 0, or -1 if 'index' is out of range. */
 OC166_API int oc166_result_symbol(const oc166_result *r, size_t index, oc166_symbol *out);
+
+/* The module that defines symbol 'index', or -1 if 'index' is out of
+ * range. */
+OC166_API int oc166_result_symbol_module(const oc166_result *r, size_t index);
+
+/* 1 if symbol 'index' is named by PUBLIC or GLOBAL, so other modules can
+ * use it; 0 if not; -1 if 'index' is out of range. */
+OC166_API int oc166_result_symbol_exported(const oc166_result *r, size_t index);
 
 /* ---- Sections ---------------------------------------------------------- */
 
@@ -234,6 +263,10 @@ OC166_API size_t oc166_result_section_count(const oc166_result *r);
 /* Fills '*out' with section 'index' (in order of first appearance).
  * Returns 0, or -1 if 'index' is out of range. */
 OC166_API int oc166_result_section(const oc166_result *r, size_t index, oc166_section *out);
+
+/* The class of section 'index' as in its SECTION line ('ROM' gives "ROM"),
+ * "" if it has none, or NULL if 'index' is out of range. */
+OC166_API const char *oc166_result_section_class(const oc166_result *r, size_t index);
 
 #ifdef __cplusplus
 }

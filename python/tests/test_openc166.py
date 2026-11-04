@@ -331,6 +331,83 @@ class SectionTest(unittest.TestCase):
             openc166.assemble(self.SOURCE, sections={"": 0x100})
 
 
+class LinkTest(unittest.TestCase):
+    MAIN = (
+        "EXTERN COUNT:WORD, LIMIT:DATA16\n"
+        "PUBLIC MAIN\n"
+        "PROG   SECTION CODE 'ROM'\n"
+        "MAIN   PROC NEAR\n"
+        "       MOV R4, COUNT\n"
+        "       MOV R5, #LIMIT\n"
+        "       RET\n"
+        "MAIN   ENDP\n"
+        "PROG   ENDS\n"
+        "       END\n"
+    )
+    DATA = (
+        "PUBLIC COUNT, LIMIT\n"
+        "LIMIT  EQU 1234H\n"
+        "VARS   SECTION DATA AT 0C000H\n"
+        "COUNT: DW 0\n"
+        "VARS   ENDS\n"
+        "       END\n"
+    )
+
+    def test_assemble_many(self):
+        for sources in ({"main.a66": self.MAIN, "data.a66": self.DATA.encode()},
+                        [("main.a66", self.MAIN), ("data.a66", self.DATA)]):
+            result = openc166.assemble_many(sources, origin=0x8000)
+            self.assertTrue(result.ok, result.diagnostics)
+            self.assertEqual(result.modules, ["main.a66", "data.a66"])
+            self.assertEqual(result.chunks[0].address, 0x8000)
+            self.assertEqual(result.chunks[0].data.hex(), "f2f400c0e6f53412cb00")
+            self.assertEqual(result.sections["PROG"].class_name, "ROM")
+            self.assertEqual(result.sections["VARS"].class_name, "")
+
+            self.assertEqual(
+                [(s.name, s.kind, s.module, s.exported) for s in result.all_symbols],
+                [
+                    ("COUNT", "extern", "main.a66", False),
+                    ("COUNT", "label", "data.a66", True),
+                    ("LIMIT", "extern", "main.a66", False),
+                    ("LIMIT", "equ", "data.a66", True),
+                    ("MAIN", "label", "main.a66", True),
+                ],
+            )
+            count = result.all_symbols[0]
+            self.assertEqual((count.value, count.text, count.label_type), (0xC000, "WORD", "word"))
+            # symbols holds the PUBLIC definitions.
+            self.assertEqual(result.symbol("count").module, "data.a66")
+            self.assertEqual(result.symbols["LIMIT"].kind, "equ")
+
+    def test_single_module(self):
+        result = openc166.assemble(" NOP\n END\n", file_name="one.a66")
+        self.assertEqual(result.modules, ["one.a66"])
+        self.assertEqual(result.symbols, {})
+
+    def test_errors(self):
+        result = openc166.assemble_many({"main.a66": self.MAIN})
+        self.assertEqual([(d.code, d.file, d.line) for d in result.errors],
+                         [("OC15", "main.a66", 1), ("OC15", "main.a66", 1)])
+        with self.assertRaises(ValueError):
+            openc166.assemble_many({})
+        with self.assertRaises(TypeError):
+            openc166.assemble_many([("a.a66", 5)])
+
+    def test_assemble_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = []
+            for name, text in (("main.a66", self.MAIN), ("data.a66", self.DATA)):
+                paths.append(os.path.join(tmp, name))
+                with open(paths[-1], "w") as f:
+                    f.write(text)
+            result = openc166.assemble_files(paths, origin=0x8000)
+            self.assertTrue(result.ok, result.diagnostics)
+            self.assertEqual(result.modules, paths)
+            self.assertEqual([(c.address, c.data.hex()) for c in result.chunks],
+                             [(0x8000, "f2f400c0e6f53412cb00"), (0xC000, "0000")])
+
+
 class IncludeTest(unittest.TestCase):
     def test_include_paths(self):
         with tempfile.TemporaryDirectory() as tmp:

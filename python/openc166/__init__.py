@@ -15,6 +15,10 @@
     >>> hex(image.base), image.data.hex()
     ('0xe000', 'e6f4efbecb00')
 
+assemble_many() and assemble_files() assemble several modules and link
+them, as Keil's A166 and L166 would: EXTERN symbols take their values from
+PUBLIC ones in other modules.
+
 assemble() never raises for mistakes in the source: they are listed in
 Result.diagnostics. Result.image() raises AssemblyError if there are
 errors, so code that only wants the bytes can write
@@ -28,13 +32,15 @@ import os
 import threading
 import weakref
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Mapping, Optional, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from . import _native
 
 __all__ = [
     "assemble",
     "assemble_file",
+    "assemble_many",
+    "assemble_files",
     "Result",
     "Diagnostic",
     "Chunk",
@@ -50,6 +56,7 @@ _lib = _native.lib
 __version__: str = _lib.oc166_version().decode("ascii")
 
 PathLike = Union[str, "os.PathLike[str]"]
+SourceText = Union[str, bytes]
 
 
 def _text(b: Optional[bytes]) -> str:
@@ -112,7 +119,9 @@ class Image:
 class Symbol:
     """A name defined in the source.
 
-    kind is how it was defined: "label", "equ", "set", "bit" or "lit".
+    kind is how it was defined: "label", "equ", "set", "bit", "lit" or
+    "extern". An "extern" has the value of the PUBLIC symbol it names, and
+    its 'text' is the type from the EXTERN line, such as "WORD".
     type says what value holds:
       "number"    a number or address
       "gpr"       a word register: 0..15 for R0..R15
@@ -130,8 +139,10 @@ class Symbol:
     value: Optional[int]
     label_type: str = ""  # "near", "far", "byte", "word", "dword" or ""
     bit: Optional[int] = None  # bit number 0..15 of a "bit"
-    text: str = ""  # replacement text of a LIT
-    line: int = 0  # listing line of the definition
+    text: str = ""  # replacement text of a LIT, type of an EXTERN
+    line: int = 0  # listing line of the definition, counted in its module
+    module: str = ""  # file name of the module that defines it
+    exported: bool = False  # named by PUBLIC or GLOBAL, so other modules can use it
 
 
 @dataclass(frozen=True)
@@ -143,6 +154,7 @@ class Section:
     or "PECADDRESSABLE". placement says how the address was chosen: "at"
     (AT in the source), "given" (the 'sections' argument of assemble()) or
     "located" (by openc166, in the first free place from the origin on).
+    class_name is the class from the SECTION line ('ROM' gives "ROM"), or "".
     """
 
     name: str
@@ -151,6 +163,7 @@ class Section:
     address: int
     size: int
     placement: str
+    class_name: str = ""
 
     @property
     def end(self) -> int:
@@ -207,23 +220,44 @@ class Result:
             data = ctypes.string_at(c.data, c.size) if c.size else b""
             self.chunks.append(Chunk(c.address, data))
 
-        self.symbols: Dict[str, Symbol] = {}
-        """Defined names, spelled as in their definition, sorted by name."""
+        self.modules: List[str] = [
+            _text(_lib.oc166_result_module(handle, i))
+            for i in range(_lib.oc166_result_module_count(handle))
+        ]
+        """File name of each module: one per source."""
+
+        self.all_symbols: List[Symbol] = []
+        """The names defined in every module, sorted by name, then module."""
         s = _native.Symbol()
         for i in range(_lib.oc166_result_symbol_count(handle)):
             _lib.oc166_result_symbol(handle, i, ctypes.byref(s))
             kind = _text(s.kind)
             sym_type = _text(s.type)
-            self.symbols[_text(s.name)] = Symbol(
-                name=_text(s.name),
-                kind=kind,
-                type=sym_type,
-                value=s.value if s.known and kind != "lit" else None,
-                label_type=_text(s.label_type),
-                bit=s.bit if sym_type == "bit" else None,
-                text=_text(s.text),
-                line=s.line,
+            module = _lib.oc166_result_symbol_module(handle, i)
+            self.all_symbols.append(
+                Symbol(
+                    name=_text(s.name),
+                    kind=kind,
+                    type=sym_type,
+                    value=s.value if s.known and kind != "lit" else None,
+                    label_type=_text(s.label_type),
+                    bit=s.bit if sym_type == "bit" else None,
+                    text=_text(s.text),
+                    line=s.line,
+                    module=self.modules[module] if 0 <= module < len(self.modules) else "",
+                    exported=_lib.oc166_result_symbol_exported(handle, i) == 1,
+                )
             )
+
+        self.symbols: Dict[str, Symbol] = {}
+        """Defined names, spelled as in their definition, sorted by name.
+
+        If several modules define a name, this holds the PUBLIC or GLOBAL
+        one, or else the one in the first of them; all_symbols has them all.
+        """
+        for sym in self.all_symbols:
+            if sym.name not in self.symbols or (sym.exported and not self.symbols[sym.name].exported):
+                self.symbols[sym.name] = sym
         self._folded = {name.upper(): sym for name, sym in self.symbols.items()}
 
         self.sections: Dict[str, Section] = {}
@@ -238,6 +272,7 @@ class Result:
                 address=sec.address,
                 size=sec.size,
                 placement=_text(sec.placement),
+                class_name=_text(_lib.oc166_result_section_class(handle, i)),
             )
 
     @property
@@ -355,12 +390,27 @@ def assemble(
                   {"MYDATA": 0xF600}. The other sections go in order of
                   appearance to the first free place from the origin on.
     """
-    if isinstance(source, str):
-        source = source.encode("utf-8")
-    elif not isinstance(source, (bytes, bytearray, memoryview)):
-        raise TypeError("source must be str or bytes")
-    source = bytes(source)
+    source = _source_bytes(source)
+    name = os.fsencode(os.fspath(file_name)) if file_name is not None else None
+    return _run(
+        lambda opts: _lib.oc166_assemble(opts, source, len(source), name),
+        cpu,
+        origin,
+        include_dirs,
+        sections,
+    )
 
+
+def _source_bytes(source: SourceText) -> bytes:
+    if isinstance(source, str):
+        return source.encode("utf-8")
+    if not isinstance(source, (bytes, bytearray, memoryview)):
+        raise TypeError("source must be str or bytes")
+    return bytes(source)
+
+
+def _run(call, cpu, origin, include_dirs, sections) -> Result:
+    """Makes the options, calls call(options) and wraps the result."""
     opts = _lib.oc166_options_new()
     if not opts:
         raise MemoryError("cannot allocate options")
@@ -378,8 +428,7 @@ def assemble(
                 )
             if _lib.oc166_options_set_section_address(opts, str(sec_name).encode("utf-8"), address) != 0:
                 raise ValueError("bad section name {!r}".format(sec_name))
-        name = os.fsencode(os.fspath(file_name)) if file_name is not None else None
-        handle = _lib.oc166_assemble(opts, source, len(source), name)
+        handle = call(opts)
     finally:
         _lib.oc166_options_free(opts)
     if not handle:
@@ -406,3 +455,68 @@ def assemble_file(
         include_dirs=include_dirs,
         sections=sections,
     )
+
+
+def assemble_many(
+    sources: Union[Mapping[PathLike, SourceText], Iterable[Tuple[PathLike, SourceText]]],
+    *,
+    cpu: Optional[str] = None,
+    origin: int = 0,
+    include_dirs: Iterable[PathLike] = (),
+    sections: Optional[Mapping[str, int]] = None,
+) -> Result:
+    """Assembles several modules and links them into one program.
+
+    sources is a dict or a list of (file name, source text) pairs; each is
+    a module, as one .a66 file is for Keil's A166. As L166 would, the
+    modules are joined: an EXTERN symbol takes the value of the PUBLIC or
+    GLOBAL symbol of that name in another module, and sections with the
+    same name and class are combined. Code outside sections starts at the
+    origin in every module. See assemble() for the other options.
+
+        >>> result = assemble_many({
+        ...     "main.a66": "EXTERN LIMIT:DATA16\\n"
+        ...                 "PROG SECTION CODE AT 0E000H\\n"
+        ...                 "     MOV R4, #LIMIT\\n"
+        ...                 "PROG ENDS\\n"
+        ...                 "     END\\n",
+        ...     "consts.a66": "PUBLIC LIMIT\\nLIMIT EQU 1234H\\n END\\n",
+        ... })
+        >>> result.image().data.hex(), result.symbol("LIMIT").module
+        ('e6f43412', 'consts.a66')
+    """
+    items = list(sources.items()) if isinstance(sources, Mapping) else list(sources)
+    if not items:
+        raise ValueError("no sources")
+    names = [os.fsencode(os.fspath(name)) for name, _ in items]
+    texts = [_source_bytes(text) for _, text in items]
+    count = len(items)
+    c_texts = (ctypes.c_char_p * count)(*texts)
+    c_lengths = (ctypes.c_size_t * count)(*(len(t) for t in texts))
+    c_names = (ctypes.c_char_p * count)(*names)
+    return _run(
+        lambda opts: _lib.oc166_assemble_many(opts, count, c_texts, c_lengths, c_names),
+        cpu,
+        origin,
+        include_dirs,
+        sections,
+    )
+
+
+def assemble_files(
+    paths: Iterable[PathLike],
+    *,
+    cpu: Optional[str] = None,
+    origin: int = 0,
+    include_dirs: Iterable[PathLike] = (),
+    sections: Optional[Mapping[str, int]] = None,
+) -> Result:
+    """Reads source files and assembles them as modules of one program.
+
+    See assemble_many().
+    """
+    items = []
+    for path in paths:
+        with open(path, "rb") as f:
+            items.append((path, f.read()))
+    return assemble_many(items, cpu=cpu, origin=origin, include_dirs=include_dirs, sections=sections)

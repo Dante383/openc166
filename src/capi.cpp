@@ -90,6 +90,28 @@ void fill_symbol(const oc166::Symbol& s, oc166_symbol* out) {
     }
 }
 
+// A result of assemble(), or NULL if out of memory.
+template <class F>
+oc166_result* new_result(const std::string& file_name, F assemble) {
+    try {
+        auto r = std::make_unique<oc166_result>();
+        try {
+            r->res = assemble();
+        } catch (const std::bad_alloc&) {
+            return nullptr;
+        } catch (const std::exception& e) {
+            // A bug in openc166: report it instead of losing the whole result.
+            r->res.diagnostics.push_back(
+                {oc166::Severity::Error, "OC0", std::string("internal error: ") + e.what(), file_name, 0, 0});
+        }
+        r->diagnostic_text.reserve(r->res.diagnostics.size());
+        for (const auto& d : r->res.diagnostics) r->diagnostic_text.push_back(oc166::format_diagnostic(d));
+        return r.release();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
 // Runs 'f' and returns the text it builds into 'slot', or NULL with
 // last_error set.
 template <class F>
@@ -164,19 +186,26 @@ oc166_result* oc166_assemble(const oc166_options* opts, const char* source, size
     try {
         oc166::AssembleOptions opt = opts ? opts->opt : oc166::AssembleOptions{};
         if (file_name) opt.file_name = file_name;
-        auto r = std::make_unique<oc166_result>();
-        try {
-            r->res = oc166::assemble(std::string_view(source ? source : "", length), opt);
-        } catch (const std::bad_alloc&) {
-            return nullptr;
-        } catch (const std::exception& e) {
-            // A bug in openc166: report it instead of losing the whole result.
-            r->res.diagnostics.push_back(
-                {oc166::Severity::Error, "OC0", std::string("internal error: ") + e.what(), opt.file_name, 0, 0});
+        return new_result(opt.file_name,
+                          [&] { return oc166::assemble(std::string_view(source ? source : "", length), opt); });
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+oc166_result* oc166_assemble_many(const oc166_options* opts, size_t count, const char* const* sources,
+                                  const size_t* lengths, const char* const* file_names) {
+    if (count == 0 || !sources || !lengths) return nullptr;
+    try {
+        const oc166::AssembleOptions opt = opts ? opts->opt : oc166::AssembleOptions{};
+        std::vector<oc166::Source> list(count);
+        for (size_t i = 0; i < count; ++i) {
+            if (!sources[i] && lengths[i] != 0) return nullptr;
+            const char* name = file_names ? file_names[i] : nullptr;
+            list[i].file_name = name ? name : "module" + std::to_string(i + 1) + ".a66";
+            list[i].text.assign(sources[i] ? sources[i] : "", lengths[i]);
         }
-        r->diagnostic_text.reserve(r->res.diagnostics.size());
-        for (const auto& d : r->res.diagnostics) r->diagnostic_text.push_back(oc166::format_diagnostic(d));
-        return r.release();
+        return new_result(list.front().file_name, [&] { return oc166::assemble(list, opt); });
     } catch (...) {
         return nullptr;
     }
@@ -261,12 +290,29 @@ const char* oc166_result_listing(oc166_result* r) {
     }
 }
 
+size_t oc166_result_module_count(const oc166_result* r) { return r ? r->res.modules.size() : 0; }
+
+const char* oc166_result_module(const oc166_result* r, size_t index) {
+    if (!r || index >= r->res.modules.size()) return nullptr;
+    return r->res.modules[index].c_str();
+}
+
 size_t oc166_result_symbol_count(const oc166_result* r) { return r ? r->res.symbols.size() : 0; }
 
 int oc166_result_symbol(const oc166_result* r, size_t index, oc166_symbol* out) {
     if (!r || !out || index >= r->res.symbols.size()) return -1;
     fill_symbol(r->res.symbols[index], out);
     return 0;
+}
+
+int oc166_result_symbol_module(const oc166_result* r, size_t index) {
+    if (!r || index >= r->res.symbols.size()) return -1;
+    return r->res.symbols[index].module;
+}
+
+int oc166_result_symbol_exported(const oc166_result* r, size_t index) {
+    if (!r || index >= r->res.symbols.size()) return -1;
+    return r->res.symbols[index].exported ? 1 : 0;
 }
 
 size_t oc166_result_section_count(const oc166_result* r) { return r ? r->res.sections.size() : 0; }
@@ -285,6 +331,11 @@ int oc166_result_section(const oc166_result* r, size_t index, oc166_section* out
     case oc166::SectionInfo::Placement::Located: out->placement = "located"; break;
     }
     return 0;
+}
+
+const char* oc166_result_section_class(const oc166_result* r, size_t index) {
+    if (!r || index >= r->res.sections.size()) return nullptr;
+    return r->res.sections[index].class_name.c_str();
 }
 
 }  // extern "C"

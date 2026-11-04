@@ -134,6 +134,12 @@ _declare("oc166_result_symbol_count", _size, _p)
 _declare("oc166_result_symbol", _int, _p, _size, ctypes.POINTER(Symbol))
 _declare("oc166_result_section_count", _size, _p)
 _declare("oc166_result_section", _int, _p, _size, ctypes.POINTER(Section))
+_declare("oc166_assemble_many", _p, _p, _size, ctypes.POINTER(_str), ctypes.POINTER(_size), ctypes.POINTER(_str))
+_declare("oc166_result_module_count", _size, _p)
+_declare("oc166_result_module", _str, _p, _size)
+_declare("oc166_result_symbol_module", _int, _p, _size)
+_declare("oc166_result_symbol_exported", _int, _p, _size)
+_declare("oc166_result_section_class", _str, _p, _size)
 
 if lib.oc166_api_version() != API_VERSION:
     raise ImportError(

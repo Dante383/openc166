@@ -68,6 +68,7 @@ static void test_code_and_image(void) {
     CHECK(oc166_result_error_count(r) == 0);
     CHECK(oc166_result_warning_count(r) == 0);
     CHECK(strcmp(oc166_result_cpu(r), "c166") == 0);
+    CHECK(oc166_result_module_count(r) == 1 && strcmp(oc166_result_module(r, 0), "test.a66") == 0);
 
     CHECK(oc166_result_chunk_count(r) >= 1);
     CHECK(oc166_result_chunk(r, 0, &chunk) == 0);
@@ -230,6 +231,91 @@ static void test_sections(void) {
     oc166_options_free(opts);
 }
 
+static void test_linking(void) {
+    const char *main_src = "EXTERN COUNT:WORD, LIMIT:DATA16\n"
+                           "PUBLIC MAIN\n"
+                           "PROG   SECTION CODE 'ROM'\n"
+                           "MAIN   PROC NEAR\n"
+                           "       MOV R4, COUNT\n"
+                           "       MOV R5, #LIMIT\n"
+                           "       RET\n"
+                           "MAIN   ENDP\n"
+                           "PROG   ENDS\n"
+                           "       END\n";
+    const char *data_src = "PUBLIC COUNT, LIMIT\n"
+                           "LIMIT  EQU 1234H\n"
+                           "VARS   SECTION DATA AT 0C000H\n"
+                           "COUNT: DW 0\n"
+                           "VARS   ENDS\n"
+                           "       END\n";
+    const char *sources[2];
+    size_t lengths[2];
+    const char *names[2] = {"main.a66", "data.a66"};
+    const char *bad_src = "EXTERN NOWHERE:WORD\n END\n";
+    size_t bad_len = strlen(bad_src);
+    oc166_options *opts = oc166_options_new();
+    oc166_result *r;
+    oc166_symbol sym;
+    oc166_section s;
+    oc166_chunk chunk;
+    oc166_diagnostic d;
+    static const unsigned char code[] = {0xF2, 0xF4, 0x00, 0xC0, 0xE6, 0xF5, 0x34, 0x12, 0xCB, 0x00};
+
+    sources[0] = main_src;
+    sources[1] = data_src;
+    lengths[0] = strlen(main_src);
+    lengths[1] = strlen(data_src);
+    oc166_options_set_origin(opts, 0x8000);
+    r = oc166_assemble_many(opts, 2, sources, lengths, names);
+    CHECK(r != NULL);
+    CHECK(oc166_result_error_count(r) == 0 && oc166_result_warning_count(r) == 0);
+    CHECK(oc166_result_module_count(r) == 2);
+    CHECK(strcmp(oc166_result_module(r, 0), "main.a66") == 0);
+    CHECK(strcmp(oc166_result_module(r, 1), "data.a66") == 0);
+    CHECK(oc166_result_module(r, 2) == NULL);
+    CHECK(oc166_result_chunk(r, 0, &chunk) == 0);
+    CHECK(chunk.address == 0x8000 && chunk.size == sizeof code && memcmp(chunk.data, code, sizeof code) == 0);
+
+    /* Sorted by name, then module: COUNT (extern in main.a66, label in
+     * data.a66), LIMIT (likewise), MAIN. */
+    CHECK(oc166_result_symbol_count(r) == 5);
+    CHECK(oc166_result_symbol(r, 0, &sym) == 0);
+    CHECK(strcmp(sym.name, "COUNT") == 0 && strcmp(sym.kind, "extern") == 0 && strcmp(sym.text, "WORD") == 0);
+    CHECK(sym.value == 0xC000 && strcmp(sym.label_type, "word") == 0);
+    CHECK(oc166_result_symbol_module(r, 0) == 0 && oc166_result_symbol_exported(r, 0) == 0);
+    CHECK(oc166_result_symbol(r, 1, &sym) == 0);
+    CHECK(strcmp(sym.name, "COUNT") == 0 && strcmp(sym.kind, "label") == 0 && sym.value == 0xC000);
+    CHECK(oc166_result_symbol_module(r, 1) == 1 && oc166_result_symbol_exported(r, 1) == 1);
+    CHECK(oc166_result_symbol(r, 2, &sym) == 0);
+    CHECK(strcmp(sym.name, "LIMIT") == 0 && strcmp(sym.text, "DATA16") == 0 && sym.value == 0x1234);
+    CHECK(oc166_result_symbol(r, 4, &sym) == 0);
+    CHECK(strcmp(sym.name, "MAIN") == 0 && oc166_result_symbol_exported(r, 4) == 1);
+    CHECK(oc166_result_symbol_module(r, 5) == -1 && oc166_result_symbol_exported(r, 5) == -1);
+
+    CHECK(oc166_result_section_count(r) == 2);
+    CHECK(oc166_result_section(r, 0, &s) == 0 && strcmp(s.name, "PROG") == 0);
+    CHECK(strcmp(oc166_result_section_class(r, 0), "ROM") == 0);
+    CHECK(strcmp(oc166_result_section_class(r, 1), "") == 0);
+    CHECK(oc166_result_section_class(r, 2) == NULL);
+    oc166_result_free(r);
+
+    /* Without file names; an EXTERN that no module defines. */
+    r = oc166_assemble_many(NULL, 1, &bad_src, &bad_len, NULL);
+    CHECK(r != NULL);
+    CHECK(oc166_result_error_count(r) == 1);
+    CHECK(strcmp(oc166_result_module(r, 0), "module1.a66") == 0);
+    CHECK(oc166_result_diagnostic(r, 0, &d) == 0);
+    CHECK(strcmp(d.code, "OC15") == 0 && strcmp(d.file, "module1.a66") == 0 && d.line == 1);
+    oc166_result_free(r);
+
+    CHECK(oc166_assemble_many(NULL, 0, sources, lengths, NULL) == NULL);
+    CHECK(oc166_assemble_many(NULL, 2, NULL, lengths, NULL) == NULL);
+    CHECK(oc166_assemble_many(NULL, 2, sources, NULL, NULL) == NULL);
+    CHECK(oc166_result_module_count(NULL) == 0);
+    CHECK(oc166_result_module(NULL, 0) == NULL);
+    oc166_options_free(opts);
+}
+
 static void test_edge_cases(void) {
     oc166_result *r = oc166_assemble(NULL, NULL, 0, NULL);
     CHECK(r != NULL);
@@ -249,6 +335,7 @@ int main(void) {
     test_diagnostics();
     test_symbols();
     test_sections();
+    test_linking();
     test_edge_cases();
     if (failures) {
         fprintf(stderr, "%d check(s) failed\n", failures);
