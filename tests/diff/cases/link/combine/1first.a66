@@ -1,0 +1,42 @@
+; Link case: sections of the same name combined across three modules.
+; Tables of addresses make the placement visible in the image.
+$MOD167
+PUBLIC  First, Odd1, Shared
+EXTERN  Second:NEAR, Third:NEAR, Odd2:BYTE, Word3:WORD
+EXTERN  Common1:BYTE, Common2:BYTE, Late:WORD
+
+Prog    SECTION CODE WORD PUBLIC 'ROM'
+First   PROC NEAR
+        MOV     R1, #1
+        CALL    Second
+        CALL    Third
+        RET
+First   ENDP
+Prog    ENDS
+
+Bytes   SECTION CONST BYTE PUBLIC
+Odd1:   DB      1, 2, 3
+Bytes   ENDS
+
+Over    SECTION DATA WORD COMMON
+Shared: DSW     2
+Over    ENDS
+
+Glob    SECTION CONST WORD GLOBAL 'TBL'
+        DW      First, Second, Third
+        DW      Odd1, Odd2, Word3
+        DW      Shared, Common1, Common2, Late
+Glob    ENDS
+
+Twin    SECTION CONST WORD PUBLIC 'T1'
+        DW      0AAAAH
+Twin    ENDS
+
+Fixed1  SECTION CODE AT 800H
+        DW      1111H
+Fixed1  ENDS
+Ovl     SECTION CONST WORD COMMON
+        DW      1111H, 2222H, 3333H
+Ovl     ENDS
+
+        END

@@ -1,0 +1,35 @@
+; Link case: external values that do not fit the field they are used in.
+; L166 warns at each use (L121); openc166 gives OC18 there.
+$MOD167
+EXTERN  Big:DATA8, NegOne:DATA8, Low8:DATA8, Wide:DATA4, Small:DATA4
+EXTERN  Tiny:DATA3, Num:INTNO, OkNum:INTNO, Huge:DATA16, Minus:DATA16
+EXTERN  Flag:BIT, Wrd:BITWORD, Far1:FAR, Unused:DATA8
+
+Prog    SECTION CODE
+Main    PROC NEAR
+        MOVB    RL1, #Big
+        MOVB    RL2, #NegOne
+        MOVB    RL3, #Low8
+        SHL     R1, #Wide
+        SHL     R1, #Small
+        ADD     R1, #Tiny
+        ADD     R1, #Small
+        TRAP    #Num
+        TRAP    #OkNum
+        MOV     R2, #Huge
+        MOV     R3, #Minus
+        BSET    Flag
+        BFLDL   Wrd, #1, #1
+        EXTS    #SEG Far1, #1
+        MOV     R4, Far1
+        EXTP    #PAG Huge, #1
+        RET
+Main    ENDP
+Prog    ENDS
+
+Tab     SECTION CONST WORD
+        DB      Big, NegOne, Low8, Tiny
+        DW      Huge, Minus, Big
+        DD      Huge, Minus
+Tab     ENDS
+        END

@@ -583,6 +583,11 @@ Unlike C, `A AND B > 1` means `(A AND B) > 1`, and `A OR B AND C` means
 or the parenthesised expression right after it: write `BOF (PSW.3)`, as
 `BOF PSW.3` means `(BOF PSW).3` and fails with A61.
 
+**`BYTE0`..`BYTE7` and `WORD0`, `WORD2`, `WORD4`, `WORD6`** pick a byte or a
+16-bit word of a value: `BYTE1 12345678H` is 56H, `WORD2 12345678H` is
+1234H. Only these names are operators and reserved words. Other names that
+look alike, such as `WORD3` or `BYTE8`, are ordinary symbols, as in Keil.
+
 **`DATA3`, `DATA4`, `DATA8` and `DATA16`** say how many bits an immediate
 needs. The value is cut to that many bits without a warning (`#DATA3 -1` is
 7, `#DATA8 1234H` is 34H), and the instruction uses the shortest form with

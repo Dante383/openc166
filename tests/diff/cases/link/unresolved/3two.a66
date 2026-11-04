@@ -1,0 +1,11 @@
+; Link case: the second provider of Dup.
+$MOD167
+PUBLIC  Dup
+
+Other   SECTION CODE
+Dup     PROC NEAR
+        NOP
+        RET
+Dup     ENDP
+Other   ENDS
+        END

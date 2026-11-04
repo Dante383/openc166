@@ -112,6 +112,11 @@ TEST_CASE("byte, word and memory operators") {
     CHECK(num("POF 12345H") == 0x2345);
     CHECK(num("BYTE1 12345678H") == 0x56);
     CHECK(num("WORD2 12345678H") == 0x1234);
+    CHECK(num("WORD6 123456789ABCDEF0H") == 0x1234);
+    CHECK(num("BYTE7 123456789ABCDEF0H") == 0x12);
+    // WORD3, BYTE8 and the like are ordinary names, as in Keil.
+    CHECK(error_code("WORD3 12345678H") == "A42");
+    CHECK(error_code("BYTE8") == "A42");
     CHECK(num("0F0H & 3CH") == 0x30);
     CHECK(num("0FFH ^ 0AAH") == 0x55);
 }

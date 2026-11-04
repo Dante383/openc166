@@ -1,0 +1,25 @@
+; Link case: the far code and constants for 1main.a66.
+$SEGMENTED
+$MOD167
+PUBLIC  Remote, Far2, Table, Count
+EXTERN  Main:NEAR
+
+FarCode SECTION CODE AT 20000H
+Remote  PROC FAR
+        CALLS   SEG Main, Main
+        RETS
+Remote  ENDP
+Far2    PROC FAR
+        NOP
+        RETS
+Far2    ENDP
+FarCode ENDS
+
+Tabs    SECTION CONST AT 28000H
+Table:  DW      1234H, 5678H
+Tabs    ENDS
+
+Vars    SECTION DATA
+Count:  DSW     1
+Vars    ENDS
+        END

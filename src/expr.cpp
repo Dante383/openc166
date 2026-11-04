@@ -21,6 +21,18 @@ int byte_word_index(std::string_view t, std::string_view prefix) {
     return (d >= '0' && d <= '9') ? d - '0' : -1;
 }
 
+// BYTE0..BYTE7 and WORD0, WORD2, WORD4, WORD6 are operators (and reserved
+// words). Other names such as WORD3 or BYTE8 are ordinary symbols, as in Keil.
+int byte_operator(std::string_view t) {
+    int n = byte_word_index(t, "BYTE");
+    return n <= 7 ? n : -1;
+}
+
+int word_operator(std::string_view t) {
+    int n = byte_word_index(t, "WORD");
+    return n >= 0 && n <= 6 && n % 2 == 0 ? n : -1;
+}
+
 // Width of a DATAn operator (DATA3, DATA4, DATA8, DATA16), otherwise 0.
 // Returns -1 for DATA32 and DATA64, which Keil rejects.
 int data_width(const Token& t) {
@@ -332,10 +344,9 @@ private:
             return num(a, a, U{0} - static_cast<U>(a.num));
         }
         if (t.kind == TokKind::Ident) {
-            int byte = byte_word_index(t.text, "BYTE");
-            int word = byte_word_index(t.text, "WORD");
+            int byte = byte_operator(t.text);
+            int word = word_operator(t.text);
             bool high = ieq(t.text, "HIGH"), low = ieq(t.text, "LOW"), bnot = ieq(t.text, "NOT");
-            if (byte > 7 || (word >= 0 && (word > 6 || word % 2))) throw AsmError("A6", "syntax error", t.column);
             if (high || low || bnot || byte >= 0 || word >= 0) {
                 cur_.next();
                 Value a = resolved(unary());
@@ -539,7 +550,7 @@ private:
 bool is_operator_keyword(std::string_view name) {
     for (auto k : kOperatorKeywords)
         if (ieq(name, k)) return true;
-    return byte_word_index(name, "BYTE") >= 0 || byte_word_index(name, "WORD") >= 0;
+    return byte_operator(name) >= 0 || word_operator(name) >= 0;
 }
 
 int dpp_number(std::string_view name) {

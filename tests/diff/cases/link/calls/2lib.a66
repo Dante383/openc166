@@ -1,0 +1,40 @@
+; Link case: the library module for 1main.a66.
+$MOD167
+PUBLIC  Delay, Blink, Counter, Flags, Total
+PUBLIC  Limit, Step, Shift, Mode, Vector, Ready, Status
+EXTERN  Start:NEAR, Table:WORD
+
+Limit   EQU     1000
+Step    EQU     10H
+Shift   EQU     3
+Mode    EQU     5
+Vector  EQU     21H
+
+Prog    SECTION CODE PUBLIC 'ROM'
+Delay   PROC NEAR
+        MOV     R1, #Limit
+Wait:   SUB     R1, #1
+        JMPR    cc_NZ, Wait
+        RET
+Delay   ENDP
+Prog    ENDS
+
+FarCode SECTION CODE
+Blink   PROC FAR
+        MOV     R2, Table
+        CALL    Start
+        RET
+Blink   ENDP
+FarCode ENDS
+
+Bits    SECTION DATA BITADDRESSABLE
+Status: DSW     1
+Ready   BIT     Status.4
+Bits    ENDS
+
+Vars    SECTION DATA PUBLIC
+Counter: DSW    1
+Flags:  DSB     1
+Total:  DSD     1
+Vars    ENDS
+        END

@@ -2536,30 +2536,33 @@ std::vector<Program::Unit> Program::units() {
     auto combinable = [](const std::string& c) {
         return c == "PUBLIC" || c == "GLOBAL" || c == "COMMON" || c == "SYSSTACK" || c == "USRSTACK";
     };
+    // As in L166, each later part is checked against the first one only; a
+    // part that does not match stands alone (and is reported), the others
+    // still combine.
     std::vector<Unit> out;
     for (auto& u : found) {
         const Section& first = u.parts[0].section();
-        bool ok = true;
-        for (const Part& p : u.parts) {
+        Unit kept{{u.parts[0]}};
+        std::vector<Unit> rejected;
+        for (std::size_t j = 1; j < u.parts.size(); ++j) {
+            const Part& p = u.parts[j];
             const Section& s = p.section();
-            ok = ok && !s.absolute && s.type == first.type && s.combine == first.combine && combinable(s.combine);
-        }
-        if (u.parts.size() > 1 && !ok) {
-            for (std::size_t j = 1; j < u.parts.size(); ++j) {
-                const Part& p = u.parts[j];
-                const Section& s = p.section();
-                p.m->report_at_section(
-                    p.index, Severity::Error, "OC19",
-                    "section '" + s.name + "' (" + s.type + ", " + s.combine + ") cannot be combined with '" +
-                        first.name + "' (" + first.type + ", " + first.combine + ") of " +
-                        link_.modules[u.parts[0].m->module_] +
-                        ": parts of a section must have the same type and combine type PUBLIC, GLOBAL, COMMON, "
-                        "SYSSTACK or USRSTACK");
+            if (!first.absolute && !s.absolute && s.type == first.type && s.combine == first.combine &&
+                combinable(first.combine)) {
+                kept.parts.push_back(p);
+                continue;
             }
-            for (const Part& p : u.parts) out.push_back(Unit{{p}});
-            continue;
+            p.m->report_at_section(
+                p.index, Severity::Error, "OC19",
+                "section '" + s.name + "' (" + s.type + ", " + s.combine + ") cannot be combined with '" +
+                    first.name + "' (" + first.type + ", " + first.combine + ") of " +
+                    link_.modules[u.parts[0].m->module_] +
+                    ": parts of a section must have the same type and combine type PUBLIC, GLOBAL, COMMON, "
+                    "SYSSTACK or USRSTACK");
+            rejected.push_back(Unit{{p}});
         }
-        out.push_back(std::move(u));
+        out.push_back(std::move(kept));
+        for (auto& r : rejected) out.push_back(std::move(r));
     }
     for (auto& u : out) {
         const bool common = u.parts[0].section().combine == "COMMON";

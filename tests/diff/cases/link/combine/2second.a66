@@ -1,0 +1,33 @@
+; Link case: the second module for 1first.a66.
+$MOD167
+PUBLIC  Second, Odd2, Common1
+EXTERN  First:NEAR, Shared:WORD
+
+Prog    SECTION CODE WORD PUBLIC 'ROM'
+Second  PROC NEAR
+        MOV     R2, Shared
+        RET
+Second  ENDP
+Prog    ENDS
+
+Bytes   SECTION CONST BYTE PUBLIC
+Odd2:   DB      4, 5
+Bytes   ENDS
+
+Over    SECTION DATA WORD COMMON
+Common1: DSB    1
+        DSW     5
+Over    ENDS
+
+Twin    SECTION CONST WORD PUBLIC 'T2'
+        DW      0BBBBH, 0CCCCH
+Twin    ENDS
+
+Glob    SECTION CONST WORD GLOBAL 'TBL'
+        DW      Second, 2222H
+Glob    ENDS
+Ovl     SECTION CONST WORD COMMON
+        DB      77H
+Ovl     ENDS
+
+        END

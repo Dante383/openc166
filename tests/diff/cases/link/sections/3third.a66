@@ -1,0 +1,13 @@
+; Link case: parts that do combine with those of 1first.a66.
+$MOD167
+Kind    SECTION CODE PUBLIC
+Kind3   PROC NEAR
+        NOP
+        RET
+Kind3   ENDP
+Kind    ENDS
+
+Scope   SECTION CONST PUBLIC
+        DW      6
+Scope   ENDS
+        END

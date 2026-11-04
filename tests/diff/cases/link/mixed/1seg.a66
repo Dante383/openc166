@@ -1,0 +1,14 @@
+; Link case: modules assembled for different CPU modes. The first module
+; sets the mode; L166 warns (L15) and openc166 warns (OC20) for the others.
+$SEGMENTED
+$MOD167
+EXTERN  Helper:NEAR, Other:NEAR
+
+Prog    SECTION CODE PUBLIC
+Main    PROC NEAR
+        CALL    Helper
+        CALL    Other
+        RET
+Main    ENDP
+Prog    ENDS
+        END

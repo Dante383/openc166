@@ -1,0 +1,12 @@
+; Link case: the first provider of Dup, and Number as a plain number.
+$MOD167
+PUBLIC  Dup, Number
+
+Number  EQU     1234H
+
+Lib     SECTION CODE
+Dup     PROC NEAR
+        RET
+Dup     ENDP
+Lib     ENDS
+        END

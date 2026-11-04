@@ -1,0 +1,28 @@
+; Link case: the definitions for 1use.a66.
+$MOD167
+PUBLIC  Big, NegOne, Low8, Wide, Small, Tiny, Num, OkNum, Huge, Minus
+PUBLIC  Flag, Wrd, Far1, Unused
+
+Big     EQU     200H
+NegOne  EQU     -1
+Low8    EQU     -129
+Wide    EQU     17
+Small   EQU     -9
+Tiny    EQU     9
+Num     EQU     80H
+OkNum   EQU     7FH
+Huge    EQU     12345H
+Minus   EQU     -2
+Wrd     EQU     0F000H
+Unused  EQU     1000H
+
+Vars    SECTION DATA WORD
+Flag:   DSW     1
+Vars    ENDS
+
+FarCode SECTION CODE AT 0A00H
+Far1    PROC FAR
+        RETS
+Far1    ENDP
+FarCode ENDS
+        END

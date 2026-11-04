@@ -1,0 +1,16 @@
+; Link case: externals that no module provides (used and unused), a name
+; made PUBLIC by two modules, and a NEAR external bound to a plain number.
+$MOD167
+EXTERN  Missing:NEAR, NeverUsed:WORD, Lost:DATA16, Number:NEAR, Dup:NEAR
+
+Prog    SECTION CODE
+Main    PROC NEAR
+        CALL    Missing
+        CALL    Missing
+        MOV     R1, #Lost
+        CALL    Number
+        CALL    Dup
+        RET
+Main    ENDP
+Prog    ENDS
+        END

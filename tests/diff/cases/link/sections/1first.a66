@@ -1,0 +1,25 @@
+; Link case: section parts that cannot be combined (L101 in L166, OC19 in
+; openc166), and combined DATA parts that outgrow a 16 KB page (L129, OC21).
+$MOD167
+Kind    SECTION CODE PUBLIC
+Kind1   PROC NEAR
+        RET
+Kind1   ENDP
+Kind    ENDS
+
+Mine    SECTION CONST
+        DW      1
+Mine    ENDS
+
+Shape   SECTION DATA COMMON
+        DSW     1
+Shape   ENDS
+
+Scope   SECTION CONST PUBLIC
+        DW      2
+Scope   ENDS
+
+Big     SECTION DATA WORD PUBLIC
+        DSB     2001H
+Big     ENDS
+        END

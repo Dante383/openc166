@@ -1,0 +1,22 @@
+; Link case: parts that clash with those of 1first.a66.
+$MOD167
+Kind    SECTION CONST PUBLIC
+        DW      3
+Kind    ENDS
+
+Mine    SECTION CONST
+        DW      4
+Mine    ENDS
+
+Shape   SECTION DATA PUBLIC
+        DSW     1
+Shape   ENDS
+
+Scope   SECTION CONST GLOBAL
+        DW      5
+Scope   ENDS
+
+Big     SECTION DATA WORD PUBLIC
+        DSB     2001H
+Big     ENDS
+        END

@@ -1,0 +1,36 @@
+; Link case: the third module for 1first.a66, with stricter alignments.
+$MOD167
+PUBLIC  Third, Word3, Common2, Late
+
+Prog    SECTION CODE DWORD PUBLIC 'ROM'
+Third   PROC NEAR
+        NOP
+        RET
+Third   ENDP
+Prog    ENDS
+
+Bytes   SECTION CONST WORD PUBLIC
+Word3:  DW      6
+Bytes   ENDS
+
+Over    SECTION DATA WORD COMMON
+        DSB     3
+Common2: DSB    1
+Over    ENDS
+
+Twin    SECTION CONST WORD PUBLIC 'T1'
+        DW      0DDDDH
+Twin    ENDS
+
+Lates   SECTION DATA WORD PUBLIC
+Late:   DSW     1
+Lates   ENDS
+
+Fixed3  SECTION CONST AT 900H
+        DW      3333H
+Fixed3  ENDS
+Ovl     SECTION CONST WORD COMMON
+        DW      9999H
+Ovl     ENDS
+
+        END

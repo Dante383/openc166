@@ -1,0 +1,34 @@
+; Link case: segmented modules reaching code and constants in other
+; segments and pages through externals.
+$SEGMENTED
+$MOD167
+EXTERN  Remote:FAR, Far2:FAR, Table:WORD, Count:WORD
+PUBLIC  Main
+
+Prog    SECTION CODE
+Main    PROC NEAR
+        CALLS   SEG Remote, Remote
+        CALLS   SEG Far2, Far2
+        JMPS    SEG Far2, Far2
+        MOV     R1, #POF Table
+        MOV     R2, #PAG Table
+        MOV     R3, #SEG Remote
+        MOV     R4, #SOF Remote
+        EXTP    #PAG Table, #1
+        MOV     R5, POF Table
+        EXTS    #SEG Table, #1
+        MOV     R6, SOF Table
+        MOV     DPP2, #PAG Table
+        MOV     R7, DPP2:Table
+        MOV     R8, DPP2:Table + 2
+        MOV     R9, #PAG Count
+        RET
+Main    ENDP
+Prog    ENDS
+
+Ptrs    SECTION CONST WORD
+        DW      POF Table, PAG Table, SEG Remote, SOF Remote, POF Remote
+        DW      SOF Far2, SEG Far2, PAG Count, POF Count
+        DD      Remote
+Ptrs    ENDS
+        END

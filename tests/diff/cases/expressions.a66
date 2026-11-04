@@ -56,6 +56,10 @@ EXPRP   PROC NEAR
         DW      POF 12345H
         DW      BYTE1 12345678H
         DW      WORD2 12345678H
+; Only BYTE0..BYTE7 and WORD0/2/4/6 are operators; these are plain names
+Word3   EQU     3
+Byte8   EQU     8
+        DW      Word3, Byte8 + 1, Word3 + WORD2 12345678H
         DW      -(-3)
         DW      +5
         DW      1 / 0

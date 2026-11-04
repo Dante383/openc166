@@ -1,0 +1,39 @@
+; Link case: a main module that calls into a library module and uses its
+; data, constants and bits through EXTERN symbols of every type.
+$MOD167
+EXTERN  Delay:NEAR, Blink:FAR
+EXTERN  Counter:WORD, Flags:BYTE, Total:DWORD
+EXTERN  Limit:DATA16, Step:DATA8, Shift:DATA4, Mode:DATA3, Vector:INTNO
+EXTERN  Ready:BIT, Status:BITWORD
+PUBLIC  Start, Table
+
+Prog    SECTION CODE PUBLIC 'ROM'
+Start   PROC NEAR
+        MOV     R4, #Limit
+        MOV     Counter, R4
+        MOV     R5, Total
+        MOVB    RL5, #Step
+        SHL     R4, #Shift
+        ADD     R4, #Mode
+        CMP     R4, #Step
+        MOVB    RL6, Flags
+        BSET    Ready
+        BCLR    Status.2
+        BFLDL   Status, #Step, #3
+        JB      Ready, Skip
+        CALL    Delay
+        CALLA   cc_UC, Delay
+Skip:   CALLS   SEG Blink, Blink
+        JMPS    SEG Blink, Blink
+        TRAP    #Vector
+        RET
+Start   ENDP
+Prog    ENDS
+
+Consts  SECTION CONST WORD PUBLIC
+Table:  DW      Counter, Limit, POF Blink, SOF Blink, Delay
+        DW      Status, Step, Shift
+        DB      Step, Shift, Mode, Vector
+        DD      Total
+Consts  ENDS
+        END

@@ -1,0 +1,11 @@
+; Link case: a non-segmented module linked after 1seg.a66.
+$MOD167
+PUBLIC  Helper
+
+Prog    SECTION CODE PUBLIC
+Helper  PROC NEAR
+        MOV     R1, #2
+        RET
+Helper  ENDP
+Prog    ENDS
+        END

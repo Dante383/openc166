@@ -12,7 +12,9 @@ The values of all symbols in both symbol tables are compared too.
 With --image, sources that both assemblers accept without errors are also
 linked with Keil L166 and converted with OH166, and the resulting memory
 image is compared byte for byte with the openc166 binary, including which
-addresses are left empty.
+addresses are left empty. The messages L166 gives are compared with the
+openc166 codes for the same problems (OC15..OC21, see LINK_CODES); A166
+cannot report those, so they are not compared line by line.
 
 Sources may use $INCLUDE and $INCDIR. Lines are numbered across all files
 as in Keil's listing; both assemblers run in the directory of the source.
@@ -20,11 +22,18 @@ as in Keil's listing; both assemblers run in the directory of the source.
 A source line containing "DIVERGES:" (e.g. "; DIVERGES: reason") marks an
 intentional, documented difference from Keil and is not compared.
 
+A directory instead of a source is a link case: its .a66 files, in order of
+name, are modules of one program. Keil assembles each with A166 and links
+them with L166; openc166 gets them all on one command line. The error and
+warning codes of both are compared (L166 codes as the openc166 codes that
+stand for them, such as L121 as OC18), and, if there are no errors, the
+memory images.
+
 Keil A166 is not distributed with openc166. Point KEIL_A166 at your own
 A166.EXE; on Linux and macOS it runs under Wine (set WINEPREFIX if needed).
 Keil's output is only used locally for the comparison and is never stored.
 
-usage: keil_diff.py [--openc166 PATH] [--keil PATH] [--quiet] [--codes] [--image] SOURCE...
+usage: keil_diff.py [--openc166 PATH] [--keil PATH] [--quiet] [--codes] [--image] SOURCE|DIR...
 """
 import argparse
 import os
@@ -348,14 +357,32 @@ def openc166_image(tool, source, workdir):
     return read_hex86(out)
 
 
-def compare_image(source, keil, tool, workdir):
-    """Link with Keil and compare memory images. Returns a list of problems,
-    or None when the Keil evaluation linker refuses the code size."""
-    if "L250" in keil_tool(keil, "L166.EXE", ["t.OBJ", "TO", "t.ABS"], workdir):
+def link_messages(text):
+    """The openc166 codes for the L166 messages in 'text'."""
+    codes = []
+    for _, c in KEIL_MESSAGE.findall(text):
+        mapped = LINK_CODES.get(c, c) if c.startswith("L") else c
+        if mapped:
+            codes.append(mapped)
+    return codes
+
+
+def compare_image(source, keil, tool, workdir, link_codes=()):
+    """Link with Keil and compare memory images, and the messages of the link
+    stage (L166) with 'link_codes', those openc166 gave. Returns a list of
+    problems, "link errors" when both fail to link in the same way, or None
+    when the Keil evaluation linker refuses the code size."""
+    linked = keil_tool(keil, "L166.EXE", ["t.OBJ", "TO", "t.ABS"], workdir)
+    if "L250" in linked:
         return None
+    kcodes = link_messages(linked)
+    if sorted(kcodes) != sorted(link_codes):
+        return [f"link codes: keil {' '.join(sorted(kcodes)) or '-'}  openc166 {' '.join(sorted(link_codes)) or '-'}"]
+    if re.search(r"\*\*\* (FATAL )?ERROR", linked):
+        return "link errors"
     keil_tool(keil, "OH166.EXE", ["t.ABS"], workdir)
-    path = os.path.join(workdir, "t.H86")
-    if not os.path.exists(path):
+    path = find_file(workdir, "t.H86")
+    if path is None:
         return ["Keil L166/OH166 produced no image"]
     k = read_hex86(path)
     o = openc166_image(tool, source, workdir)
@@ -367,6 +394,68 @@ def compare_image(source, keil, tool, workdir):
         if kb != ob:
             fmt = lambda v: "--" if v is None else f"{v:02X}"
             problems.append(f"{addr:06X}: keil {fmt(kb)} openc166 {fmt(ob)}")
+    return problems
+
+
+# L166 codes and the openc166 codes for the same problem. None marks follow-on
+# errors that openc166 does not repeat: L118 and L128 at each reference to a
+# duplicate or missing external, L120 for content of a section that failed.
+LINK_CODES = {"L15": "OC20", "L21": "OC17", "L101": "OC19", "L104": "OC16", "L121": "OC18",
+              "L127": "OC15", "L129": "OC21", "L118": None, "L120": None, "L128": None}
+LINK_ONLY = {c for c in LINK_CODES.values() if c}
+KEIL_MESSAGE = re.compile(r"\*\*\* (ERROR|WARNING) #?([AL]\d+)")
+OPENC166_MESSAGE = re.compile(r"\b(error|warning) ([A-Z]+\d+):")
+
+
+def compare_link(directory, keil, tool, quiet=False):
+    """A link case: the diagnostic codes, and the images if both succeed."""
+    modules = sorted(f for f in os.listdir(directory) if f.lower().endswith(".a66"))
+    name = os.path.basename(os.path.normpath(directory))
+    problems = []
+    with tempfile.TemporaryDirectory() as work:
+        shutil.copytree(directory, work, dirs_exist_ok=True)
+        kcodes = []
+        for i, m in enumerate(modules):
+            # Short names, as Keil's tools want 8.3 names.
+            shutil.copy(os.path.join(directory, m), os.path.join(work, f"m{i}.a66"))
+            keil_tool(keil, os.path.basename(keil), [f"m{i}.a66"], work)
+            listing = find_file(work, f"m{i}.LST")
+            if listing is None:
+                problems.append(f"A166 produced no listing for {m}")
+                continue
+            with open(listing, encoding="latin-1") as f:
+                kcodes += [c for _, c in KEIL_MESSAGE.findall(f.read())]
+        objs = ",".join(f"m{i}.OBJ" for i in range(len(modules)))
+        linked = keil_tool(keil, "L166.EXE", [objs, "TO", "t.ABS"], work)
+        if "L250" in linked:
+            return None
+        kcodes += link_messages(linked)
+        out = os.path.join(work, "img.hex")
+        p = subprocess.run([os.path.abspath(tool), *modules, "-o", out], capture_output=True, timeout=TIMEOUT,
+                           cwd=os.path.abspath(directory))
+        ocodes = [c for _, c in OPENC166_MESSAGE.findall(p.stdout.decode() + p.stderr.decode())]
+        if sorted(kcodes) != sorted(ocodes):
+            problems.append(f"codes: keil {' '.join(sorted(kcodes)) or '-'}"
+                            f"  openc166 {' '.join(sorted(ocodes)) or '-'}")
+        keil_failed = bool(re.search(r"\*\*\* (FATAL )?ERROR", linked)) or find_file(work, "t.ABS") is None
+        if not keil_failed and p.returncode == 0:
+            keil_tool(keil, "OH166.EXE", ["t.ABS"], work)
+            hex86 = find_file(work, "t.H86")
+            if hex86 is None:
+                problems.append("Keil L166/OH166 produced no image")
+                hex86 = os.devnull
+            k, o = read_hex86(hex86), read_hex86(out)
+            for addr in sorted(set(k) | set(o)):
+                kb, ob = k.get(addr), o.get(addr)
+                if kb != ob:
+                    fmt = lambda v: "--" if v is None else f"{v:02X}"
+                    problems.append(f"{addr:06X}: keil {fmt(kb)} openc166 {fmt(ob)}")
+        elif keil_failed != (p.returncode != 0):
+            problems.append("only " + ("Keil" if keil_failed else "openc166") + " fails")
+    if problems and not quiet:
+        print(f"{name}: link results differ")
+        for line in problems[:20]:
+            print("    " + line)
     return problems
 
 
@@ -413,10 +502,19 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
     with tempfile.TemporaryDirectory() as work:
         k, ksym = run_keil(keil, source, work)
         o, osym = run_openc166(tool, source, work)
+        # A166 cannot see what L166 reports (OC15..OC21 in openc166); those
+        # are checked against L166 when the image is, and not line by line.
+        link_codes = []
+        for line in o.values():
+            link_codes += [d[:-1] for d in line.diags if d[:-1] in LINK_ONLY]
+            line.diags = [d for d in line.diags if d[:-1] not in LINK_ONLY]
         clean = not any(l.errors() for l in k.values()) and not any(l.errors() for l in o.values())
         if image and clean:
-            problems = compare_image(source, keil, tool, work)
-            counts["image"] = "skipped" if problems is None else not problems
+            problems = compare_image(source, keil, tool, work, link_codes)
+            if problems == "link errors":
+                counts["image"], problems = problems, []
+            else:
+                counts["image"] = "skipped" if problems is None else not problems
             if problems is not None:
                 counts["ok" if not problems else "hard"] += 1
             if problems and not quiet:
@@ -481,9 +579,18 @@ def main():
         sys.exit("keil_diff.py: set KEIL_A166 or pass --keil")
     total_bad = 0
     for s in args.sources:
+        if os.path.isdir(s):
+            problems = compare_link(s, args.keil, args.openc166, args.quiet)
+            status = ("skipped: Keil evaluation size limit" if problems is None
+                      else "codes and image identical" if not problems else "LINK RESULTS DIFFER")
+            count = sum(f.lower().endswith(".a66") for f in os.listdir(s))
+            print(f"{s}: {count} modules linked, {status}")
+            total_bad += bool(problems)
+            continue
         c = compare(s, args.keil, args.openc166, args.quiet, args.codes, args.image)
         img = {None: "", True: ", image identical", False: ", IMAGE DIFFERS",
-               "skipped": ", image skipped: Keil evaluation size limit"}[c["image"]]
+               "skipped": ", image skipped: Keil evaluation size limit",
+               "link errors": ", same link errors"}[c["image"]]
         print(f"{s}: {c['ok'] + c['soft']}/{c['ok'] + c['soft'] + c['hard']} checks pass"
               f" ({c['symbols']} symbols; {c['soft']} lines with different error codes,"
               f" {c['diverges']} documented divergences{img})")

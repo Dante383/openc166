@@ -1,0 +1,29 @@
+; Link case: external values that fit the field they are used in, including
+; negative ones and values that only DW/DD/EXTS/EXTP truncate silently.
+$MOD167
+EXTERN  Big:DATA8, NegOne:DATA8, Low8:DATA8, Wide:DATA4, Small:DATA4
+EXTERN  Tiny:DATA3, Num:INTNO, OkNum:INTNO, Huge:DATA16, Minus:DATA16
+EXTERN  Flag:BIT, Wrd:BITWORD, Far1:FAR, Unused:DATA8
+
+Prog    SECTION CODE
+Main    PROC NEAR
+        MOVB    RL2, #NegOne
+        MOVB    RL3, #Low8
+        SHL     R1, #Small
+        ADD     R1, #Small
+        TRAP    #OkNum
+        MOV     R2, #Huge
+        MOV     R3, #Minus
+        EXTS    #SEG Far1, #1
+        MOV     R4, Far1
+        EXTP    #PAG Huge, #1
+        RET
+Main    ENDP
+Prog    ENDS
+
+Tab     SECTION CONST WORD
+        DB      NegOne, Low8, Tiny
+        DW      Huge, Minus, Big
+        DD      Huge, Minus
+Tab     ENDS
+        END

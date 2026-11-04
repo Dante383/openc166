@@ -1,0 +1,12 @@
+; Link case: a segmented module, like 1seg.a66.
+$SEGMENTED
+$MOD167
+PUBLIC  Other
+
+Prog    SECTION CODE PUBLIC
+Other   PROC NEAR
+        MOV     R2, #3
+        RET
+Other   ENDP
+Prog    ENDS
+        END
