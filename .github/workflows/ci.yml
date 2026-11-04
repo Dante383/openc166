@@ -1,8 +1,11 @@
 name: CI
 
+# Pushes to main run this from the release workflow (wheels.yml) instead.
 on:
   push:
+    branches-ignore: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
