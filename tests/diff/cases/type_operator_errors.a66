@@ -1,0 +1,49 @@
+; Keil refuses arithmetic on a type operator applied to a label that is
+; defined further down: + and - give A61, other operators A63. A comparison
+; is fine if the other side refers to a later symbol too. Arithmetic inside
+; the operand is fine, and parentheses around the operator do not help.
+$MOD167
+Prg     SECTION CODE
+Main    PROC    NEAR
+        JMP     FAR Later + 2
+        JMP     SHORT Later - 2
+        CALL    NEAR PTR Later + 0
+        DW      Later - FAR Later
+        DW      (NEAR Later) + 2
+        DW      FAR (Later + 2) + 2
+        DW      FAR Later * 2
+        DW      WORD Later OR 1
+        DW      2 SHL BYTE Later
+        DW      FAR Later LT Later
+        DW      FAR (Later + 2)
+        DW      HIGH FAR Later
+        JMP     FAR Later
+        JMP     SHORT cc_Z, Later
+        JMP     NEAR cc_Z, Later
+        CALL    FAR [R2]
+        JMP     cc_Z, SHORT [R2]
+        JMP     WORD PTR [R3]
+Later:  RET
+Main    ENDP
+Prg     ENDS
+
+Abs     SECTION CODE AT 0D000H
+Ap      PROC    NEAR
+Back:   NOP
+        DW      FAR Back + 2
+        DW      DWORD Fwd SHR 1
+        DW      FAR Fwd - Fwd
+        DW      BYTE Fwd AND 0FFH
+        DW      2 + SHORT Fwd
+        DW      FAR Fwd GE Back
+        DW      FAR Fwd LT Fwd
+        DW      FAR Fwd EQ Fwd2
+        DW      Fwd EQ FAR Fwd
+        DW      5 NE NEAR Fwd
+        DW      FAR Back EQ Fwd
+        JMP     FAR Fwd + 0
+Fwd:    RET
+Fwd2:   RET
+Ap      ENDP
+Abs     ENDS
+        END

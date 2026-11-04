@@ -2305,7 +2305,7 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
         cc = ops[0];
         if (cc.value.short_jump) {
             rep.error("A73", "number of operands does not match instruction", cc.column);
-            throw AsmError("A6", "syntax error: SHORT belongs in front of the target", cc.column);
+            throw AsmError("A6", "syntax error: SHORT or a type belongs in front of the target", cc.column);
         }
         if (cc.mode != OpMode::Direct || cc.value.type != VType::Cc)
             throw AsmError("A74", "operand type mismatch: condition code expected", cc.column);
@@ -2331,6 +2331,7 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
         seg.value = Value::number((v.num >> 16) & 0xFF);
         off.value = Value::number(v.num & 0xFFFF);
         seg.value.known = off.value.known = v.known;
+        off.value.movable = v.movable;  // for check_branch_target()
         ops = {seg, off};
         return;
     }
@@ -2355,8 +2356,9 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
     }
 }
 
-// Keil warns when a near branch goes to a FAR label and when any branch goes
-// to a data label.
+// Keil warns when a near branch goes to a FAR label, when any branch goes
+// to a data label, and when an absolute target that does not depend on the
+// linker is odd.
 void Assembler::check_branch_target(const std::string& m, const std::vector<Operand>& ops, Reporter& rep) const {
     const bool near_branch = m == "JMPA" || m == "JMPR" || m == "CALLA" || m == "CALLR";
     if (!near_branch && m != "JMPS" && m != "CALLS") return;
@@ -2366,7 +2368,7 @@ void Assembler::check_branch_target(const std::string& m, const std::vector<Oper
         rep.warning("A84", "near reference to far location", t.column);
     if (near_branch && is_data_type(t.value.ltype))
         rep.warning("A74", "operand type mismatch: branch to a data label", t.column);
-    if (m != "JMPR" && m != "CALLR" && t.value.known && !t.value.external() && (t.value.num & 1))
+    if (m != "JMPR" && m != "CALLR" && t.value.known && !t.value.movable && (t.value.num & 1))
         rep.warning("A134", "address alignment not sufficient: branch target is odd", t.column);
 }
 

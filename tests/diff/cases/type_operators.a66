@@ -1,0 +1,87 @@
+; Type operators: SHORT, and NEAR, FAR, BYTE, WORD and DWORD with or without
+; PTR. They bind like DPPn: (FAR x + 2 is (FAR x) + 2), the outermost one
+; wins, and they only change addresses. In a section without AT, "label + n"
+; is still an address and keeps the type of the label, so JMP picks JMPS for
+; a FAR label plus an offset.
+$MOD167
+Vars    SECTION DATA
+Count   DSW     1
+Flags   DSB     4
+Vars    ENDS
+
+Main    SECTION CODE
+Entry   PROC    NEAR
+Top:    NOP
+        JMP     Top + 2
+        JMP     Svc + 2
+        CALL    Svc - 2
+        JMP     6 + Svc
+        CALL    Svc + (Top - Entry)
+        JMP     Svc + 2 - 2
+        CALL    cc_NZ, Svc + 4
+        JMP     Count + 2
+        JMP     FAR Top
+        CALL    FAR PTR Top + 2
+        JMP     NEAR Svc
+        JMP     SHORT FAR Top
+        JMP     FAR SHORT Top
+        JMP     NEAR SHORT Top
+        JMP     SHORT NEAR Top
+        JMP     SHORT SHORT Top
+        JMP     (FAR Top)
+        JMP     FAR (Top + 4)
+        CALL    WORD Top
+        JMP     BYTE PTR Top
+        CALL    DWORD Top + 2
+        JMP     cc_C, SHORT Top
+        CALL    cc_C, SHORT Top
+        MOV     R4, WORD Count
+        MOV     R5, BYTE PTR Flags + 1
+        MOV     R6, FAR R7
+        MOV     R8, #FAR Top
+        DW      SOF FAR Top
+        DW      FAR FAR Top
+        DW      FAR HIGH 1234H
+        DW      DWORD 1234H + 1
+        DW      FAR Top EQ Top
+        DW      2 + FAR Top
+        DD      FAR Top + 2
+; Keil leaves the alignment of an address that the linker places alone.
+        MOV     R9, Count + 1
+        MOV     R9, Flags + 1 - Flags
+        JMPA    cc_UC, Top + 1
+        JMP     Svc + 1
+        RET
+Entry   ENDP
+Svc     PROC    FAR
+        RETS
+Svc     ENDP
+Main    ENDS
+
+; In a section with an AT address "label + n" is a number, so the type of
+; the label and SHORT no longer count.
+Fixed   SECTION CODE AT 0C000H
+Fx      PROC    NEAR
+Here:   NOP
+        DS      200H
+        JMP     FAR Here + 2
+        JMP     SHORT Here + 2
+        JMP     FAR (Here + 2)
+        JMP     (FAR Here)
+        JMP     NEAR PTR Far2
+        JMP     FAR PTR 0D000H
+        JMP     SHORT 0E000H
+        CALL    SHORT 0E000H
+        DW      FAR Here SHR 1
+        DW      WORD Here * 1
+        DW      BYTE Here LT Here
+        DW      Here + FAR 2
+        DW      HIGH FAR Here
+        DW      FAR HIGH Here
+        RET
+Fx      ENDP
+Far2    PROC    FAR
+        RETS
+Far2    ENDP
+Fixed   ENDS
+        END

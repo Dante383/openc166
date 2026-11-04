@@ -114,6 +114,95 @@ TEST_CASE("branches to data labels warn") {
     CHECK(diags(r, 15) == "A48W");
 }
 
+TEST_CASE("type operators bind tightly and the outermost one wins") {
+    auto r = run(program("P PROC NEAR\n"
+                         "B0: NOP\n"                    // 4  C000
+                         " JMP SHORT FAR PTR B0\n"      // 5  C002
+                         " JMP FAR PTR SHORT B0\n"      // 6  C004
+                         " JMP (FAR B0)\n"              // 7  C008
+                         " DW SOF FAR B0, FAR HIGH B0\n" // 8  C00C
+                         " MOV R1,FAR R2\n"             // 9  C010
+                         " DS 300\n"
+                         " JMP NEAR SHORT B0\n"         // 11 C140
+                         " JMP SHORT NEAR B0\n"         // 12 C144
+                         " JMP FAR B0 + 2\n"            // 13 C146 a number in an AT section
+                         " JMP FAR cc_Z,B0\n"           // 14
+                         " JMP SHORT [R1]\n"            // 15
+                         " RET\n"
+                         "P ENDP\n"));
+    CHECK(code(r, 5) == "0DFE");
+    CHECK(code(r, 6) == "FA0000C0");
+    CHECK(code(r, 7) == "FA0000C0");
+    CHECK(code(r, 8) == "00C0C000");
+    CHECK(code(r, 9) == "F2F1E4FF");
+    CHECK(code(r, 11) == "EA0000C0");
+    CHECK(diags(r, 12) == "A82E");
+    CHECK(code(r, 13) == "EA0002C0");
+    CHECK(diags(r, 14) == "A73E A6E");
+    CHECK(diags(r, 15) == "A74E A6E");
+}
+
+TEST_CASE("label plus a number keeps its type in a relocatable section") {
+    auto r = run("$MOD167\n"
+                 "S SECTION CODE\n"
+                 "P PROC NEAR\n"
+                 "T: NOP\n"                // 4  0000
+                 " JMP Q + 2\n"            // 5  0002
+                 " CALL Q - 2\n"           // 6  0006
+                 " JMP 2 + Q\n"            // 7  000A
+                 " JMP cc_Z,Q + 2\n"       // 8  000E
+                 " JMP LW + 2\n"           // 9  0012
+                 " JMP FAR T + 2\n"        // 10 0014
+                 " JMP SHORT T + 2\n"      // 11 0018
+                 " RET\n"
+                 "P ENDP\n"
+                 "LW LABEL WORD\n"
+                 "Q PROC FAR\n"            // 15 001C
+                 " RETS\n"
+                 "Q ENDP\n"
+                 "S ENDS\n"
+                 " END\n");
+    REQUIRE(r.ok());
+    CHECK(code(r, 5) == "FA001E00");
+    CHECK(code(r, 6) == "DA001A00");
+    CHECK(code(r, 7) == "FA001E00");
+    CHECK(code(r, 8) == "EA201E00");
+    CHECK(diags(r, 8) == "A84W");
+    CHECK(code(r, 9) == "0D05");
+    CHECK(diags(r, 9) == "A74W");
+    CHECK(code(r, 10) == "FA000200");
+    CHECK(code(r, 11) == "0DF4");
+}
+
+TEST_CASE("a type operator on a forward reference stays out of arithmetic") {
+    auto r = run("$MOD167\n"
+                 "S SECTION CODE AT 0C000H\n"
+                 "P PROC NEAR\n"
+                 "B: NOP\n"                    // 4
+                 " JMP FAR F + 2\n"            // 5
+                 " DW (NEAR F) + 2\n"          // 6
+                 " DW F - FAR F\n"             // 7
+                 " DW WORD F SHR 1\n"          // 8
+                 " DW FAR F LT F\n"            // 9
+                 " DW FAR F EQ B\n"            // 10
+                 " DW FAR (F + 2)\n"           // 11
+                 " DW FAR B + 2\n"             // 12
+                 "F: RET\n"                    // 13 C012
+                 "P ENDP\n"
+                 "S ENDS\n"
+                 " END\n");
+    CHECK(diags(r, 5) == "A61E");
+    CHECK(code(r, 6) == "14C0");
+    CHECK(diags(r, 6) == "A61E");
+    CHECK(diags(r, 7) == "A61E");
+    CHECK(code(r, 8) == "0960");
+    CHECK(diags(r, 8) == "A63E");
+    CHECK(diags(r, 9).empty());
+    CHECK(diags(r, 10) == "A63E");
+    CHECK(diags(r, 11).empty());
+    CHECK(diags(r, 12).empty());
+}
+
 TEST_CASE("out of range relative jumps") {
     auto r = run(program("P PROC NEAR\n"
                          " JMP SHORT F\n"   // 4

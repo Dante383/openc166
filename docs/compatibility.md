@@ -39,7 +39,8 @@ since OH166 starts a new record at each section.
 - **Expressions:** `+ - * / MOD SHL SHR AND OR XOR NOT`, comparisons,
   `HIGH LOW SOF SEG PAG POF BOF`, `DATA3 DATA4 DATA8 DATA16`, `$`, section
   names, character constants, bit selection (`base.n`), `DPPn:` prefixes,
-  and the `SHORT` and `type PTR` operators. See
+  `SHORT`, and the type operators `NEAR`, `FAR`, `BYTE`, `WORD` and
+  `DWORD` (with or without `PTR`). See
   [Expression details](#expression-details) and
   [Segmented mode and DPPs](#segmented-mode-and-dpps).
 - **Sections:** `SECTION` with or without `AT`, with Keil's types, align
@@ -571,10 +572,28 @@ Labels have a type, shown in the symbol table of the listing:
 | `DD`/`DSD`, `LABEL DWORD` | DWORD |
 
 A colon label in front of data (`T: DW 1`) takes the type of the data. A
-colon label inside a `FAR` procedure is still NEAR. `FAR PTR x`,
-`NEAR PTR x`, `WORD PTR x` and so on change the type of an address.
-Arithmetic removes the type (`label + 2` is untyped), except plus or minus
-zero.
+colon label inside a `FAR` procedure is still NEAR.
+
+**Type operators.** `NEAR`, `FAR`, `BYTE`, `WORD` and `DWORD`, with or
+without `PTR`, change the type of an address: `FAR x` and `FAR PTR x` are
+the same. `SHORT x` makes `JMP` and `CALL` use the relative form. Like
+`HIGH` or `DPPn:`, these bind to the operand right after them, so
+`FAR x + 2` means `(FAR x) + 2`. When several are stacked, the outermost one
+wins: `JMP FAR SHORT x` is `JMPS`, `JMP SHORT FAR x` is `JMPR`. On a plain
+number they do nothing (`JMP FAR PTR 1234H` is `JMPA`).
+
+**Label plus a number.** In a section without `AT`, `label + n` and
+`label - n` are still addresses and keep the label's type (and `SHORT`):
+`JMP FarProc + 2` is `JMPS`, and `JMP Table + 2` warns A74 if `Table` is a
+data label. In a section with `AT`, `label ± n` with `n` not zero is a plain
+number to Keil, so it has no type: `JMP FAR Here + 2` is `JMPA`.
+
+**Forward references.** Keil refuses to compute with a type operator
+applied to a symbol that is defined further down: `FAR Later + 2` gives
+A61, and `*`, `/`, `MOD`, `SHL`, `SHR`, `AND`, `OR` and `XOR` give A63. A
+comparison is fine only if the other side also refers to a later symbol.
+Parentheses around the operator do not help, but arithmetic inside the
+operand does: write `FAR (Later + 2)`.
 
 `JMP` and `CALL` pick an instruction the way Keil does:
 
@@ -591,7 +610,9 @@ target address of the previous pass. That is why a forward jump that would
 reach exactly +254 bytes once shortened stays long, as in Keil.
 
 Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
-for a near jump or call to a FAR label, A134 for an odd absolute target.
+for a near jump or call to a FAR label, A134 for an odd target. Like Keil,
+openc166 does not check the alignment of a target that the linker places (a
+label in a section without `AT`, plus or minus a number).
 
 ## Segmented mode and DPPs
 
@@ -649,6 +670,8 @@ segment register from a table:
 **Other checks.**
 
 - A word access to an odd address (`MOV R1, 0E001H`) gives warning A134.
+  Keil does not check addresses that the linker places (labels in sections
+  without `AT`), so neither does openc166.
 - A `DATA` section with `AT` must fit in the 16 KB page it starts in
   (error A86). Keil also checks the size of some `CODE`, `CONST` and
   `HDATA` sections; openc166 does not yet.
@@ -658,7 +681,8 @@ segment register from a table:
 **Operator precedence**, from tightest to loosest, as in Keil:
 
 1. unary `-`, `NOT`, `HIGH`, `LOW`, `SEG`, `SOF`, `PAG`, `POF`, `DATA3`,
-   `DATA4`, `DATA8`, `DATA16`;
+   `DATA4`, `DATA8`, `DATA16`, `DPPn:`, `SHORT`, and the type operators
+   `NEAR`, `FAR`, `BYTE`, `WORD`, `DWORD` (with or without `PTR`);
 2. `*`, `/`, `MOD`;
 3. `+`, `-`;
 4. `SHL`, `SHR`;

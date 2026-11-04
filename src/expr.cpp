@@ -57,27 +57,7 @@ public:
     Evaluator(TokenCursor& cur, SymbolContext& ctx, bool immediate = false)
         : cur_(cur), ctx_(ctx), immediate_(immediate) {}
 
-    Value expression() {
-        // SHORT and "type PTR" apply to everything after them.
-        const Token& t = cur_.peek();
-        if (t.kind == TokKind::Ident && ieq(t.text, "SHORT")) {
-            cur_.next();
-            Value v = expression();
-            v.short_jump = true;
-            return v;
-        }
-        if (t.kind == TokKind::Ident && cur_.peek(1).kind == TokKind::Ident && ieq(cur_.peek(1).text, "PTR")) {
-            LType type = ptr_type(t.text);
-            if (type == LType::None) throw AsmError("A6", "syntax error: unknown type before PTR", t.column);
-            cur_.next();
-            cur_.next();
-            Value v = expression();
-            // Keil ignores the type of plain numbers.
-            if (v.rel == Rel::Addr) v.ltype = type;
-            return v;
-        }
-        return comparison();
-    }
+    Value expression() { return comparison(); }
 
     static LType ptr_type(std::string_view s) {
         if (ieq(s, "NEAR")) return LType::Near;
@@ -114,6 +94,7 @@ public:
                 throw AsmError(e.code(), e.message(), t.column);
             }
             if (v) {
+                v->typed_forward = false;
                 if (v->external()) ctx_.external_used(*v, t.column);
                 // A GPR's address is that of its short register number F0H + n.
                 if (immediate_ && (v->type == VType::Gpr || v->type == VType::GprB)) {
@@ -232,11 +213,13 @@ private:
         return r;
     }
 
-    // Level 2: SEG PAG SOF POF BOF DATAn DPPn:
+    // Level 2: SEG PAG SOF POF BOF DATAn DPPn: SHORT NEAR FAR BYTE WORD DWORD
     Value segment_ops() {
         const Token& t = cur_.peek();
         if (t.kind == TokKind::Ident) {
             if (int n = dpp_prefix_at(cur_); n >= 0) return dpp_prefix(n, t);
+            if (ieq(t.text, "SHORT")) return type_op(t, LType::None);
+            if (LType type = ptr_type(t.text); type != LType::None) return type_op(t, type);
             if (int w = data_width(t); w > 0) return data_op(w, t);
             if (data_width(t) < 0) throw AsmError("A6", "syntax error: Keil A166 has DATA3, DATA4, DATA8 and DATA16 only", t.column);
             if (ieq(t.text, "BOF")) return bit_offset_op(t);
@@ -279,6 +262,53 @@ private:
         a.type = VType::Number;
         a.dpp = static_cast<std::int8_t>(n);
         return a;
+    }
+
+    // SHORT and the type operators NEAR, FAR, BYTE, WORD and DWORD (each
+    // optionally followed by PTR) bind like DPPn:, so FAR x + 2 is
+    // (FAR x) + 2, and the outermost one wins: SHORT makes JMP and CALL
+    // relative, a type replaces the type of the label and cancels SHORT.
+    // Keil ignores them on anything but an address.
+    Value type_op(const Token& t, LType type) {
+        cur_.next();
+        if (type != LType::None && cur_.peek().kind == TokKind::Ident && ieq(cur_.peek().text, "PTR")) cur_.next();
+        if (cur_.peek().is_op("[")) {
+            ctx_.soft_error(AsmError("A74", "operand type mismatch", t.column));
+            throw AsmError("A6", "syntax error: " + std::string(t.text) + " cannot apply to an indirect operand",
+                           cur_.peek().column);
+        }
+        const unsigned forward = ctx_.forward_references();
+        Value a = unary();
+        if (a.type == VType::Gpr) {
+            // Keil takes a register for its address here (MOV R1, FAR R2).
+            a.num = 0xFE00 + 2 * (0xF0 + a.num);
+            a.type = VType::Sfr;
+        }
+        if (a.type == VType::Cc) {
+            a.short_jump = true;  // branch() reports it in front of a condition
+            return a;
+        }
+        if (a.rel == Rel::Addr) {
+            a.short_jump = type == LType::None;
+            if (type != LType::None) a.ltype = type;
+        }
+        if (ctx_.forward_references() != forward) a.typed_forward = true;
+        return a;
+    }
+
+    // Keil does not let a type operator on a forward reference go into
+    // arithmetic: A61 for + and -, A63 for the others. A comparison is fine
+    // if the other side has a forward reference too. a_forward and b_forward
+    // tell whether the operands refer to symbols defined further down.
+    void check_typed_forward(int op, const Value& a, const Value& b, bool a_forward, bool b_forward, int column) {
+        if (!a.typed_forward && !b.typed_forward) return;
+        if (op == Add || op == Sub)
+            ctx_.soft_error(AsmError("A61", "invalid expression operand: a type operator on a forward reference "
+                                            "cannot take part in + or -",
+                                     column));
+        else if (op < Eq || (a.typed_forward && !b_forward) || (b.typed_forward && !a_forward))
+            ctx_.soft_error(AsmError("A63", "illegal relocatable expression: a type operator on a forward reference",
+                                     column));
     }
 
     // DATAn masks a number to n bits and makes an immediate use an n-bit
@@ -366,13 +396,16 @@ private:
 
     template <typename Next, typename Match>
     Value binary_level(Next next, Match match) {
+        const unsigned start = ctx_.forward_references();
         Value a = (this->*next)();
         for (;;) {
             const Token& t = cur_.peek();
             int op = match(t);
             if (op < 0) return a;
             cur_.next();
+            const unsigned middle = ctx_.forward_references();
             Value b = (this->*next)();
+            check_typed_forward(op, a, b, middle != start, ctx_.forward_references() != middle, t.column);
             if ((op == Add || op == Sub) && (a.type == VType::Bit || b.type == VType::Bit)) {
                 a = bit_arithmetic(op, a, b, t.column);
                 continue;
@@ -453,9 +486,11 @@ private:
             v.fixed = l.fixed;
             v.section = l.section;
             const bool offset = (n.rel == Rel::None || n.rel == Rel::Diff) && !(n.known && n.num == 0);
-            if (n.known && n.num == 0 && (n.rel == Rel::None || n.rel == Rel::Diff))
-                v.ltype = l.ltype;  // "label + 0" is still the label
-            return rel(l.fixed && offset ? Rel::Diff : Rel::Addr);
+            if (l.fixed && offset) return rel(Rel::Diff);
+            // While the sum is still an address it keeps the label's type.
+            v.ltype = l.ltype;
+            v.short_jump = l.short_jump;
+            return rel(Rel::Addr);
         };
         if (a.rel == Rel::Addr) return op == Sub && b.rel == Rel::Addr ? rel(Rel::Diff) : addr(a, b);
         if (b.rel == Rel::Addr) {

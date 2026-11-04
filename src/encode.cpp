@@ -350,7 +350,8 @@ Encoding encode(std::string_view mnemonic, const std::vector<Operand>& ops, cons
                 if (!ctx.ext_page) rep.warning("A77", "missing 'DPP' information", col);
                 continue;
             }
-            if (v.known && !v.external() && m.fit != Fit::Trunc && (p.value.num & 1) && !ops[i].unchecked &&
+            // Keil only checks addresses it knows; the linker places the rest.
+            if (v.known && !v.movable && m.fit != Fit::Trunc && (p.value.num & 1) && !ops[i].unchecked &&
                 word_memory(form->mnemonic, i))
                 rep.warning("A134", "address alignment not sufficient", col);
             if (ops[i].unchecked) continue;

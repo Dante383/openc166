@@ -27,7 +27,8 @@ enum class Rel : std::uint8_t {
 
 // Type of a label as Keil records it. JMP and CALL use it to choose between
 // near and segmented (far) branches and to warn about jumps to data.
-// Arithmetic on a label drops the type; "type PTR label" changes it.
+// "label + n" keeps the type while it is still an address; other arithmetic
+// drops it. "type label" and "type PTR label" change it.
 enum class LType : std::uint8_t { None, Near, Far, Byte, Word, Dword };
 
 constexpr bool is_data_type(LType t) { return t == LType::Byte || t == LType::Word || t == LType::Dword; }
@@ -43,6 +44,9 @@ struct Value {
     bool fixed = false;  // Addr: in a section with a fixed (AT) address
     LType ltype = LType::None;
     bool short_jump = false;  // SHORT operator: JMP/CALL must use the relative form
+    // A type operator (SHORT, NEAR, FAR, ...) was applied to a forward
+    // reference. Keil refuses to use such a value in arithmetic.
+    bool typed_forward = false;
     std::uint16_t section = 0;  // Addr: index of the section that holds the address
     // Segmented mode: the DPPn: prefix (0..3) that selects the data page,
     // with num holding the page offset; -1 if none.

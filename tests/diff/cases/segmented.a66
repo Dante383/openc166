@@ -94,6 +94,13 @@ P       PROC NEAR
         MOV     R1,CSEC
         MOV     R1,#DS3
         MOV     R1,#PAG DS3
+; Type operators bind like DPPn:, so either may come first; a code type
+; under the prefix is an error.
+        MOV     R1,FAR DPP1:V1
+        MOV     R1,DPP1:WORD PTR V1
+        MOV     R1,DPP2:BYTE P
+        MOV     R1,DPP1:NEAR V1
+        MOV     R1,DPP2:FAR PTR VB
 P       ENDP
         DW      DPP2:1234H, DPP2:V1, DPP2:12345H
         DPPTR   W1, V1

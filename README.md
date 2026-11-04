@@ -42,7 +42,7 @@ Early development (version 0.x). What works today:
 - Generic `JMP` and `CALL`: like Keil, openc166 picks the shortest
   instruction that reaches the target and shortens forward jumps over
   several passes. Label types (`NEAR`, `FAR`, `WORD`, ...) and the `SHORT`
-  and `FAR PTR` operators work as in Keil.
+  and type operators (`FAR x`, `WORD PTR x`, ...) work as in Keil.
 - `$INCLUDE` and `$INCDIR`, with Keil's search order and listing format.
 - Conditional assembly: `$SET`/`$RESET`, `$IF`/`$ELSEIF`/`$ELSE`/`$ENDIF`
   and the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, with Keil's quirks (only

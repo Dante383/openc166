@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // A166 expression evaluation with Keil operator precedence:
-//   ()  >  .  >  SEG PAG SOF POF BOF DATAn DPPn:  >  HIGH LOW BYTEn WORDn NOT unary+-
+//   ()  >  .  >  SEG PAG SOF POF BOF DATAn DPPn: SHORT type [PTR]
+//   >  HIGH LOW BYTEn WORDn NOT unary+-
 //   >  * / MOD  >  + -  >  SHL SHR << >>  >  AND OR XOR & | ^
 //   >  EQ NE LT LE GT GE ULT ULE UGT UGE == != < <= > >=
-//   >  SHORT, type PTR (prefixes that apply to the whole rest)
+// where type is NEAR, FAR, BYTE, WORD or DWORD.
 // Arithmetic is 64-bit; comparisons yield 1 (true) or 0 (false).
 #pragma once
 
