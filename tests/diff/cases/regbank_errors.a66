@@ -1,0 +1,82 @@
+; Errors in REGDEF, REGBANK, NAME, SSKDEF, PECDEF and TYPEDEC, and misuses of
+; register bank names.
+$SEGMENTED
+        NAME    FIRST
+        NAME    SECOND
+        SSKDEF  4
+        SSKDEF  1 junk
+        SSKDEF  2
+        PECDEF  PECC8
+        PECDEF  PECC1
+        REGDEF
+        REGBANK
+        REGDEF  R3-R1
+        REGDEF  R16
+        REGDEF  RL0
+        REGDEF  0-7
+        REGDEF  R0--R7
+        REGDEF  R0-R7-R9
+        REGDEF  R0,
+        REGDEF  R0 junk
+        REGDEF  R0-R3 COMMON
+RB1     REGBANK R0-R3
+RB1     REGDEF  R0
+SYM     EQU     5
+SYM     REGBANK R0
+RB4     REGBANK R0
+; Keil turns RB3 into the number 5 despite the errors.
+RB3     REGBANK R0
+RB3     EQU     5
+RB3     SET     5
+X1      TYPEDEC
+        PUBLIC  RB1
+        EXTERN  RX:REGBANK
+RB1     SECTION DATA
+D1      SECTION DATA
+RB1     ENDS
+D1      LABEL   WORD
+D1      ENDS
+GG      DGROUP  RB1
+RB1     DGROUP  D2
+GG2     DGROUP  D3
+GG2     REGBANK R0
+D2      SECTION DATA
+D2      ENDS
+D3      SECTION DATA
+D3      ENDS
+; Keil gives up RB2 as a bank after these errors.
+RB2     REGBANK R0
+        EXTERN  RB2:WORD
+D4      SECTION DATA
+RB2     LABEL   WORD
+RB2:    DW      1
+D4      ENDS
+        COMREG
+D5      SECTION DATA BITADDRESSABLE
+LB5:    DW      0
+D5      ENDS
+        ASSUME  DPP2:RB1
+C1      SECTION CODE
+P1X     PROC
+        MOV     R1, RB1
+        MOV     R1, #RB1
+        MOV     R1, #PAG RB1
+        MOV     R1, DPP3:RB1
+        BSET    RB1.1
+        MOV     R1, #BOF RB1
+; Section and group names are no bit bases, nor are values the linker
+; fills in.
+        BSET    D5.1
+        BSET    (D5).1
+        BSET    GG2.1
+        BSET    LB5.1
+        BSET    (LB5+2).1
+        BSET    (SOF LB5).1
+        BSET    (POF LB5).1
+        BSET    (SOF D5).1
+        BSET    (D5+2).1        ; DIVERGES: Keil adds A70 to the A69
+P1X     ENDP
+; Keil turns RB4 into a code label despite the error.
+RB4     PROC
+C1      ENDS
+        END

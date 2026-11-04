@@ -54,6 +54,12 @@ public:
     // True in Keil's segmented mode ($SEGMENTED), where DPPn: prefixes and
     // ASSUME select data pages. Nonsegmented mode ignores both.
     virtual bool segmented() const { return false; }
+    // True if this movable section index is a register bank, which the
+    // linker puts in page 3 of segment 0.
+    virtual bool register_bank(std::uint16_t movable) const {
+        (void)movable;
+        return false;
+    }
     // In the final pass undefined symbols are errors; before it they are
     // unknown values that later passes resolve.
     virtual bool final_pass() const = 0;

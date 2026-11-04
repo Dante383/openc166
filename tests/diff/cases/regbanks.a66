@@ -1,0 +1,51 @@
+; Register banks (named REGDEF and REGBANK) and the other directives for the
+; linker: NAME, SSKDEF, PECDEF and TYPEDEC.
+$MOD167
+        NAME    REGBANKS
+        SSKDEF  1 + 6
+        PECDEF  PECC0, PECC2-PECC4, pecc7-PECC5, PECC2
+        TYPEDEC anything, ,, at all
+        REGDEF  R0-R3
+        REGBANK r0 - r7 , r9
+MAINRB  REGDEF  R0 - R15
+SMALL   REGBANK R2-R5
+PAIR    REGBANK R0, R2
+EMPTY   REGBANK
+ONE     REGDEF  R15
+ALIAS   EQU     SMALL
+
+; A bank goes to the lowest free even address from 0FC00H on.
+DAT     SECTION DATA AT 0FC00H
+        DB      1, 2, 3
+DAT     ENDS
+
+CODE1   SECTION CODE AT 0C000H
+MAIN    PROC    NEAR
+        MOV     CP, #MAINRB
+        MOV     CP, #FWDRB
+        MOV     R1, #SMALL + 2
+        MOV     R1, #POF SMALL
+        MOV     R1, #SOF SMALL
+        MOV     R1, #PAG SMALL
+        MOV     R1, #SEG SMALL
+        MOV     R1, #PAG (SMALL + 2)
+        MOV     R1, #HIGH MAINRB
+        MOV     R1, #LOW MAINRB
+        MOV     R1, MAINRB
+        MOV     R1, ONE + 2
+        MOV     R1, [R2 + #PAIR]
+        ADD     R1, #ALIAS
+        MOV     R1, #MAINRB - MAINRB
+        MOV     R1, #DPP3:MAINRB
+        JMP     MAINRB
+        RET
+MAIN    ENDP
+CODE1   ENDS
+
+TAB     SECTION DATA
+        DW      MAINRB, SMALL, PAIR, ONE, FWDRB
+        DW      PAG MAINRB, SEG MAINRB, PAG MAINRB + 1
+        DB      PAG PAIR, SEG PAIR
+FWDRB   REGBANK R0-R1
+TAB     ENDS
+        END

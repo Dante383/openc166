@@ -67,6 +67,8 @@ Early development (version 0.x). What works today:
   `PUBLIC` and `GLOBAL` symbols, and sections of the same name combined
   across files. Each file is assembled separately (a "module"), so a name
   that is not `PUBLIC` stays private to its file.
+- Register banks (`REGBANK`/`REGDEF`), placed in `0FC00H..0FDFFH` as L166
+  places them, and the `NAME`, `SSKDEF`, `PECDEF` and `TYPEDEC` directives.
 - A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:

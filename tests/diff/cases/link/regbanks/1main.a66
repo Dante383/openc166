@@ -1,0 +1,39 @@
+; Link case: register banks. L166 places banks before ordinary data and
+; bit-addressable sections, at even addresses from 0FC00H. Banks with the
+; same name in several modules merge into the largest one.
+$MOD167
+EXTERN  Helper:NEAR
+PUBLIC  Start
+
+Odd     SECTION DATA
+OddB:   DB      1
+Odd     ENDS
+
+BANKA   REGBANK R0-R3
+        REGDEF  R0-R15
+
+Flags   SECTION DATA BITADDRESSABLE
+FlagW:  DW      0
+Flags   ENDS
+
+BANKB   REGBANK R0-R2
+
+Main    SECTION CODE
+Start   PROC    NEAR
+        MOV     R1, #BANKA
+        MOV     R2, #BANKB
+        MOV     R3, #PAG BANKA
+        MOV     R4, #SOF BANKB
+        MOV     R5, #POF BANKA
+        MOV     R6, BANKA
+        MOV     R7, OddB
+        MOV     R8, FlagW
+        CALL    CC_UC, Helper
+        RET
+Start   ENDP
+Main    ENDS
+
+Ptrs    SECTION CONST
+        DW      BANKA, BANKB, PAG BANKA, SOF BANKB, POF BANKA, OddB, FlagW
+Ptrs    ENDS
+        END

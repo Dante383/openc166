@@ -67,10 +67,13 @@ since OH166 starts a new record at each section.
 - **Several modules:** `EXTERN`/`EXTRN`, `PUBLIC` and `GLOBAL`, with
   sections combined across modules as L166 combines them. See
   [Linking several files](#linking-several-files).
-- **Accepted and ignored:** these only matter to a linker or debugger.
-  - Directives: `NAME`, `REGDEF`, `REGBANK`, `SSKDEF`, `PECDEF`, `TYPEDEC`.
-  - Listing and object-file controls: `$NOLIST`, `$TITLE(...)`, `$DEBUG`,
-    and similar.
+- **Register banks and linker directives:** `REGDEF`/`REGBANK` (named
+  banks are placed as L166 places them), `NAME`, `SSKDEF`, `PECDEF` and
+  `TYPEDEC`, with Keil's error checks. See
+  [Register banks and linker directives](#register-banks-and-linker-directives).
+- **Accepted and ignored:** listing and object-file controls such as
+  `$NOLIST`, `$TITLE(...)` and `$DEBUG`, which only matter to a printed
+  listing or a debugger.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
   `$SEGMENTED`/`$NONSEGMENTED`, `$TABS`, `$MACRO`/`$NOMACRO`,
   `$MPL`/`$NOMPL`, `$GEN`/`$NOGEN`/`$GENONLY`, `$SAVE`/`$RESTORE`.
@@ -84,7 +87,6 @@ These produce error OC3, so a missing feature is never silently skipped:
 - Keil's MPL macro processor: under `$MPL`, which is Keil's default, every
   `%` starts an MPL call, even in comments and strings (see
   [Macros](#macros))
-- `COMREG`
 - the XC16x/Super10 extended instruction set
 
 ## Register definitions
@@ -509,6 +511,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC25 | error | more than 1,000,000 lines to assemble, usually a macro that never stops expanding; the assembly stops |
 | OC26 | warning | a `%` macro argument that Keil reads in a surprising way (see [Macros](#macros)) |
 | OC27 | warning | a macro argument `!;` or a `!` at the end of the line, which Keil garbles |
+| OC28 | error | a register bank with no room left in `0FC00H..0FDFFH` (L166: L123) |
 
 ## Sections
 
@@ -555,8 +558,9 @@ default:
 - each at the lowest free address that suits its align type, from
   `--origin` on (default 0, as in L166), around the sections with `AT` and
   the code outside sections;
-- `BITADDRESSABLE` sections in `0FD00H..0FDFFH`, before all others, and
-  then `BIT` sections (see [BIT sections](#bit-sections));
+- [register banks](#register-banks-and-linker-directives) first, in
+  `0FC00H..0FDFFH`; then `BITADDRESSABLE` sections in `0FD00H..0FDFFH`,
+  and then `BIT` sections (see [BIT sections](#bit-sections));
 - the sections of [groups](#groups) first, then the others;
 - `DATA` and `CONST` sections inside one 16 KB data page, and `CODE`,
   `HDATA` and `HCONST` sections inside one 64 KB segment, unless they are
@@ -708,6 +712,60 @@ from bit 3 of `0FD02H`. The `size` that the C and Python interfaces report
 counts every byte the section touches; `Section.bit` and
 `Section.bit_size` in Python, and `oc166_result_section_bits()` in C, give
 the first bit and the size in bits.
+
+## Register banks and linker directives
+
+```
+name REGBANK R0-R7          ; or REGDEF; a list such as R0, R4-R6
+     SSKDEF  3              ; system stack size
+     PECDEF  PECC0-PECC3    ; PEC channels in use
+     NAME    MYMODULE
+```
+
+These tell the linker about the module. In Keil they mostly end up in the
+object file; openc166 checks them as Keil does and places named register
+banks.
+
+- **A named register bank** reserves room for the registers `R0` up to the
+  highest one listed: `RB REGBANK R0-R3` takes 8 bytes, and so does
+  `RB REGBANK R3`. Like L166, openc166 places it as a `DATA` section of
+  class `*REG*`:
+  - before all other sections without `AT`, at the lowest free even
+    address from `0FC00H` on;
+  - banks of the same name in several modules become one, as big as the
+    biggest;
+  - a bank with no room left below `0FE00H` is error OC28 (L166: L123).
+
+  `REGDEF` without a name only declares the registers and reserves
+  nothing. An empty list is fine with a name (no registers) and A6
+  without one. A range backwards (`R3-R1`) is A52; anything that is not a
+  register list is A6.
+- **The bank name** is the bank's address, so `MOV R1, #RB` followed by
+  `MOV CP, R1` switches to it. Keil knows that a bank lies in page 3:
+  `PAG RB` is the plain number 3, and no `ASSUME` is needed to reach it.
+  `SEG RB` is 0 in `$SEGMENTED` mode; otherwise it is left to the linker,
+  as in Keil (so it takes the long instruction form).
+- **Errors for bank names**, as in Keil: a name that is already a symbol,
+  section or group is A5. Using a bank name as a section, group or label
+  afterwards is A25 (A5 for `name LABEL`). `PUBLIC` is A39, `EXTERN
+  x:REGBANK` A113, `ASSUME DPPn:bank` A56, `bank.n` A69, `BOF bank` A61.
+  After some of these errors, Keil quietly turns the bank name into the
+  failed label, constant or procedure. openc166 keeps it as the bank, so
+  later lines that use the name can differ; the module has errors anyway.
+- **`SSKDEF n`** takes a number known at that point: 0..3, or 0..7 with
+  `$MOD167` (otherwise A66). A name defined later is A71, a label or bit
+  A72, a register A70.
+- **`PECDEF`** takes `PECC0` to `PECC7`, alone or as ranges, in any order;
+  anything else is A88.
+- A module may have one `SSKDEF` and one `PECDEF`: a second one is A87.
+  As in Keil, an `SSKDEF` whose value is out of range does not count, but
+  one with any other error does.
+- **`NAME name`** names the module. A second `NAME` is A25; a reserved word
+  is A6 and A23.
+- **`TYPEDEC`** declares types for a debugger. openc166 accepts and
+  ignores everything after it; a name in front is A6.
+- **`COMREG`** is not a Keil A166 directive (Keil gives A6), and neither
+  is it one in openc166.
 
 ## Linking several files
 
@@ -966,6 +1024,12 @@ Unlike C, `A AND B > 1` means `(A AND B) > 1`, and `A OR B AND C` means
 or the parenthesised expression right after it: write `BOF (PSW.3)`, as
 `BOF PSW.3` means `(BOF PSW).3` and fails with A61. For bits in `BIT`
 sections, see [BIT sections](#bit-sections).
+
+**Bit bases.** In `base.n`, the base is an SFR, a GPR, a bit-addressable
+address or a label in a `BITADDRESSABLE` section. As in Keil, the name of a
+section without `AT`, a group or a register bank is A69 (the name of a
+section with `AT` is its address, and works). `SOF`, `POF`, `PAG` or `SEG`
+of a label is A70 and A68, as the linker fills in that number.
 
 **`BYTE0`..`BYTE7` and `WORD0`, `WORD2`, `WORD4`, `WORD6`** pick a byte or a
 16-bit word of a value: `BYTE1 12345678H` is 56H, `WORD2 12345678H` is

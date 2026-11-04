@@ -199,6 +199,13 @@ private:
         r.type = VType::Bit;
         r.known = base.known && pos.known;
         if (!r.known) return r;
+        if (base.section_name)
+            throw AsmError("A69", "not a bitaddressable base: a section, register bank or group name", dot.column);
+        // SOF, POF, PAG or SEG of a label: a number the linker fills in.
+        if (base.type == VType::Number && base.movable && !base.external() && base.rel != Rel::Addr) {
+            ctx_.soft_error(AsmError("A70", "invalid type of expression: the linker fills in this base", dot.column));
+            throw AsmError("A68", "invalid base in bit address", dot.column);
+        }
         BitAddr b = oc166::bit_select(base, pos.num, dot.column, pos_column);
         if (b.ext && !ctx_.has_esfr())
             throw AsmError("A68", "invalid base in bit address: extended SFRs need $MOD167", dot.column);
@@ -232,6 +239,10 @@ private:
                 require_number(a, t.column);
                 if (which == 3 && a.group())
                     throw AsmError("A96", "invalid component: POF of a group", t.column);
+                // Keil knows that a register bank (and anything near it) lies
+                // in page 3, and, in segmented mode only, in segment 0.
+                if ((which == 1 || (which == 0 && ctx_.segmented())) && ctx_.register_bank(a.movable))
+                    return Value::number(which == 0 ? 0 : 3);
                 U x = static_cast<U>(a.num);
                 U r = which == 0 ? x >> 16 : which == 1 ? x >> 14 : which == 2 ? x & 0xFFFF : x & 0x3FFF;
                 Value v = moving_with(num(a, a, r), a);
@@ -477,7 +488,10 @@ private:
         }
         Value v = add_sub_value(op, a, b, column);
         v.dpp = a.dpp >= 0 ? a.dpp : b.dpp;
-        if (!difference) v.movable = a.movable ? a.movable : b.movable;
+        if (!difference) {
+            v.movable = a.movable ? a.movable : b.movable;
+            v.section_name = a.section_name || b.section_name;
+        }
         if (a.rel == Rel::None && b.rel == Rel::None) {
             v.system = a.system || b.system || a.type == VType::Sfr || b.type == VType::Sfr;
             if (v.section == 0) v.section = a.section ? a.section : b.section;

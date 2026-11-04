@@ -1,0 +1,25 @@
+; Link case: the second module for 1main.a66. BANKA comes back larger, and
+; BANKC is new.
+$MOD167
+PUBLIC  Helper
+
+Odd2    SECTION DATA
+        DB      2
+Odd2    ENDS
+
+BANKA   REGBANK R0-R7
+BANKC   REGBANK R0
+
+Lib     SECTION CODE
+Helper  PROC    NEAR
+        MOV     R1, #BANKA
+        MOV     R2, #BANKC
+        MOV     R3, #SOF BANKC
+        RET
+Helper  ENDP
+Lib     ENDS
+
+Ptrs2   SECTION CONST
+        DW      BANKA, BANKC
+Ptrs2   ENDS
+        END

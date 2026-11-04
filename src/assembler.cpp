@@ -79,14 +79,13 @@ bool same_value(const Value& a, const Value& b) {
 // Directives written as "name DIRECTIVE ...".
 constexpr std::string_view kNamedDirectives[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW", "DSD",
-    "DEFR", "DEFB", "DEFA", "LIT", "REGDEF", "REGBANK", "COMREG", "DBIT", "DGROUP", "CGROUP", "MACRO", "TYPEDEC",
+    "DEFR", "DEFB", "DEFA", "LIT", "REGDEF", "REGBANK", "DBIT", "DGROUP", "CGROUP", "MACRO",
     "DPPTR", "DSPTR", "DBPTR",
 };
 
-// Directives that only matter to a linker or debugger; a raw image ignores them.
-constexpr std::string_view kIgnoredDirectives[] = {
-    "NAME", "REGDEF", "REGBANK", "SSKDEF", "PECDEF", "TYPEDEC",
-};
+// COMREG is not a Keil A166 directive: A166 takes it as an ordinary name, so
+// a line that starts with it is a syntax error.
+constexpr const char* kComregMessage = "syntax error: Keil A166 has no COMREG directive";
 
 constexpr std::string_view kDataDirectives[] = {"DB", "DW", "DD", "DS", "DSB", "DSW", "DSD", "DPPTR", "DSPTR", "DBPTR"};
 
@@ -114,6 +113,8 @@ constexpr AlignType kAlignTypes[] = {
 };
 constexpr std::string_view kCombineTypes[] = {"PUBLIC", "PRIVATE", "COMMON", "GLOBAL", "SYSSTACK", "USRSTACK"};
 constexpr std::int64_t kBitAreaStart = 0xFD00, kBitAreaEnd = 0xFE00;
+// L166 puts register banks (named REGDEF and REGBANK) in FC00H..FDFFH.
+constexpr std::int64_t kBankAreaStart = 0xFC00;
 // A BIT section with AT must start below this byte address, as in Keil.
 constexpr std::int64_t kBitSectionAtEnd = 0xFDE0;
 
@@ -646,6 +647,9 @@ struct Section {
     // BIT section: base, loc, size and align count bits (byte address * 8 +
     // bit), so 0FD02H.3 is 7E813H.
     bool bits = false;
+    // A register bank (named REGDEF or REGBANK): a DATA section of class
+    // *REG* that holds no data, only room for the registers it lists.
+    bool bank = false;
     // Final pass: the listing line and column of the first SECTION line.
     std::size_t listing = SIZE_MAX;
     int column = 0;
@@ -752,6 +756,11 @@ public:
     bool segmented() const override { return segmented_; }
     bool final_pass() const override { return final_; }
     void external_used(const Value& v, int column) override;
+    bool register_bank(std::uint16_t movable) const override {
+        if (movable == 0 || movable >= Value::kGroupBase) return false;
+        const std::vector<Section>& list = movable < sections_.size() ? sections_ : prev_sections_;
+        return movable < list.size() && list[movable].bank;
+    }
 
 private:
     struct Entry {
@@ -860,6 +869,8 @@ private:
     bool ext_page_ = false;  // the EXT sequence is EXTP or EXTPR: no DPP needed
     bool ended_ = false;
     std::size_t end_line_ = 0;  // index of the END line in res_.listing
+    // NAME, SSKDEF and PECDEF may appear once per module.
+    bool named_ = false, sskdef_ = false, pecdef_ = false;
     std::size_t insn_ = 0;
     int line_no_ = 0;  // counts lines across all files, as in Keil's listing
     int file_line_ = 0;  // line number within the current file
@@ -933,6 +944,11 @@ private:
     void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
     std::int64_t bit_section_at(TokenCursor& cur, Reporter& rep);
     void section_end(const Token& name, Reporter& rep);
+    std::optional<std::size_t> find_section(const std::string& name_key) const;
+    void regbank_directive(const Token* name, TokenCursor& cur);
+    void module_name(TokenCursor& cur, Reporter& rep);
+    void stack_size(TokenCursor& cur, Reporter& rep);
+    void pec_channels(TokenCursor& cur);
     std::optional<std::int64_t> option_address(const std::string& name_key) const;
 
     std::string key(std::string_view name) const { return case_ ? std::string(name) : upper(name); }
@@ -998,9 +1014,10 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
         if (repeat(*p)) return;
         throw AsmError("A25", "symbol redefinition", name.column);
     }
-    for (std::size_t i = 1; i < sections_.size(); ++i)
-        if (key(sections_[i].name) == key(name.text))
-            throw AsmError("A25", "symbol redefinition: '" + sections_[i].name + "' is a section", name.column);
+    if (auto i = find_section(key(name.text)))
+        throw AsmError("A25", "symbol redefinition: '" + sections_[*i].name + "' is a " +
+                                  (sections_[*i].bank ? "register bank" : "section"),
+                       name.column);
     if (auto g = find_group(key(name.text), false))
         throw AsmError("A25", "symbol redefinition: '" + groups_[*g].name + "' is a group", name.column);
     auto [it, inserted] = symbols_.try_emplace(key(name.text));
@@ -1196,6 +1213,7 @@ void Assembler::run_lines() {
     segmented_ = false;
     assume_.fill(-1);
     ended_ = false;
+    named_ = sskdef_ = pecdef_ = false;
     insn_ = 0;
     incdirs_.clear();
     fatal_ = false;
@@ -2496,6 +2514,11 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         v.data_bits = 0;
         define(name, kind, v, kind == SymbolKind::Bit);
         if (v.known) lst.value = v;
+    } else if (auto i = dir == "LABEL" ? find_section(key(name.text)) : std::nullopt) {
+        // Keil reports A5 here, not the A25 of other definitions.
+        throw AsmError("A5", "symbol or label redefinition: '" + sections_[*i].name + "' is a " +
+                                 (sections_[*i].bank ? "register bank" : "section"),
+                       name.column);
     } else if (dir == "LABEL" && section().bits) {
         // A BIT section only takes LABEL BIT (or just LABEL): a bit.
         if (!cur.at_end()) {
@@ -2641,8 +2664,8 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         bit_directive(&name, name, cur, rep, lst);
     } else if (dir == "DGROUP" || dir == "CGROUP") {
         group(name, dir == "CGROUP", cur, rep);
-    } else if (contains(kIgnoredDirectives, dir)) {
-        // REGDEF and REGBANK name register banks for the linker.
+    } else if (dir == "REGDEF" || dir == "REGBANK") {
+        regbank_directive(&name, cur);
     } else if (dir == "MACRO") {
         throw AsmError("A6", "syntax error: an instruction name cannot be a macro name", name.column);
     } else {
@@ -2686,8 +2709,17 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         extern_directive(cur, rep);
     } else if (kw == "PUBLIC" || kw == "GLOBAL") {
         public_directive(kw == "GLOBAL", cur, rep);
-    } else if (contains(kIgnoredDirectives, kw)) {
-        // No effect on a raw image.
+    } else if (kw == "REGDEF" || kw == "REGBANK") {
+        regbank_directive(nullptr, cur);
+    } else if (kw == "NAME") {
+        module_name(cur, rep);
+    } else if (kw == "SSKDEF") {
+        stack_size(cur, rep);
+    } else if (kw == "PECDEF") {
+        pec_channels(cur);
+    } else if (kw == "TYPEDEC") {
+        // Type information for a debugger: Keil takes any text after it.
+        while (!cur.at_end()) cur.next();
     } else if (kw == "ENDS" || kw == "ENDP") {
         throw AsmError("A6", "syntax error: " + kw + " needs the name of the " +
                                  (kw == "ENDS" ? "section" : "procedure"),
@@ -2696,6 +2728,8 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         throw AsmError("A6", "syntax error: " + kw + " needs the name of the group", tok.column);
     } else if (kw == "MACRO") {
         throw AsmError("A6", "syntax error: MACRO needs the name of the macro in front", tok.column);
+    } else if (kw == "COMREG") {
+        throw AsmError("A6", kComregMessage, tok.column);
     } else if (contains(kKeywords, kw)) {
         throw AsmError("OC3", "directive " + kw + " is not supported yet", tok.column);
     } else {
@@ -3023,6 +3057,7 @@ void Assembler::check_public(const Token& name, Reporter& rep) {
         rep.error("A39", "illegal PUBLIC/GLOBAL symbol: '" + std::string(name.text) + "' " + why, name.column);
     };
     if (isa::is_mnemonic(u) || contains(kKeywords, u)) return illegal("is a reserved word");
+    if (auto i = find_section(k); i && sections_[*i].bank) return illegal("is a register bank");
     if (section_name(k)) return illegal("is a section");
     if (find_group(k, true)) return illegal("is a group");
     if (auto it = symbols_.find(k); it != symbols_.end() && it->second.pass >= pass_ - 1) {
@@ -3065,8 +3100,10 @@ std::optional<Value> Assembler::section_value(std::string_view name) {
             v.rel = s.absolute ? Rel::None : Rel::Addr;
             v.unsig = true;
             v.fixed = s.absolute;
-            v.section = s.code ? 0 : static_cast<std::uint16_t>(i);
+            // A register bank needs no DPP: Keil knows it lies in page 3.
+            v.section = s.code || s.bank ? 0 : static_cast<std::uint16_t>(i);
             if (!s.absolute) v.movable = static_cast<std::uint16_t>(i);
+            v.section_name = !s.absolute;
             return v;
         }
     }
@@ -3132,6 +3169,7 @@ std::optional<Value> Assembler::group_value(std::string_view name) {
     const auto id = static_cast<std::uint16_t>(Value::kGroupBase + *g);
     v.section = code ? 0 : id;
     v.movable = id;
+    v.section_name = true;
     return v;
 }
 
@@ -3175,7 +3213,8 @@ void Assembler::group(const Token& name, bool code, TokenCursor& cur, Reporter& 
         for (std::size_t i = 0; i < index && !other; ++i)
             if (std::find(groups_[i].members.begin(), groups_[i].members.end(), mk) != groups_[i].members.end())
                 other = i;
-        if (!s && (predefined(t.text, cpu_, sys166_) || symbols_.count(mk) || find_group(mk, true))) {
+        if ((!s && (predefined(t.text, cpu_, sys166_) || symbols_.count(mk) || find_group(mk, true))) ||
+            (s && s->bank)) {
             rep.error("A25", "symbol redefinition: '" + std::string(t.text) + "' is not a section", t.column);
         } else if (other) {
             rep.error("A53", "section is already a member of group '" + groups_[*other].name + "'", t.column);
@@ -3251,9 +3290,11 @@ void Assembler::assume(TokenCursor& cur, Reporter& rep) {
             if (!target && pass_ == 1) changed_ = true;
             if (target && *target < Value::kGroupBase) {
                 const std::size_t i = static_cast<std::size_t>(*target);
-                const bool bits = i < sections_.size() ? sections_[i].bits
-                                                       : i < prev_sections_.size() && prev_sections_[i].bits;
-                if (bits) throw AsmError("A56", "illegal component: a BIT section has no data page", t.column);
+                const std::vector<Section>& list = i < sections_.size() ? sections_ : prev_sections_;
+                if (i < list.size() && list[i].bits)
+                    throw AsmError("A56", "illegal component: a BIT section has no data page", t.column);
+                if (i < list.size() && list[i].bank)
+                    throw AsmError("A56", "illegal component: a register bank needs no DPP", t.column);
             }
             if (target) target = assume_key(*target);
         }
@@ -3304,6 +3345,8 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     std::size_t old = 0;
     for (std::size_t i = 1; i < sections_.size() && !old; ++i)
         if (key(sections_[i].name) == k) old = i;
+    if (old && sections_[old].bank)
+        throw AsmError("A25", "symbol redefinition: '" + sections_[old].name + "' is a register bank", name.column);
     if (old && sections_[old].type != type) {
         AsmError e("A30", "redefinition: section type: '" + sections_[old].name + "' is a " +
                               sections_[old].type + " section", cur.peek().column);
@@ -3476,7 +3519,8 @@ void Assembler::section_end(const Token& name, Reporter& rep) {
     const std::string k = key(name.text);
     if (key(sections_[open_.back()].name) != k) {
         bool known = false;
-        for (std::size_t i = 1; i < sections_.size(); ++i) known = known || key(sections_[i].name) == k;
+        for (std::size_t i = 1; i < sections_.size(); ++i)
+            known = known || (key(sections_[i].name) == k && !sections_[i].bank);
         if (!known) throw AsmError("A28", "invalid or unmatched section name", name.column);
         const std::string closed = sections_[open_.back()].name;
         open_.pop_back();
@@ -3485,6 +3529,134 @@ void Assembler::section_end(const Token& name, Reporter& rep) {
     }
     open_.pop_back();
     cur_ = open_.empty() ? 0 : open_.back();
+}
+
+// The section (or register bank) of this pass with this name.
+std::optional<std::size_t> Assembler::find_section(const std::string& name_key) const {
+    for (std::size_t i = 1; i < sections_.size(); ++i)
+        if (key(sections_[i].name) == name_key) return i;
+    return std::nullopt;
+}
+
+// [name] REGDEF|REGBANK Rn[-Rm], ... lists the registers a module uses.
+// With a name, it defines a register bank. Like L166, openc166 reserves 2
+// bytes for each register up to the highest one listed, at the lowest free
+// even address in FC00H..FDFFH, and the name stands for the bank's address
+// (for MOV CP, #name). Banks with the same name in several modules are one
+// bank, as large as the largest of them.
+void Assembler::regbank_directive(const Token* name, TokenCursor& cur) {
+    if (name) {
+        const std::string u = upper(name->text), k = key(name->text);
+        if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
+            throw AsmError("A4", "illegal use of a reserved word", name->column);
+        auto it = symbols_.find(k);
+        if (predefined(name->text, cpu_, sys166_) || (it != symbols_.end() && it->second.pass == pass_) ||
+            find_group(k, false) || find_section(k))
+            throw AsmError("A5", "symbol or label redefinition: '" + std::string(name->text) + "' is already defined",
+                           name->column);
+    }
+    int highest = -1;
+    // Like Keil, only a named bank may list no registers.
+    if (!name || !cur.at_end()) {
+        auto reg = [&] {
+            const Token& t = cur.peek();
+            int n = -1;
+            if (t.kind == TokKind::Ident && (t.text.size() == 2 || t.text.size() == 3) && (t.text[0] == 'R' || t.text[0] == 'r') &&
+                std::all_of(t.text.begin() + 1, t.text.end(), [](char c) { return c >= '0' && c <= '9'; }))
+                n = std::stoi(std::string(t.text.substr(1)));
+            if (n < 0 || n > 15) throw AsmError("A6", "syntax error: register R0..R15 expected", t.column);
+            cur.next();
+            return n;
+        };
+        do {
+            const int first = reg();
+            int last = first;
+            if (cur.accept_op("-")) {
+                const int column = cur.peek().column;
+                last = reg();
+                if (last < first) throw AsmError("A52", "invalid register range: the higher register comes first", column);
+            }
+            highest = std::max(highest, last);
+        } while (cur.accept_op(","));
+        expect_end(cur);
+    }
+    if (!name) return;
+    Section s;
+    s.name = std::string(name->text);
+    s.type = "DATA";
+    s.code = false;
+    s.bank = true;
+    s.class_name = "*REG*";
+    s.size = 2 * (highest + 1);
+    const std::string k = key(name->text);
+    const std::optional<std::int64_t> given = option_address(k);
+    s.placed = given.has_value();
+    if (auto it = layout_.find(k); it != layout_.end())
+        s.base = it->second;
+    else
+        s.base = given.value_or(kBankAreaStart);
+    s.loc = s.base + s.size;
+    if (final_) {
+        s.listing = res_.listing.size();
+        s.column = name->column;
+    }
+    sections_.push_back(std::move(s));
+}
+
+// NAME gives the module a name for the linker. A module has one at most.
+void Assembler::module_name(TokenCursor& cur, Reporter& rep) {
+    const Token& t = cur.peek();
+    if (named_) throw AsmError("A25", "symbol redefinition: the module already has a NAME", t.column);
+    named_ = true;
+    const std::string u = upper(t.text);
+    if (t.kind != TokKind::Ident || isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u)) {
+        rep.error("A6", "syntax error: NAME expects the name of the module", t.column);
+        throw AsmError("A23", "identifier expected", t.column);
+    }
+    cur.next();
+    expect_end(cur);
+}
+
+// SSKDEF n tells the linker the size of the system stack (the STKSZ field
+// of SYSCON): 0..3 on the C166, 0..7 with $MOD167.
+void Assembler::stack_size(TokenCursor& cur, Reporter& rep) {
+    const int column = cur.peek().column;
+    if (sskdef_) throw AsmError("A87", "more than one PECDEF/SSKDEF", column);
+    if (cur.at_end()) throw AsmError("A6", "syntax error: SSKDEF expects the stack size", column);
+    forward_ref_ = false;
+    const Value v = expression(cur);
+    if (forward_ref_) throw AsmError("A71", "expression with forward reference not permitted in SSKDEF", column);
+    if (v.type == VType::Gpr || v.type == VType::GprB)
+        throw AsmError("A70", "invalid type of expression: SSKDEF takes a number", column);
+    if (v.type != VType::Number || v.relocatable()) throw AsmError("A72", "absolute expression required", column);
+    const std::int64_t top = cpu_ == isa::Cpu::C167 ? 7 : 3;
+    // Like Keil, a value out of range does not count as the module's SSKDEF.
+    if (v.known && (v.num < 0 || v.num > top))
+        rep.error("A66", "value out of range: SSKDEF takes 0.." + std::to_string(top) +
+                             (top == 3 ? " (0..7 with $MOD167)" : ""),
+                  column);
+    else
+        sskdef_ = true;
+    expect_end(cur);
+}
+
+// PECDEF PECCn[-PECCm], ... reserves PEC channels 0..7 for the linker.
+void Assembler::pec_channels(TokenCursor& cur) {
+    if (pecdef_) throw AsmError("A87", "more than one PECDEF/SSKDEF", cur.peek().column);
+    pecdef_ = true;
+    auto channel = [&] {
+        const Token& t = cur.peek();
+        if (t.kind != TokKind::Ident) throw AsmError("A6", "syntax error: PEC channel PECC0..PECC7 expected", t.column);
+        const std::string u = upper(t.text);
+        if (u.size() != 5 || u.compare(0, 4, "PECC") != 0 || u[4] < '0' || u[4] > '7')
+            throw AsmError("A88", "illegal PEC-channel: PECC0..PECC7 expected", t.column);
+        cur.next();
+    };
+    do {
+        channel();
+        if (cur.accept_op("-")) channel();
+    } while (cur.accept_op(","));
+    expect_end(cur);
 }
 
 void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
@@ -3799,8 +3971,9 @@ std::vector<Program::Unit> Program::units() {
         for (std::size_t j = 1; j < u.parts.size(); ++j) {
             const Part& p = u.parts[j];
             const Section& s = p.section();
-            if (!first.absolute && !s.absolute && s.type == first.type && s.combine == first.combine &&
-                combinable(first.combine)) {
+            if ((first.bank && s.bank) || (!first.absolute && !s.absolute && !first.bank && !s.bank &&
+                                           s.type == first.type && s.combine == first.combine &&
+                                           combinable(first.combine))) {
                 kept.parts.push_back(p);
                 continue;
             }
@@ -3816,8 +3989,9 @@ std::vector<Program::Unit> Program::units() {
         out.push_back(std::move(kept));
         for (auto& r : rejected) out.push_back(std::move(r));
     }
+    // Register banks of the same name overlay each other, like COMMON parts.
     for (auto& u : out) {
-        const bool common = u.parts[0].section().combine == "COMMON";
+        const bool common = u.parts[0].section().combine == "COMMON" || u.parts[0].section().bank;
         for (Part& p : u.parts) {
             const Section& s = p.section();
             p.offset = common ? 0 : align_up(u.size, s.align);
@@ -3923,6 +4097,25 @@ void Program::locate(bool final) {
         done[i] = s.absolute || m.option_address(m.key(s.name));
     }
 
+    // Like L166, register banks come first: each at the lowest free even
+    // address in FC00H..FDFFH.
+    for (std::size_t i = 0; i < all.size(); ++i) {
+        Unit& u = all[i];
+        const Section& s = u.parts[0].section();
+        if (done[i] || !s.bank) continue;
+        std::optional<std::int64_t> a = first_fit(u, kBankAreaStart, kBitAreaEnd, 0, taken(false));
+        if (!a) {
+            u.parts[0].m->report_at_section(u.parts[0].index, Severity::Error, "OC28",
+                                            "no room for register bank '" + s.name + "' (" + hex(u.size, 4) +
+                                                "H bytes) in FC00H..FDFFH (L166 reports L123)");
+            a = s.base;
+        } else {
+            occupy(u, *a);
+        }
+        u.base = *a;
+        done[i] = true;
+    }
+
     // Groups of the same name in different modules are one group. Like
     // L166, place all DGROUPs and then all CGROUPs, each in order of first
     // definition, before the other sections. A group goes to the first 16 KB
@@ -3956,7 +4149,9 @@ void Program::locate(bool final) {
             lg.defs.emplace_back(&m, gi);
             for (const std::string& member : g.members)
                 for (std::size_t i = 1; i < m.sections_.size(); ++i) {
-                    if (m.key(m.sections_[i].name) != member || !group_type_ok(lg.code, m.sections_[i].type)) continue;
+                    if (m.key(m.sections_[i].name) != member || m.sections_[i].bank ||
+                        !group_type_ok(lg.code, m.sections_[i].type))
+                        continue;
                     const std::size_t u = unit_of.at({&m, i});
                     if (grouped[u]) continue;
                     grouped[u] = true;

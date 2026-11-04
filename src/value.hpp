@@ -58,6 +58,9 @@ struct Value {
     std::uint8_t data_bits = 0;
     // Derived from an SFR address, so ASSUME DPPn:SYSTEM applies to it.
     bool system = false;
+    // The name of a section without AT, a register bank or a group (or
+    // derived from one). Keil refuses it as the base of a bit.
+    bool section_name = false;
     // Index of the section without AT whose start address the value depends
     // on (a label in it, or PAG, POF, SOF, SEG, HIGH or LOW of one, plus or
     // minus a number); 0 if none. Keil leaves such values to the linker.
