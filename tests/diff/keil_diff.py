@@ -89,13 +89,11 @@ def bit_loc(text):
 def locate(source, number, text, wrap=None):
     """Number of the first line after 'number' with the source 'text'. Lines
     in false IF blocks have no number in the listings, and $NOCOND leaves
-    some of them out. Keil expands tabs and wraps lines after 'wrap'
-    characters."""
+    some of them out. Both assemblers expand tabs; Keil also wraps lines
+    after 'wrap' characters."""
     text = text.rstrip()
     for n in range(number + 1, len(source) + 1):
-        src = source[n - 1].rstrip()
-        if wrap:
-            src = src.expandtabs(8)
+        src = source[n - 1].rstrip().expandtabs(8)
         if src == text or (wrap and len(text) >= wrap and src.startswith(text)):
             return n
     return number + 1
@@ -114,11 +112,12 @@ def parse_keil_listing(text, source=()):
     body = False
     number = 0  # last line listed
     printed = 0  # characters of its source printed so far
-    # Lines from include files carry a nesting marker (+1, +2, ...).
-    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}| [0-9A-F]{4}\.\d\d| [0-9A-F]{4}\.\d ) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
+    # Lines from include files carry a nesting marker (+1, +2, ...) before
+    # the number, lines of macro expansions one after it.
+    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}| [0-9A-F]{4}\.\d\d| [0-9A-F]{4}\.\d ) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+)(?:\+\S)*\s")
     # The linker fills in the digits that Keil lists as '?' (marked R).
     more = re.compile(r"^(?:[0-9A-F]{8}| [0-9A-F]{4}\.\d[\d ]) ([0-9A-F?]+)(?:\s+R)?\s*$")
-    unnumbered = re.compile(r" *(?:\+\d+)? *")
+    unnumbered = re.compile(r" *(?:\+\S *)*")
     # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
     sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)(?:\s+R\s+SEC=(\S+))?")
@@ -238,6 +237,7 @@ def parse_openc166_listing(text, source=()):
             continue
         number = l[29:35].strip()
         obj = l[10:26].strip()
+        # l[35:37] marks lines of macro expansions; the source starts at l[39:].
         if number.isdigit():
             last = lines.setdefault(int(number), Line())
             if obj and re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last.loc is None:
@@ -247,9 +247,9 @@ def parse_openc166_listing(text, source=()):
             last.code += obj
         elif (re.fullmatch(r"[0-9A-F]{8}", l[0:8]) or bit_loc(l[0:9]) is not None) and last is not None:
             last.code += obj
-        elif len(l) >= 37 and not l[:27].strip() and not number and re.fullmatch(r"(\+\d)? *", l[27:29]):
+        elif len(l) >= 39 and not l[:27].strip() and not number and re.fullmatch(r"(\+\d)? *", l[27:29]):
             # a line in a false IF block, listed without a number
-            last = lines.setdefault(locate(source, max(lines, default=0), l[37:]), Line())
+            last = lines.setdefault(locate(source, max(lines, default=0), l[39:]), Line())
             last.skipped = True
     bases = relocatable_bases(source, sections)
     for n, line in lines.items():
@@ -332,7 +332,34 @@ def expand(source):
     return out
 
 
-def run_keil(keil, source, workdir):
+MACRO_HEAD = re.compile(r"\s*(?:(?:[A-Za-z_?@][\w?@]*\s*:\s*)?(?:REPT|IRPC?)\b|[A-Za-z_?@][\w?@]*\s+MACRO\b)", re.I)
+
+
+def listed_source(tool, source, workdir):
+    """Like expand(), but with the lines of macro, REPT, IRP and IRPC
+    expansions, which the listings number too: line n is the source that
+    openc166 lists for line n. Lines it leaves out ($NOGEN, $NOCOND) are
+    empty."""
+    text = expand(source)
+    if not any(MACRO_HEAD.match(l) for l in text):
+        return text
+    lines = {}
+    number = 0
+    for l in run_tool_listing(tool, source, workdir).splitlines():
+        if l == "SYMBOLS":
+            break
+        n = l[29:35].strip()
+        if n.isdigit():
+            number = int(n)
+        elif len(l) >= 39 and not l[:27].strip() and re.fullmatch(r"(\+\d)? *", l[27:29]):
+            number += 1  # a line in a false IF block, listed without a number
+        else:
+            continue
+        lines[number] = l[39:]
+    return [lines.get(n, "") for n in range(1, max(lines, default=0) + 1)]
+
+
+def run_keil(keil, source, workdir, text):
     # Include files are looked up relative to the source, so the whole source
     # directory goes along.
     if any(INCLUDE.match(l) for l in expand(source)):
@@ -340,15 +367,19 @@ def run_keil(keil, source, workdir):
     shutil.copy(source, os.path.join(workdir, "t.a66"))
     keil_tool(keil, os.path.basename(keil), ["t.a66"], workdir)
     with open(os.path.join(workdir, "t.LST"), encoding="latin-1") as f:
-        return parse_keil_listing(f.read(), expand(source))
+        return parse_keil_listing(f.read(), text)
 
 
-def run_openc166(tool, source, workdir):
+def run_tool_listing(tool, source, workdir):
     lst = os.path.join(workdir, "o.lst")
     subprocess.run([os.path.abspath(tool), os.path.abspath(source), "-o", os.path.join(workdir, "o.bin"), "-l", lst],
                    capture_output=True, timeout=TIMEOUT, cwd=os.path.dirname(os.path.abspath(source)))
     with open(lst, encoding="utf-8") as f:
-        return parse_openc166_listing(f.read(), expand(source))
+        return f.read()
+
+
+def run_openc166(tool, source, workdir, text):
+    return parse_openc166_listing(run_tool_listing(tool, source, workdir), text)
 
 
 def read_hex86(path):
@@ -525,11 +556,11 @@ def fmt_loc(line):
 
 
 def compare(source, keil, tool, quiet=False, codes=False, image=False):
-    text = expand(source)
     counts = {"ok": 0, "soft": 0, "hard": 0, "diverges": 0, "symbols": 0, "image": None}
     with tempfile.TemporaryDirectory() as work:
-        k, ksym, ksec = run_keil(keil, source, work)
-        o, osym, osec = run_openc166(tool, source, work)
+        text = listed_source(tool, source, work)
+        k, ksym, ksec = run_keil(keil, source, work, text)
+        o, osym, osec = run_openc166(tool, source, work, text)
         # A166 cannot see what L166 reports (OC15..OC21 in openc166); those
         # are checked against L166 when the image is, and not line by line.
         link_codes = []

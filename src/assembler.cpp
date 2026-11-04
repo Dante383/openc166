@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -28,6 +29,14 @@ constexpr int kMaxPasses = 32;
 constexpr std::size_t kMaxIncludeDepth = 32;
 // Guards against LITs whose texts multiply ('A LIT 'B B'', 'B LIT 'C C'', ...).
 constexpr std::size_t kMaxExpandedLine = 65536;
+// Keil hangs when a macro calls itself ten levels deep.
+constexpr int kMaxSameMacro = 9;
+constexpr int kMaxMacroDepth = 64;  // macro calls and REPT, IRP and IRPC blocks inside each other
+// Lines a pass may read, counting expansions: stops a REPT or macro that
+// never ends.
+constexpr int kMaxLines = 1000000;
+// Keil keeps up to ten $SAVE levels (its manual says nine).
+constexpr std::size_t kMaxSaveDepth = 10;
 constexpr std::int64_t kAddressLimit = 0x1000000;  // 16 MB C167 address space
 
 std::string upper(std::string_view s) {
@@ -151,10 +160,229 @@ std::vector<std::string_view> split_lines(std::string_view text) {
     return lines;
 }
 
+// Keil turns each tab of a source line into spaces up to the next multiple
+// of 'width' columns (8 unless $TABS) before it reads the line, even inside
+// strings.
+std::string expand_tabs(std::string_view line, int width) {
+    std::string out;
+    out.reserve(line.size());
+    const auto w = static_cast<std::size_t>(width);
+    for (char c : line) {
+        if (c != '\t') {
+            out += c;
+            continue;
+        }
+        out.append(w - out.size() % w, ' ');
+    }
+    return out;
+}
+
+// Whether MPL is on at the start of the source. Keil reads the primary
+// controls at the top of the file (before the first statement) ahead of the
+// rest, so a $NOMPL there also covers the comments above it.
+bool initial_mpl(const std::vector<std::string_view>& lines) {
+    bool mpl = true;
+    for (std::string_view line : lines) {
+        std::size_t i = line.find_first_not_of(" \t");
+        if (i == std::string_view::npos || line[i] == ';') continue;
+        if (line[i] != '$') break;
+        for (++i;;) {
+            while (i < line.size() && std::isspace(static_cast<unsigned char>(line[i]))) ++i;
+            std::size_t start = i;
+            while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) ++i;
+            const std::string name = upper(line.substr(start, i - start));
+            if (name.empty()) break;
+            if (name == "INCLUDE" || name == "IC" || name == "IF" || name == "ELSEIF" || name == "ELSE" ||
+                name == "ENDIF")
+                return mpl;
+            if (name == "MPL") mpl = true;
+            if (name == "NOMPL" || name == "NOMACRO") mpl = false;
+            while (i < line.size() && std::isspace(static_cast<unsigned char>(line[i]))) ++i;
+            if (i < line.size() && line[i] == '(') {
+                std::size_t close = line.find(')', i);
+                if (close == std::string_view::npos) break;
+                i = close + 1;
+            }
+        }
+    }
+    return mpl;
+}
+
 std::string_view trim(std::string_view s) {
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) s.remove_prefix(1);
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.remove_suffix(1);
     return s;
+}
+
+// A line of a macro, REPT, IRP or IRPC body with each whole word in 'names'
+// (upper case) replaced by its value, as Keil does: in strings and comments
+// too, but not inside numbers such as 0FFH. An '&' right before or after a
+// replaced name is dropped, so 'L&P' can join text to a value. A ';;'
+// comment, even one inside quotes, is left out.
+std::string substitute(std::string_view line, const std::vector<std::string>& names,
+                       const std::vector<std::string>& values) {
+    if (std::size_t c = line.find(";;"); c != std::string_view::npos) line = line.substr(0, c);
+    std::string out;
+    out.reserve(line.size());
+    std::size_t amp = std::string::npos;  // index in 'out' of an '&' copied just before
+    std::size_t i = 0;
+    while (i < line.size()) {
+        const char c = line[i];
+        std::size_t j = i + 1;
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            while (j < line.size() && std::isalnum(static_cast<unsigned char>(line[j]))) ++j;
+        } else if (ident_start(c)) {
+            while (j < line.size() && ident_char(line[j])) ++j;
+            if (!names.empty()) {
+                auto it = std::find(names.begin(), names.end(), upper(line.substr(i, j - i)));
+                if (it != names.end()) {
+                    if (amp != std::string::npos && amp + 1 == out.size()) out.pop_back();
+                    out += values[static_cast<std::size_t>(it - names.begin())];
+                    if (j < line.size() && line[j] == '&') ++j;
+                    amp = std::string::npos;
+                    i = j;
+                    continue;
+                }
+            }
+        } else if (c == '&') {
+            amp = out.size();
+        }
+        out.append(line, i, j - i);
+        i = j;
+    }
+    return out;
+}
+
+// One argument of a macro call, or the value list of IRP or IRPC.
+struct MacroArg {
+    std::string text;
+    bool unclosed = false;  // a '<' without its '>'
+    // Where, counting from 1, a '!' is that Keil A166 garbles the
+    // arguments after: '!;' or '!' at the end. 0 if none.
+    std::size_t garbled = 0;
+};
+
+// Where Keil stops starting new macro call arguments: at the first ';'
+// outside quotes, or at a quote without its end, which sets 'open_quote'.
+std::size_t args_end(std::string_view text, bool& open_quote) {
+    open_quote = false;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == ';') return i;
+        if (text[i] == '\'' || text[i] == '"') {
+            const std::size_t close = text.find(text[i], i + 1);
+            if (close == std::string_view::npos) {
+                open_quote = true;
+                return i;
+            }
+            i = close;
+        }
+    }
+    return text.size();
+}
+
+// Reads a '%' argument that starts at text[pos] into 'a' and returns where
+// the next argument starts, or npos if none follows.
+using PercentArg = std::function<std::size_t(std::string_view text, std::size_t pos, MacroArg& a)>;
+
+// Splits the arguments of a macro call, as Keil does. An argument that
+// starts with '<' runs to the matching '>', even past a ';', and loses that
+// one pair of brackets, so it may hold commas. With 'escapes', an argument
+// that starts with '!' is the one character after it. Both kinds end there,
+// with or without a comma after them, and Keil skips a '>' right after
+// them; no argument follows them past args_end(). Other arguments end at a
+// comma or ';' outside quotes, or else at the end of the text; quotes stay,
+// and so does a '!' that does not start an argument. Arguments are trimmed.
+// 'percent', if given, reads arguments that start with '%'.
+std::vector<MacroArg> split_args(std::string_view text, bool escapes, const PercentArg& percent = {}) {
+    std::vector<MacroArg> args;
+    bool open_quote = false;
+    const std::size_t end = args_end(text, open_quote);
+    std::size_t i = 0;
+    auto skip_space = [&] {
+        while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i]))) ++i;
+    };
+    // After an argument in brackets or after '!': true if none follows.
+    auto last = [&] {
+        if (i < text.size() && text[i] == '>') ++i;
+        skip_space();
+        if (i >= end || text[i] == ';') return true;
+        if (text[i] == ',') ++i;
+        return false;
+    };
+    for (;;) {
+        skip_space();
+        MacroArg a;
+        std::string raw;
+        if (i < text.size() && text[i] == '<') {
+            a.unclosed = true;
+            for (std::size_t depth = 1; ++i < text.size();) {
+                if (text[i] == '<') ++depth;
+                if (text[i] == '>' && --depth == 0) {
+                    a.unclosed = false;
+                    ++i;
+                    break;
+                }
+                raw += text[i];
+            }
+            a.text = trim(raw);
+            args.push_back(std::move(a));
+            if (last()) return args;
+            continue;
+        }
+        if (escapes && i < text.size() && text[i] == '!') {
+            if (++i < text.size()) a.text = text[i++];
+            if (a.text.empty() || a.text == ";") a.garbled = i - a.text.size();
+            args.push_back(std::move(a));
+            if (last()) return args;
+            continue;
+        }
+        if (percent && i < text.size() && text[i] == '%') {
+            const std::size_t next = percent(text, i, a);
+            args.push_back(std::move(a));
+            if (next >= text.size() || text[next] == ';') return args;
+            i = next;
+            continue;
+        }
+        for (char quote = 0; i < text.size(); ++i) {
+            if (quote) {
+                if (text[i] == quote) quote = 0;
+            } else if (text[i] == '\'' || text[i] == '"') {
+                quote = text[i];
+            } else if (text[i] == ',' || text[i] == ';') {
+                break;
+            }
+            raw += text[i];
+        }
+        a.text = trim(raw);
+        args.push_back(std::move(a));
+        if (i >= text.size() || text[i] != ',') return args;
+        ++i;
+    }
+}
+
+// The values of an IRP list: split at commas outside quotes and brackets,
+// which stay, and trimmed.
+std::vector<std::string> split_list(std::string_view text) {
+    std::vector<std::string> out;
+    std::size_t depth = 0, start = 0;
+    char quote = 0;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote) {
+            if (c == quote) quote = 0;
+        } else if (c == '\'' || c == '"') {
+            quote = c;
+        } else if (c == '<') {
+            ++depth;
+        } else if (c == '>' && depth > 0) {
+            --depth;
+        } else if (c == ',' && depth == 0) {
+            out.emplace_back(trim(text.substr(start, i - start)));
+            start = i + 1;
+        }
+    }
+    out.emplace_back(trim(text.substr(start)));
+    return out;
 }
 
 // Keil sources are written on Windows; '/' works there and everywhere else.
@@ -221,6 +449,28 @@ bool contains(const std::string_view (&list)[N], std::string_view upper_name) {
 
 // IF, ELSEIF, ELSE and ENDIF, as statements and as $ controls.
 constexpr std::string_view kCondKeywords[] = {"IF", "ELSEIF", "ELSE", "ENDIF"};
+
+// What the first words of a line mean to standard macros: a definition
+// 'name MACRO', a call, the head of a REPT, IRP or IRPC block, or ENDM,
+// EXITM or LOCAL.
+enum class MacroWord : std::uint8_t { None, Define, Call, Rept, Irp, Irpc, Endm, Exitm, Local };
+
+// The names of 'name MACRO a, b' or 'LOCAL a, b' from text[from] on, in
+// upper case. Something that is not a name is a syntax error.
+std::vector<std::string> read_names(std::string_view text, std::size_t from) {
+    std::vector<std::string> out;
+    std::string_view list = text.substr(from, text.find(';', from) - from);
+    if (trim(list).empty()) return out;
+    for (std::size_t pos = 0;;) {
+        const std::size_t comma = list.find(',', pos);
+        std::string_view name = trim(list.substr(pos, comma - pos));
+        if (name.empty() || !ident_start(name[0]) || !std::all_of(name.begin(), name.end(), ident_char))
+            throw AsmError("A6", "syntax error: name expected", static_cast<int>(from + pos) + 1);
+        out.push_back(upper(name));
+        if (comma == std::string_view::npos) return out;
+        pos = comma + 1;
+    }
+}
 
 // Keil opens a $IF only while fewer than this many IF blocks (of either
 // kind) are open.
@@ -350,9 +600,32 @@ constexpr std::string_view kPrimaryControls[] = {
 };
 
 // Controls allowed anywhere that only affect the listing.
+// Primary controls that choose a setting; one that contradicts an earlier
+// choice for the same group is error A7.
+struct PrimaryChoice {
+    std::string_view name, group, setting;
+};
+constexpr PrimaryChoice kPrimaryChoices[] = {
+    {"CASE", "CASE", "+"},         {"NOCASE", "CASE", "-"},       {"SEGMENTED", "SG", "+"},
+    {"SG", "SG", "+"},             {"NONSEGMENTED", "SG", "-"},   {"NOSG", "SG", "-"},
+    {"MACRO", "MACRO", "+"},       {"NOMACRO", "MACRO", "-"},     {"MPL", "MPL", "+"},
+    {"NOMPL", "MPL", "-"},         {"SYMBOLS", "SB", "+"},        {"SB", "SB", "+"},
+    {"NOSYMBOLS", "SB", "-"},      {"NOSB", "SB", "-"},           {"DEBUG", "DB", "+"},
+    {"DB", "DB", "+"},             {"NODEBUG", "DB", "-"},        {"NODB", "DB", "-"},
+    {"XREF", "XR", "+"},           {"XR", "XR", "+"},             {"NOXREF", "XR", "-"},
+    {"NOXR", "XR", "-"},           {"PRINT", "PR", "+"},          {"PR", "PR", "+"},
+    {"NOPRINT", "PR", "-"},        {"NOPR", "PR", "-"},           {"OBJECT", "OJ", "+"},
+    {"OJ", "OJ", "+"},             {"NOOBJECT", "OJ", "-"},       {"NOOJ", "OJ", "-"},
+    {"ERRORPRINT", "EP", "+"},     {"EP", "EP", "+"},             {"NOERRORPRINT", "EP", "-"},
+    {"NOEP", "EP", "-"},           {"PAGING", "PAGING", "+"},     {"NOPAGING", "PAGING", "-"},
+    {"LINES", "LINES", "+"},       {"NOLINES", "LINES", "-"},     {"TYPE", "TYPE", "+"},
+    {"NOTYPE", "TYPE", "-"},       {"AMAKE", "AMAKE", "+"},       {"NOAMAKE", "AMAKE", "-"},
+    {"MOD166", "MOD", "166"},      {"M166", "MOD", "166"},        {"MOD167", "MOD", "167"},
+    {"M167", "MOD", "167"},        {"MODV2", "MOD", "V2"},
+};
+
 constexpr std::string_view kIgnoredControls[] = {
-    "LIST", "NOLIST", "TITLE", "TT", "EJECT", "EJ", "GEN", "NOGEN", "GENONLY", "GO",
-    "SYMLIST", "NOSYMLIST", "SAVE", "RESTORE", "REGUSE",
+    "LIST", "LI", "NOLIST", "NOLI", "TITLE", "TT", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "REGUSE",
 };
 
 enum class ProcKind : std::uint8_t { None, Near, Far, Interrupt };
@@ -435,6 +708,27 @@ constexpr std::string_view kExternTypes[] = {
     "NEAR", "FAR", "BYTE", "WORD", "DWORD", "BIT", "BITWORD", "DATA3", "DATA4", "DATA8", "DATA16", "INTNO",
 };
 
+// A macro defined with MACRO ... ENDM, or the body of a REPT, IRP or
+// IRPC block.
+struct Macro {
+    std::string name;  // as written; empty for REPT, IRP and IRPC
+    std::vector<std::string> params;  // upper case
+    std::vector<std::string> locals;  // upper case
+    std::vector<std::string> body;
+};
+enum class BlockKind : std::uint8_t { Macro, Rept, Irp, Irpc };
+// A MACRO, REPT, IRP or IRPC block whose lines are being collected up to
+// its ENDM.
+struct Block {
+    BlockKind kind = BlockKind::Macro;
+    std::shared_ptr<Macro> macro = std::make_shared<Macro>();
+    int depth = 0;  // blocks opened inside the body and not yet closed
+    bool first = true;  // the next line is the first of the body: it may be LOCAL
+    bool valid = true;  // false: the header has an error, so the block is dropped at its ENDM
+    std::int64_t count = 0;  // REPT
+    std::vector<std::string> values;  // IRP and IRPC: one per expansion of the body
+};
+
 class Assembler final : public SymbolContext {
 public:
     Assembler(const AssembleOptions& opt, std::string file_name, std::size_t module, const LinkState& link)
@@ -471,10 +765,31 @@ private:
         std::vector<std::string_view> lines;
         bool newline_at_end = true;
     };
-    // A file being read: index into files_ and the number of lines read so far.
+    // The lines of a macro call or of a REPT, IRP or IRPC block.
+    struct Expansion {
+        std::shared_ptr<const Macro> macro;
+        std::vector<std::string> names;  // upper case: parameters, then locals
+        std::vector<std::vector<std::string>> values;  // per round, one per name; empty for REPT
+        std::size_t rounds = 1;
+        std::size_t round = 0;
+        std::vector<std::string> lines;  // of the current round
+        std::size_t next = 0;
+        bool exited = false;  // EXITM
+        std::string name;  // key() of the macro, for the recursion limit; empty for REPT, IRP and IRPC
+        int level = 1;  // listed as N+level
+        std::size_t file = 0;  // problems are reported at the line of the outermost call
+        int file_line = 0;
+        int include_level = 0;
+        std::size_t conds = 0;  // IF blocks open when the expansion started; EXITM closes the others
+        bool next_line(std::string& out);
+    };
+    // A file or an expansion being read. For a file: index into files_, the
+    // number of lines read so far and the include depth.
     struct Frame {
         std::size_t file = 0;
         std::size_t next = 0;
+        int level = 0;
+        std::shared_ptr<Expansion> exp;  // null for a file
     };
 
     friend class Program;
@@ -493,10 +808,21 @@ private:
     std::vector<std::unique_ptr<SourceFile>> files_;  // [0] is the main source
     std::map<std::string, int> includes_;  // include request -> files_ index, or -1 if not found
     std::vector<std::string> incdirs_;  // directories from $INCDIR
-    std::vector<Frame> stack_;  // files being read, innermost last
+    std::vector<Frame> stack_;  // files and expansions being read, innermost last
     std::optional<std::size_t> include_;  // file to read after the current line
+    std::shared_ptr<Expansion> expansion_;  // expansion to read after the current line
+    std::optional<Block> block_;  // MACRO, REPT, IRP or IRPC block being collected
+    std::unordered_map<std::string, std::shared_ptr<const Macro>> macros_;  // by key() of the name
+    unsigned locals_ = 0;  // LOCAL names made so far: ??0000, ??0001, ...
+    int macro_level_ = 0;  // expansion depth of the current line
+    bool gen_ = false;  // $GEN: list the lines of expansions
+    bool macro_ = true;  // standard macros allowed ($NOMACRO turns them off)
+    bool mpl_ = true;  // MPL macro processing: '%' is its metacharacter ($NOMPL and $NOMACRO turn it off)
+    std::vector<bool> saved_gen_;  // gen_ of each $SAVE
     bool fatal_ = false;  // stops the pass, like Keil's fatal errors
     bool primary_done_ = false;  // a statement was seen: primary controls are no longer allowed
+    std::map<std::string_view, std::set<std::string_view>> primary_seen_;  // settings given for each group of primary controls
+    int tabs_ = 8;  // $TABS: tab stops for expand_tabs()
     std::size_t file_ = 0;  // files_ index of the current line
     int level_ = 0;  // include nesting depth of the current line
     std::string joined_;  // include file whose last line was joined to the current line
@@ -565,7 +891,18 @@ private:
     bool statement_condition(std::string_view text, std::size_t after, int column, Reporter& rep);
     bool control_condition(std::string_view text, std::size_t after, int column, Reporter& rep);
     void set_flags(std::string_view text, std::size_t from, std::size_t to, bool set);
+    void set_tabs(std::optional<std::string_view> arg, bool closed, int column);
+    bool contradicts(std::string_view name);
     void include(std::string_view name, int column);
+    MacroWord macro_word(std::string_view text, std::size_t lead, std::size_t& head, std::size_t& after) const;
+    void macro_statement(MacroWord word, std::string_view text, std::size_t head, std::size_t after, Reporter& rep);
+    void macro_header(BlockKind kind, std::string_view text, std::size_t head, std::size_t after, Reporter& rep);
+    void collect(std::string_view text, Reporter& rep);
+    void end_block(int column);
+    void call(const std::string& name_key, std::string_view args, std::size_t offset, int column);
+    std::size_t percent_argument(std::string_view text, std::size_t pos, std::size_t offset, std::string& out);
+    void exit_macro(int column);
+    void start_expansion(std::shared_ptr<Expansion> e, int column);
     void named_directive(const Token& name, const std::string& dir, TokenCursor& cur, Reporter& rep,
                          ListingLine& lst);
     void directive(const std::string& kw, const Token& tok, TokenCursor& cur, Reporter& rep, ListingLine& lst);
@@ -873,6 +1210,16 @@ void Assembler::run_lines() {
 
     stack_.assign(1, Frame{});
     line_no_ = 0;
+    expansion_.reset();
+    block_.reset();
+    macros_.clear();
+    locals_ = 0;
+    gen_ = false;
+    macro_ = true;
+    mpl_ = initial_mpl(files_[0]->lines);
+    primary_seen_.clear();
+    tabs_ = 8;
+    saved_gen_.clear();
     // Keil joins the last line of an include file that does not end with a
     // newline to the line read after it.
     std::string carry;
@@ -881,11 +1228,26 @@ void Assembler::run_lines() {
     while ((!stack_.empty() || !carry.empty()) && !fatal_) {
         std::string text;
         if (stack_.empty()) {
-            text = std::move(carry);
+            text = expand_tabs(carry, tabs_);
             file_ = carry_file;
             file_line_ = carry_line;
             level_ = carry_level;
+            macro_level_ = 0;
             joined_.clear();
+        } else if (stack_.back().exp) {
+            Expansion& e = *stack_.back().exp;
+            std::string line;
+            if (!e.next_line(line)) {
+                stack_.pop_back();
+                continue;
+            }
+            file_ = e.file;
+            file_line_ = e.file_line;
+            level_ = e.include_level;
+            macro_level_ = e.level;
+            joined_.clear();
+            if (!trim(carry).empty() && !trim(line).empty()) joined_ = files_[carry_file]->name;
+            text = expand_tabs(std::move(carry) + line, tabs_);
         } else {
             Frame& f = stack_.back();
             const SourceFile& file = *files_[f.file];
@@ -896,7 +1258,8 @@ void Assembler::run_lines() {
             std::string_view line = file.lines[f.next++];
             file_ = f.file;
             file_line_ = static_cast<int>(f.next);
-            level_ = static_cast<int>(stack_.size()) - 1;
+            level_ = f.level;
+            macro_level_ = 0;
             if (f.next == file.lines.size() && !file.newline_at_end && level_ > 0) {
                 carry += line;
                 carry_file = file_;
@@ -906,14 +1269,36 @@ void Assembler::run_lines() {
             }
             joined_.clear();
             if (!trim(carry).empty() && !trim(line).empty()) joined_ = files_[carry_file]->name;
-            text = std::move(carry) + std::string(line);
+            text = expand_tabs(std::move(carry) + std::string(line), tabs_);
         }
         carry.clear();
-        ++line_no_;
+        if (++line_no_ > kMaxLines) {
+            fatal_ = true;
+            report(Severity::Error, "OC25", "more than " + std::to_string(kMaxLines) +
+                                                " lines to assemble: does a macro, REPT, IRP or IRPC expand "
+                                                "without end?");
+            break;
+        }
         include_.reset();
+        expansion_.reset();
         process_line(text);
-        if (include_) stack_.push_back(Frame{*include_, 0});
+        if (include_) stack_.push_back(Frame{*include_, 0, level_ + 1, nullptr});
+        if (expansion_) stack_.push_back(Frame{0, 0, 0, std::move(expansion_)});
     }
+}
+
+// The next line of the expansion, or false at its end.
+bool Assembler::Expansion::next_line(std::string& out) {
+    static const std::vector<std::string> kNone;
+    while (next == lines.size()) {
+        if (exited || round == rounds) return false;
+        lines.clear();
+        for (const auto& l : macro->body) lines.push_back(substitute(l, names, values.empty() ? kNone : values[round]));
+        ++round;
+        next = 0;
+    }
+    out = std::move(lines[next++]);
+    return true;
 }
 
 // After Program::locate() has placed the sections: notes whether anything
@@ -956,6 +1341,7 @@ bool Assembler::finish_pass() {
         }
         res_.diagnostics.push_back({sev, code, std::move(msg), file, line, 0});
     };
+    if (block_) add(Severity::Error, "A120", "macro terminated by end of file: ENDM missing");
     if (!ended_) add(Severity::Warning, "A89", "premature end of file (no END statement)");
     if (!conds_.empty())
         add(Severity::Error, "A12", "unbalanced IF-ENDIF: " + std::to_string(conds_.size()) +
@@ -1011,6 +1397,7 @@ void Assembler::process_line(std::string_view text) {
     lst.file = file;
     lst.file_line = file_line_;
     lst.level = level_;
+    lst.macro_level = macro_level_;
     lst.source = std::string(text);
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
@@ -1035,7 +1422,7 @@ void Assembler::process_line(std::string_view text) {
     // $NOCOND leaves out every line after which assembly is off.
     const bool now_active = active();
     lst.skipped = !(control_line ? now_active : was_active);
-    lst.hidden = !now_active && !cond_listing_;
+    lst.hidden = (!now_active && !cond_listing_) || (macro_level_ > 0 && !gen_);
     rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
@@ -1109,6 +1496,19 @@ bool Assembler::expand_lits(std::string_view text, std::string& out, std::vector
 }
 
 void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst) {
+    // Keil's MPL macro processor, on unless $NOMPL, takes every '%' as the
+    // start of an MPL call, even in comments and strings.
+    if (mpl_ && macro_level_ == 0) {
+        if (std::size_t p = text.find('%'); p != std::string_view::npos)
+            rep.error("OC3",
+                      "'%' starts an MPL macro call in Keil; openc166 does not support MPL macros yet "
+                      "(put $NOMPL at the top of the file if '%' is meant as text)",
+                      static_cast<int>(p) + 1);
+    }
+    if (block_) {
+        collect(text, rep);
+        return;
+    }
     std::size_t lead = text.find_first_not_of(" \t");
     if (lead == std::string_view::npos) return;
     // Like Keil, replace LIT names before reading the line, in $ controls too,
@@ -1149,9 +1549,13 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     }
     if (!active()) return;
 
-    auto toks = tokenize(text);
+    // Macro statements are read as text; only a label in front of one is
+    // tokenized.
+    std::size_t head = 0, after = 0;
+    const MacroWord mw = macro_word(text, lead, head, after);
+    auto toks = tokenize(mw == MacroWord::None ? text : text.substr(0, head));
     TokenCursor cur(toks);
-    if (cur.at_end()) return;
+    if (cur.at_end() && mw == MacroWord::None) return;
     primary_done_ = true;
 
     if (cur.peek().kind == TokKind::Ident && cur.peek(1).is_op(":")) {
@@ -1195,7 +1599,10 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
             rep.error("A6", misplaced, name.column);
             throw AsmError("A6", "syntax error: " + upper(dir.text) + " is ignored after a label", dir.column);
         }
-        if (cur.at_end()) return;
+        if (cur.at_end()) {
+            if (mw != MacroWord::None) macro_statement(mw, text, head, after, rep);
+            return;
+        }
         // Keil defines the label, reports the line and still obeys the IF.
         if (const Token& t = cur.peek(); t.kind == TokKind::Ident && contains(kCondKeywords, upper(t.text))) {
             rep.error("A6", "syntax error: " + upper(t.text) + " cannot have a label", t.column);
@@ -1204,6 +1611,10 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
         }
     }
 
+    if (mw != MacroWord::None) {
+        macro_statement(mw, text, head, after, rep);
+        return;
+    }
     const Token& first = cur.peek();
     if (first.kind != TokKind::Ident) throw AsmError("A6", "syntax error", first.column);
     if (cur.peek(1).kind == TokKind::Ident) {
@@ -1230,6 +1641,7 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
         std::size_t arg = 0;  // index of the text inside the parentheses
         std::size_t arg_end = 0;
         bool paren = false;
+        bool unclosed = false;  // no ')' after the '('
         int column = 0;
     };
     std::size_t i = from;
@@ -1287,7 +1699,9 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
                 if (text[i] == '(') ++depth;
                 if (text[i] == ')' && --depth == 0) break;
             }
-            if (i >= text.size()) throw AsmError("A22", "')' expected", c.column);
+            // Keil still uses the number of '$TABS(4' (see below).
+            c.unclosed = i >= text.size();
+            if (c.unclosed && c.name != "TABS" && c.name != "TA") throw AsmError("A22", "')' expected", c.column);
             c.arg = open + 1;
             c.arg_end = i;
             ++i;
@@ -1322,6 +1736,7 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
     for (std::size_t k = 0; k < list.size(); ++k) {
         const std::string& name = list[k].name;
         int column = list[k].column;
+        const bool contradicted = contradicts(name);
         if (name == "INCLUDE" || name == "IC") {
             if (k > 0) {
                 // Keil silently skips an INCLUDE that follows another control.
@@ -1366,11 +1781,90 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             cond_listing_ = true;
         } else if (name == "NOCOND") {
             cond_listing_ = false;
+        } else if (name == "GEN" || name == "GE") {
+            gen_ = true;
+        } else if (name == "NOGEN" || name == "NOGE" || name == "GENONLY" || name == "GO") {
+            gen_ = false;
+        } else if (name == "SAVE" || name == "SA") {
+            if (saved_gen_.size() >= kMaxSaveDepth) throw AsmError("A14", "SAVE stack overflow", column);
+            saved_gen_.push_back(gen_);
+        } else if (name == "RESTORE" || name == "RS") {
+            if (saved_gen_.empty()) throw AsmError("A13", "SAVE stack underflow", column);
+            gen_ = saved_gen_.back();
+            saved_gen_.pop_back();
+        } else if (name == "MACRO") {
+            macro_ = true;
+        } else if (name == "NOMACRO") {
+            macro_ = false;
+            mpl_ = false;
+        } else if (name == "MPL") {
+            mpl_ = true;
+        } else if (name == "NOMPL") {
+            mpl_ = false;
+        } else if (name == "TABS" || name == "TA") {
+            set_tabs(list[k].paren ? std::optional(arg(list[k])) : std::nullopt, !list[k].unclosed, column);
         } else if (!contains(kIgnoredControls, name) && !contains(kPrimaryControls, name)) {
             throw AsmError("A16", "unknown control '" + name + "'", column);
         }
+        // Keil uses a primary control that contradicts an earlier one (A7),
+        // despite its message, but ignores the rest of the line.
+        if (contradicted)
+            throw AsmError("A7", "respecified primary control, line ignored: $" + name +
+                                     " contradicts an earlier primary control",
+                           column);
     }
     if (cond) cond_control(cond->name, text, cond->arg, cond->column, true, rep);
+}
+
+// Records the setting of a primary control; true if it contradicts a setting
+// given earlier for the same thing (A7 in Keil), even one that was itself
+// reported. $MOD167 contradicts an earlier $MOD166 or $MODV2, and $MOD166
+// and $MODV2 contradict each other, but either may follow $MOD167.
+bool Assembler::contradicts(std::string_view name) {
+    auto choice = std::find_if(std::begin(kPrimaryChoices), std::end(kPrimaryChoices),
+                               [&](const PrimaryChoice& c) { return c.name == name; });
+    if (choice == std::end(kPrimaryChoices)) return false;
+    auto& seen = primary_seen_[choice->group];
+    const std::string_view setting = choice->setting;
+    bool contradiction = false;
+    for (std::string_view before : seen)
+        if (before != setting && (choice->group != "MOD" || before != "167")) contradiction = true;
+    seen.insert(setting);
+    return contradiction;
+}
+
+// $TABS(number). Keil takes a decimal number, or a hexadecimal one ending in
+// H, from 1 to 16. When the number is bad or missing, each tab becomes one
+// space; when only the ')' is missing, the number is still used.
+void Assembler::set_tabs(std::optional<std::string_view> arg, bool closed, int column) {
+    tabs_ = 1;
+    if (!arg) throw AsmError("A22", "')' expected: $TABS takes a number in parentheses", column);
+    std::size_t i = arg->find_first_not_of(" \t");
+    std::string digits;
+    for (; i < arg->size(); ++i) {
+        const char c = (*arg)[i];
+        if (std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_')
+            digits += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        else if (c != '\'')
+            break;
+    }
+    int base = 10;
+    if (digits.size() > 1 && digits.back() == 'H') {
+        base = 16;
+        digits.pop_back();
+    }
+    int width = 0;
+    bool good = !digits.empty();
+    for (char c : digits) {
+        const int d = std::isdigit(static_cast<unsigned char>(c)) ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : 99;
+        good = good && d < base;
+        width = std::min(width * base + d, 1000);
+    }
+    if (!good || width < 1 || width > 16)
+        throw AsmError("A19", "numeric value out of range: $TABS takes 1 to 16", column);
+    tabs_ = width;
+    if (!closed || (i < arg->size() && arg->find_first_not_of(" \t", i) != std::string_view::npos))
+        throw AsmError("A22", "')' expected", column);
 }
 
 // $SET (name [= number], ...) and $RESET (name, ...). Keil takes only a plain
@@ -1560,7 +2054,7 @@ void Assembler::cond_statement(const std::string& kw, std::string_view text, std
 // Finds an include file and arranges for it to be read after the current
 // line. Like Keil, a missing file ends the assembly.
 void Assembler::include(std::string_view name, int column) {
-    if (stack_.size() > kMaxIncludeDepth) {
+    if (static_cast<std::size_t>(level_) >= kMaxIncludeDepth) {
         fatal_ = true;
         throw AsmError("OC6", "include files nested too deeply (does a file include itself?)", column);
     }
@@ -1597,6 +2091,378 @@ void Assembler::include(std::string_view name, int column) {
         throw AsmError("OC5", "cannot open include file '" + std::string(name) + "'", column);
     }
     include_ = static_cast<std::size_t>(it->second);
+}
+
+// What the first words of a line, read as text, mean to standard macros. A
+// label in front is allowed except before 'name MACRO'. On return,
+// text[head, after) is the word that decides.
+MacroWord Assembler::macro_word(std::string_view text, std::size_t lead, std::size_t& head,
+                                std::size_t& after) const {
+    auto word_end = [&](std::size_t p) {
+        if (p < text.size() && ident_start(text[p]))
+            while (p < text.size() && ident_char(text[p])) ++p;
+        return p;
+    };
+    auto skip_space = [&](std::size_t p) {
+        while (p < text.size() && (text[p] == ' ' || text[p] == '\t')) ++p;
+        return p;
+    };
+    head = lead;
+    after = word_end(lead);
+    if (after == head) return MacroWord::None;
+    std::size_t p = skip_space(after);
+    const bool label = p < text.size() && text[p] == ':';
+    if (label) {
+        head = skip_space(p + 1);
+        after = word_end(head);
+        if (after == head) return MacroWord::None;
+    }
+    const std::string_view word = text.substr(head, after - head);
+    const std::string w = upper(word);
+    if (w == "REPT") return MacroWord::Rept;
+    if (w == "IRP") return MacroWord::Irp;
+    if (w == "IRPC") return MacroWord::Irpc;
+    if (w == "ENDM") return MacroWord::Endm;
+    if (w == "EXITM") return MacroWord::Exitm;
+    if (w == "LOCAL") return MacroWord::Local;
+    // Keil takes 'M1 MACRO x' as a call when M1 is a macro already.
+    if (macros_.count(key(word))) return MacroWord::Call;
+    p = skip_space(after);
+    if (!label && upper(text.substr(p, word_end(p) - p)) == "MACRO" && !isa::is_mnemonic(w)) return MacroWord::Define;
+    return MacroWord::None;
+}
+
+void Assembler::macro_statement(MacroWord word, std::string_view text, std::size_t head, std::size_t after,
+                                Reporter& rep) {
+    const int column = static_cast<int>(head) + 1;
+    switch (word) {
+    case MacroWord::Define: return macro_header(BlockKind::Macro, text, head, after, rep);
+    case MacroWord::Rept: return macro_header(BlockKind::Rept, text, head, after, rep);
+    case MacroWord::Irp: return macro_header(BlockKind::Irp, text, head, after, rep);
+    case MacroWord::Irpc: return macro_header(BlockKind::Irpc, text, head, after, rep);
+    case MacroWord::Call: return call(key(text.substr(head, after - head)), text.substr(after), after, column);
+    case MacroWord::Exitm: return exit_macro(column);
+    case MacroWord::Endm: throw AsmError("A6", "syntax error: ENDM without MACRO, REPT, IRP or IRPC", column);
+    case MacroWord::Local:
+        throw AsmError("A6", "syntax error: LOCAL must be the line right after the MACRO line", column);
+    case MacroWord::None: break;
+    }
+}
+
+// The first line of a MACRO, REPT, IRP or IRPC block. The lines up to the
+// matching ENDM are its body. A block whose first line has an error is still
+// read to its ENDM, but then dropped, as in Keil.
+void Assembler::macro_header(BlockKind kind, std::string_view text, std::size_t head, std::size_t after,
+                             Reporter& rep) {
+    const int column = static_cast<int>(head) + 1;
+    Block& b = block_.emplace();
+    b.kind = kind;
+    // Keil reports these lines under $NOMACRO, but still obeys them.
+    if (!macro_) rep.error("A6", "syntax error: $NOMACRO turned macros off", column);
+    try {
+        if (kind == BlockKind::Macro) {
+            b.macro->name = std::string(text.substr(head, after - head));
+            const std::size_t p = text.find_first_not_of(" \t", after) + 5;  // after MACRO
+            b.macro->params = read_names(text, p);
+            auto& params = b.macro->params;
+            for (std::size_t i = 1; i < params.size(); ++i) {
+                if (std::find(params.begin(), params.begin() + static_cast<std::ptrdiff_t>(i), params[i]) !=
+                    params.begin() + static_cast<std::ptrdiff_t>(i))
+                    throw AsmError("A123", "duplicate local/formal: '" + params[i] + "'", column);
+            }
+        } else if (kind == BlockKind::Rept) {
+            auto toks = tokenize_from(text, after);
+            TokenCursor cur(toks);
+            if (cur.at_end()) throw AsmError("A6", "syntax error: REPT needs a count", column);
+            // Keil uses the low 16 bits of the count and ignores what follows
+            // it. It takes an undefined name as a forward reference.
+            try {
+                b.count = absolute(cur, "REPT") & 0xFFFF;
+            } catch (const AsmError& e) {
+                if (e.code() != "A42") throw;
+                throw AsmError("A71", "expression with forward reference not permitted in REPT: " + e.message(),
+                               e.column());
+            }
+        } else {
+            std::size_t p = text.find_first_not_of(" \t", after);
+            std::size_t end = p;
+            if (p != std::string_view::npos && ident_start(text[p]))
+                while (end < text.size() && ident_char(text[end])) ++end;
+            if (end == p)
+                throw AsmError("A6", "syntax error: name expected",
+                               p == std::string_view::npos ? column : static_cast<int>(p) + 1);
+            b.macro->params.push_back(upper(text.substr(p, end - p)));
+            // The comma after the name may be left out.
+            p = text.find_first_not_of(" \t", end);
+            if (p != std::string_view::npos && text[p] == ',') ++p;
+            const MacroArg list = split_args(p == std::string_view::npos ? "" : text.substr(p), false).front();
+            if (list.unclosed) rep.error("A6", "syntax error: '>' expected", column);
+            if (kind == BlockKind::Irp) {
+                b.values = split_list(list.text);
+            } else {
+                for (char c : list.text) b.values.emplace_back(1, c);
+                if (b.values.empty()) b.values.emplace_back();
+            }
+        }
+    } catch (const AsmError& e) {
+        rep.error(e.code(), e.message(), e.column());
+        b.valid = false;
+    }
+}
+
+// A line inside a MACRO, REPT, IRP or IRPC block: kept as written for the
+// body, up to the ENDM that closes the block. Blocks inside the body are
+// counted so that their ENDM lines stay in the body.
+void Assembler::collect(std::string_view text, Reporter& rep) {
+    Block& b = *block_;
+    const bool first = std::exchange(b.first, false);
+    std::size_t head = 0, after = 0;
+    std::string word, second;
+    if (std::size_t lead = text.find_first_not_of(" \t"); lead != std::string_view::npos) {
+        auto word_end = [&](std::size_t p) {
+            if (p < text.size() && ident_start(text[p]))
+                while (p < text.size() && ident_char(text[p])) ++p;
+            return p;
+        };
+        auto skip_space = [&](std::size_t p) {
+            while (p < text.size() && (text[p] == ' ' || text[p] == '\t')) ++p;
+            return p;
+        };
+        head = lead;
+        after = word_end(head);
+        std::size_t p = skip_space(after);
+        const bool label = after > head && p < text.size() && text[p] == ':';
+        if (label) {
+            head = skip_space(p + 1);
+            after = word_end(head);
+        }
+        word = upper(text.substr(head, after - head));
+        p = skip_space(after);
+        if (!label) second = upper(text.substr(p, word_end(p) - p));
+    }
+    if (first && b.kind == BlockKind::Macro && word == "LOCAL") {
+        try {
+            for (auto& name : read_names(text, after)) {
+                const auto& params = b.macro->params;
+                auto& locals = b.macro->locals;
+                if (std::find(params.begin(), params.end(), name) != params.end() ||
+                    std::find(locals.begin(), locals.end(), name) != locals.end())
+                    rep.error("A123", "duplicate local/formal: '" + name + "'", static_cast<int>(head) + 1);
+                else
+                    locals.push_back(std::move(name));
+            }
+        } catch (const AsmError& e) {
+            rep.error(e.code(), e.message(), e.column());
+        }
+        return;
+    }
+    if (word == "ENDM") {
+        if (b.depth == 0) return end_block(static_cast<int>(head) + 1);
+        --b.depth;
+    } else if (word == "REPT" || word == "IRP" || word == "IRPC" || second == "MACRO") {
+        ++b.depth;
+    }
+    b.macro->body.emplace_back(text);
+}
+
+// The ENDM of a block: defines the macro, or expands the REPT, IRP or IRPC
+// body.
+void Assembler::end_block(int column) {
+    Block b = std::move(*block_);
+    block_.reset();
+    if (!b.valid) return;
+    if (b.kind == BlockKind::Macro) {
+        std::string k = key(b.macro->name);
+        macros_[std::move(k)] = std::move(b.macro);
+        return;
+    }
+    auto e = std::make_shared<Expansion>();
+    e->names = b.macro->params;
+    if (b.kind == BlockKind::Rept) {
+        e->rounds = static_cast<std::size_t>(b.count);
+    } else {
+        e->rounds = b.values.size();
+        for (auto& v : b.values) e->values.push_back({std::move(v)});
+    }
+    e->macro = std::move(b.macro);
+    if (e->rounds) start_expansion(std::move(e), column);
+}
+
+// A macro call: 'args' is the text after the macro name, which starts at
+// 'offset' in the line.
+void Assembler::call(const std::string& name_key, std::string_view args, std::size_t offset, int column) {
+    const std::shared_ptr<const Macro>& m = macros_.at(name_key);
+    const auto same = std::count_if(stack_.begin(), stack_.end(),
+                                    [&](const Frame& f) { return f.exp && f.exp->name == name_key; });
+    if (same >= kMaxSameMacro)
+        throw AsmError("OC24",
+                       "macro '" + m->name + "' calls itself more than " + std::to_string(kMaxSameMacro) +
+                           " levels deep (Keil hangs at 10)",
+                       column);
+    auto e = std::make_shared<Expansion>();
+    e->name = name_key;
+    e->names = m->params;
+    e->names.insert(e->names.end(), m->locals.begin(), m->locals.end());
+    PercentArg percent;
+    if (!mpl_ && macro_)
+        percent = [&](std::string_view text, std::size_t pos, MacroArg& a) {
+            return percent_argument(text, pos, offset, a.text);
+        };
+    bool open_quote = false;
+    args_end(args, open_quote);
+    if (open_quote)
+        rep_->error("A2", "missing string terminator", static_cast<int>(offset + args.size()) + 1);
+    std::vector<MacroArg> list = split_args(args, true, percent);
+    if (std::any_of(list.begin(), list.end(), [](const MacroArg& a) { return a.unclosed; }))
+        rep_->error("A6", "syntax error: '<' without '>' in the macro arguments",
+                    static_cast<int>(offset + args.size()) + 1);
+    for (const MacroArg& a : list)
+        if (a.garbled) {
+            rep_->warning("OC27",
+                          a.text.empty() ? "Keil A166 passes the line break after this '!'"
+                                         : "Keil A166 garbles the macro arguments from this '!" + a.text +
+                                               "' on; openc166 passes '" + a.text + "'",
+                          static_cast<int>(offset + a.garbled));
+            break;
+        }
+    std::vector<std::string> values;
+    for (std::size_t i = 0; i < m->params.size(); ++i)
+        values.push_back(i < list.size() ? std::move(list[i].text) : std::string());
+    // Each expansion gets its own names for the LOCAL names: ??0000, ??0001, ...
+    for (std::size_t i = 0; i < m->locals.size(); ++i) values.push_back("??" + hex(locals_++, 4));
+    e->values.push_back(std::move(values));
+    e->macro = m;
+    start_expansion(std::move(e), column);
+}
+
+// '%expr' in a macro call under $NOMPL passes the value of expr in
+// decimal. Keil A166 has two bugs here that openc166 copies, so that it
+// builds the same code, with warning OC26 where the result is not what
+// Keil's manual describes:
+// - numbers in expr count as 0 (strings and symbols work);
+// - when a ',' follows expr, the next argument starts right after expr's
+//   first token, so '%CNT, 4' passes the value, an empty argument, and 4.
+// When anything other than ',', ';' or the end of the line follows expr,
+// the next argument starts at expr itself. After an error the value is 0.
+std::size_t Assembler::percent_argument(std::string_view text, std::size_t pos, std::size_t offset,
+                                        std::string& out) {
+    constexpr auto none = std::string_view::npos;
+    const std::string_view s = text.substr(pos + 1);
+    const int base = static_cast<int>(offset + pos + 1);
+    out = "0";
+    std::vector<Token> toks;
+    try {
+        toks = tokenize(s);
+    } catch (const AsmError& e) {
+        rep_->error(e.code(), e.message(), base + e.column());
+        return none;
+    }
+    if (toks.front().kind == TokKind::End) {
+        rep_->error("A6", "syntax error: expression expected after '%'", base + 1);
+        return none;
+    }
+    const std::size_t after_first =
+        toks[1].kind == TokKind::End ? none : pos + 1 + static_cast<std::size_t>(toks[1].column - 1);
+    // Evaluates 'list' into 'v'; false if the value is not a plain number.
+    auto evaluate_list = [&](const std::vector<Token>& list, std::size_t& stop, std::uint32_t& v) {
+        TokenCursor cur(list);
+        forward_ref_ = false;
+        const Value r = expression(cur);
+        stop = cur.position();
+        if (r.type != VType::Number || r.movable || r.external()) return false;
+        v = static_cast<std::uint32_t>(r.dpp >= 0 ? r.num | (std::int64_t{r.dpp} << 14) : r.num);
+        return true;
+    };
+    std::vector<Token> list = toks;
+    bool numbers = false;
+    for (Token& t : list)
+        if (t.kind == TokKind::Number && t.num) {
+            t.num = 0;
+            numbers = true;
+        }
+    bool number = false;
+    std::size_t stop = 0;
+    std::uint32_t v = 0;
+    try {
+        number = evaluate_list(list, stop, v);
+    } catch (const AsmError& e) {
+        // Keil calls a name that is not defined a forward reference here.
+        if (e.code() == "A42")
+            rep_->error("A71", "expression with forward reference not permitted in a '%' macro argument",
+                        base + e.column());
+        else
+            rep_->error(e.code(), e.message(), base + (e.column() ? e.column() : toks.front().column));
+        // Keil drops the arguments after this one unless a ',' follows the
+        // token that is wrong.
+        std::size_t at = 0;
+        while (at + 1 < list.size() && list[at].column != e.column()) ++at;
+        for (std::size_t i = at + 1; i < list.size(); ++i)
+            if (list[i].is_op(",")) return after_first;
+        return none;
+    }
+    const int column = base + toks.front().column;
+    if (forward_ref_) {
+        rep_->error("A71", "expression with forward reference not permitted in a '%' macro argument", column);
+    } else if (!number) {
+        rep_->error("A72", "absolute expression required", column);
+    } else {
+        out = std::to_string(v);
+        std::size_t ignore = 0;
+        std::uint32_t c = 0;
+        try {
+            if (numbers && evaluate_list(toks, ignore, c) && c != v)
+                rep_->warning("OC26",
+                              "Keil A166 counts numbers in a '%' argument as 0, so this passes " + out + ", not " +
+                                  std::to_string(c),
+                              column);
+        } catch (const AsmError&) {
+        }
+    }
+    const Token& next = list[stop];
+    if (next.kind == TokKind::End) return none;
+    const std::string expr(trim(s.substr(0, static_cast<std::size_t>(next.column - 1))));
+    if (next.is_op(",")) {
+        rep_->warning("OC26",
+                      "Keil A166 starts the argument after '%" + expr + "' right after its first token, not after "
+                      "the ','; put '%' arguments last",
+                      base + next.column);
+        return after_first;
+    }
+    rep_->warning("OC26",
+                  "Keil A166 passes the text from '" + expr + "' on as the next argument, since '" +
+                      std::string(next.text) + "' does not end the '%' argument",
+                  base + next.column);
+    return pos + 1;
+}
+
+// EXITM: ends the innermost expansion, closing the IF blocks opened in it.
+void Assembler::exit_macro(int column) {
+    if (macro_level_ == 0) throw AsmError("A124", "EXITM is invalid outside a macro", column);
+    for (auto it = stack_.rbegin(); it != stack_.rend(); ++it) {
+        if (!it->exp) continue;
+        Expansion& e = *it->exp;
+        e.exited = true;
+        e.next = e.lines.size();
+        if (conds_.size() > e.conds) conds_.resize(e.conds);
+        return;
+    }
+}
+
+// Arranges for the lines of 'e' to be read after the current line.
+// Problems in them are reported at the current line, which for lines of an
+// expansion is where the outermost one started.
+void Assembler::start_expansion(std::shared_ptr<Expansion> e, int column) {
+    if (macro_level_ >= kMaxMacroDepth)
+        throw AsmError("OC24",
+                       "macro calls and REPT, IRP and IRPC blocks nested more than " +
+                           std::to_string(kMaxMacroDepth) + " levels deep",
+                       column);
+    e->level = macro_level_ + 1;
+    e->file = file_;
+    e->file_line = file_line_;
+    e->include_level = level_;
+    e->conds = conds_.size();
+    expansion_ = std::move(e);
 }
 
 void Assembler::named_directive(const Token& name, const std::string& dir, TokenCursor& cur, Reporter& rep,
@@ -1777,6 +2643,8 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         group(name, dir == "CGROUP", cur, rep);
     } else if (contains(kIgnoredDirectives, dir)) {
         // REGDEF and REGBANK name register banks for the linker.
+    } else if (dir == "MACRO") {
+        throw AsmError("A6", "syntax error: an instruction name cannot be a macro name", name.column);
     } else {
         throw AsmError("OC3", "directive " + dir + " is not supported yet", cur.peek().column);
     }
@@ -1826,6 +2694,8 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
                        tok.column);
     } else if (kw == "DGROUP" || kw == "CGROUP") {
         throw AsmError("A6", "syntax error: " + kw + " needs the name of the group", tok.column);
+    } else if (kw == "MACRO") {
+        throw AsmError("A6", "syntax error: MACRO needs the name of the macro in front", tok.column);
     } else if (contains(kKeywords, kw)) {
         throw AsmError("OC3", "directive " + kw + " is not supported yet", tok.column);
     } else {
@@ -3290,7 +4160,7 @@ std::string format_listing(const AssemblyResult& result) {
     std::vector<bool> shown_diag(result.diagnostics.size());
     const bool multi = result.modules.size() > 1;
     std::string main_file = result.listing.empty() ? std::string() : result.listing.front().file;
-    static constexpr const char* kHeader = "LOC       OBJ                  LINE  SOURCE\n\n";
+    static constexpr const char* kHeader = "LOC       OBJ                  LINE    SOURCE\n\n";
     std::string out = multi ? "" : kHeader;
     auto print = [&](std::size_t i) {
         const Diagnostic& d = result.diagnostics[i];
@@ -3327,9 +4197,11 @@ std::string format_listing(const AssemblyResult& result) {
         std::string level = l.level ? "+" + std::to_string(std::min(l.level, 9)) : "";
         // Lines in false IF blocks have no number, as in Keil's listing.
         std::string number = l.skipped ? "" : std::to_string(l.line);
+        // Lines of macro expansions are marked +1, +2, ... after the number.
+        std::string macro = l.macro_level ? "+" + std::to_string(std::min(l.macro_level, 9)) : "";
         char head[64];
-        std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6s  ", loc.c_str(), obj.c_str(), level.c_str(),
-                      number.c_str());
+        std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6s%-2s  ", loc.c_str(), obj.c_str(), level.c_str(),
+                      number.c_str(), macro.c_str());
         out += head + l.source + "\n";
         // Long DB/DW lines continue on extra rows.
         while (shown < l.bytes.size()) {

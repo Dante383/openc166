@@ -58,8 +58,11 @@ struct ListingLine {
     std::string file;   // file the line comes from
     int file_line = 0;  // line number within 'file'
     int level = 0;      // $INCLUDE nesting depth; 0 for the main source
+    int macro_level = 0;  // nesting depth of macro, REPT, IRP and IRPC expansions; 0 outside them
     bool skipped = false;  // in a false IF block: not assembled, listed without a line number
-    bool hidden = false;   // left out of the printed listing by $NOCOND (assembly is off after it)
+    // Left out of the printed listing: by $NOCOND (assembly is off after
+    // it), or a line of a macro expansion under $NOGEN (the default).
+    bool hidden = false;
     bool has_address = false;
     // In a BIT section, the address counts bits: byte address * 8 + bit.
     bool bit_address = false;

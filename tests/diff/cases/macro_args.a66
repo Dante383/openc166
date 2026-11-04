@@ -1,0 +1,64 @@
+; How Keil splits macro call arguments. SHOW puts its arguments in a
+; string, so the code shows exactly what each one is.
+$NOMPL
+$GEN
+SHOW    MACRO   A, B, C
+        DB      "[A|B|C]"
+        ENDM
+
+D1      SECTION DATA
+        SHOW    1, 2, 3
+        SHOW    1, 2, 3, 4      ; one too many: 4 is left out
+        SHOW    1               ; B and C are empty
+        SHOW    , , 3
+        SHOW      a  b  ,c      ; arguments are trimmed
+        SHOW    'a,b', 'c;d', 3 ; quotes protect ',' and ';' and stay
+        SHOW    'a'b, 7, 8
+        SHOW    (1, 2), 3       ; parentheses do not protect ','
+; '<' and '>' protect ',' and ';' and are removed. Brackets nest.
+        SHOW    <1, 2>, 3, 4
+        SHOW    <a <b, c> d>, 5
+        SHOW    <a>b, 7, 8      ; the argument ends at the '>' ...
+        SHOW    <a> , b, 8      ; ... and so does the ',' after it
+        SHOW    <a>>b, 7, 8     ; a '>' right after the '>' is skipped
+        SHOW    <a>>>b, 7, 8
+        SHOW    <a>>,b, 8
+        SHOW    <a>,>b, 8
+        SHOW    <a> >b, 7, 8
+        SHOW    <!>>, 8         ; '!' is an ordinary character in brackets
+; '!' at the start of an argument passes the next character, which
+; then is the whole argument.
+        SHOW    !<, 7, 8
+        SHOW    !<a, 7, 8
+        SHOW    !< , b, 8
+        SHOW    !<>b, 7, 8
+        SHOW    !<!<, 7, 8
+        SHOW    !<,!<, 8
+        SHOW    !!, 7, 8
+        SHOW    !a, 7, 8
+        SHOW    !>, 7, 8
+        SHOW    !&, 7, 8
+        SHOW    !<;x, 7
+        SHOW    1, !<, 8
+; Elsewhere '!' is an ordinary character.
+        SHOW    a!<b, 7, 8
+        SHOW    x!>y, 2
+        SHOW    a!,b, c
+        SHOW    a!;z, 7, 8
+        SHOW    a>b, 7, 8
+        SHOW    >b, 7, 8
+; No argument starts after a ';' outside quotes, even if the one before
+; runs past it.
+        SHOW    <>, <;>, 6
+        SHOW    <a;b>, 6, 7
+        SHOW    1, <a;b>c, 6
+        SHOW    <a>';', 6, 7
+        SHOW    !<;>, 6, 7
+; A quote without its end: A2. An argument that starts with it runs to
+; the end of the line; none starts after the quote otherwise.
+        SHOW    'abc, 7
+        SHOW    1, 'abc, 7
+        SHOW    <a'b>, 6, 7
+        SHOW    !'a, 7, 8
+D1      ENDS
+        END

@@ -13,6 +13,7 @@ using U = std::uint64_t;
 constexpr std::string_view kOperatorKeywords[] = {
     "AND", "OR",  "XOR", "NOT", "MOD", "SHL", "SHR", "HIGH", "LOW", "EQ",    "NE",    "LT",    "LE",     "GT",
     "GE",  "ULT", "ULE", "UGT", "UGE", "SEG", "PAG", "SOF",  "POF", "BOF",   "DATA3", "DATA4", "DATA8", "DATA16",
+    "NUL",
 };
 
 int byte_word_index(std::string_view t, std::string_view prefix) {
@@ -85,6 +86,13 @@ public:
         }
         case TokKind::Ident: {
             cur_.next();
+            // NUL takes the rest of the line: true (0FFFFFFFFH) if nothing
+            // follows, else 0. Macros use it to test for a missing argument.
+            if (ieq(t.text, "NUL")) {
+                bool empty = true;
+                for (; !cur_.at_end(); cur_.next()) empty = false;
+                return Value::number(empty ? 0xFFFFFFFF : 0);
+            }
             if (is_operator_keyword(t.text)) throw AsmError("A6", "syntax error: unexpected operator", t.column);
             std::optional<Value> v;
             try {

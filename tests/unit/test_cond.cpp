@@ -98,7 +98,7 @@ TEST_CASE("listing line numbers of conditional lines follow Keil") {
     CHECK_FALSE(line(r, 12)->skipped);
     std::string lst = oc166::format_listing(r);
     // Skipped lines have no number.
-    CHECK(lst.find("\n" + std::string(37, ' ') + " NOP\n") != std::string::npos);
+    CHECK(lst.find("\n" + std::string(39, ' ') + " NOP\n") != std::string::npos);
 }
 
 TEST_CASE("$NOCOND leaves out the lines after which assembly is off") {
@@ -108,7 +108,7 @@ TEST_CASE("$NOCOND leaves out the lines after which assembly is off") {
     std::string lst = oc166::format_listing(r);
     CHECK(lst.find("IF 0") == lst.rfind("IF 0"));
     CHECK(lst.find("$IF (0)") == std::string::npos);
-    CHECK(lst.find("12   IF 0") != std::string::npos);
+    CHECK(lst.find("12     IF 0") != std::string::npos);
 }
 
 TEST_CASE("nesting") {

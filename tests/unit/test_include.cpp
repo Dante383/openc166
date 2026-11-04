@@ -92,7 +92,7 @@ TEST_CASE("diagnostics in include files name the file and its own line number") 
     CHECK(d.line == 2);
     CHECK(at(r, 5) == "A6E");
     std::string lst = oc166::format_listing(r);
-    CHECK(lst.find("+1     5   BOGUS") != std::string::npos);
+    CHECK(lst.find("+1     5     BOGUS") != std::string::npos);
     CHECK(lst.find("(a.inc, line 2)") != std::string::npos);
 }
 

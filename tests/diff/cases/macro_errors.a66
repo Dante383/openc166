@@ -1,0 +1,63 @@
+; Mistakes in macros, REPT, IRP and IRPC, and the error each one gives.
+$MOD167
+$NOMPL
+$GEN
+        ENDM                    ; A6: no block to end
+        LOCAL   XX              ; A6: not in a macro
+        EXITM                   ; A124: not in a macro
+DUP     MACRO   AA, AA          ; A123: AA twice, so DUP is not defined
+        DB      AA
+        ENDM
+LOC1    MACRO   AA
+        LOCAL   AA              ; A123: a local named like a parameter
+        DB      AA
+        ENDM
+LATE    MACRO
+        DB      1
+        LOCAL   XX              ; A6: LOCAL must come right after MACRO
+        ENDM
+SHOW    MACRO   AA, BB
+        DB      'AA|BB'
+        ENDM
+
+D1      SECTION DATA
+LBL:    DB      0
+        LOC1    5
+        LATE
+        SHOW    <a, b           ; A6: the bracket is not closed; this text is used
+        SHOW    1, %UNDEF       ; A71: not defined
+        SHOW    %LBL            ; A72: a label is not a number
+        SHOW    %               ; A6: no expression
+        SHOW    %(1             ; A6: no ')'
+        REPT                    ; A6: no count
+        DB      1
+        ENDM
+        REPT    UNDEF           ; A71: not defined
+        DB      2
+        ENDM
+        REPT    LBL             ; A72: a label is not a number
+        DB      3
+        ENDM
+        IRP     XX              ; A6: no list
+        DB      5
+        ENDM
+        IRPC    XX              ; A6: no text
+        DB      6
+        ENDM
+        IRP     XX, 1, 2        ; A6: the list needs '<' and '>'
+        DB      XX
+        ENDM
+$RESTORE                        ; A13: no $SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE
+$SAVE                           ; A14: more than ten
+D1      ENDS
+        END

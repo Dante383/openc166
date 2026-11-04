@@ -52,9 +52,13 @@ Early development (version 0.x). What works today:
   bit 0 of a condition counts) and listing format.
 - `LIT` text replacement (`PORT LIT 'R2'`), with Keil's rules for where
   names are replaced.
-- The `$MOD167`, `$CASE` and `$SEGMENTED` controls, with Keil's rule that
-  these come before the first statement. Listing-only controls are accepted
-  and ignored.
+- Keil's standard macros: `MACRO`/`ENDM` with parameters and `LOCAL`
+  labels, `REPT`, `IRP`, `IRPC`, `EXITM`, `NUL`, `&` and `%`, with Keil's
+  rules for splitting arguments. `$GEN`/`$NOGEN` choose whether the listing
+  shows expanded lines.
+- The `$MOD167`, `$CASE`, `$SEGMENTED` and `$TABS` controls, with Keil's
+  rule that these come before the first statement. Listing-only controls
+  are accepted and ignored.
 - Keil error and warning codes (A74, A111, ...), so messages line up with
   the Keil manual.
 - Raw binary, Intel HEX and Motorola S-record output. The HEX records match
@@ -67,7 +71,8 @@ Early development (version 0.x). What works today:
 
 Not done yet:
 
-- macros
+- Keil's MPL macro language (`%DEFINE` and the like); put `$NOMPL` at the
+  top of the file to use `%` as text
 - OMF-166 object files and libraries
 - the TASKING assembler dialect
 

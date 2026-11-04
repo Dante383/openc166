@@ -62,6 +62,8 @@ since OH166 starts a new record at each section.
   the `IF`/`ELSEIF`/`ELSE`/`ENDIF` statements, and `$COND`/`$NOCOND`. See
   [Conditional assembly](#conditional-assembly).
 - **Text replacement:** `name LIT 'text'`. See [LIT](#lit).
+- **Macros:** `MACRO`/`ENDM`, `LOCAL`, `REPT`, `IRP`, `IRPC`, `EXITM`, the
+  `NUL` operator, `&` and `%`. See [Macros](#macros).
 - **Several modules:** `EXTERN`/`EXTRN`, `PUBLIC` and `GLOBAL`, with
   sections combined across modules as L166 combines them. See
   [Linking several files](#linking-several-files).
@@ -70,7 +72,8 @@ since OH166 starts a new record at each section.
   - Listing and object-file controls: `$NOLIST`, `$TITLE(...)`, `$DEBUG`,
     and similar.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
-  `$SEGMENTED`/`$NONSEGMENTED`.
+  `$SEGMENTED`/`$NONSEGMENTED`, `$TABS`, `$MACRO`/`$NOMACRO`,
+  `$MPL`/`$NOMPL`, `$GEN`/`$NOGEN`/`$GENONLY`, `$SAVE`/`$RESTORE`.
   `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
   come before the first statement; see [Controls](#controls).
 
@@ -78,7 +81,9 @@ since OH166 starts a new record at each section.
 
 These produce error OC3, so a missing feature is never silently skipped:
 
-- `MACRO` and the other macro facilities
+- Keil's MPL macro processor: under `$MPL`, which is Keil's default, every
+  `%` starts an MPL call, even in comments and strings (see
+  [Macros](#macros))
 - `COMREG`
 - the XC16x/Super10 extended instruction set
 
@@ -220,22 +225,44 @@ Keil has two kinds of `$` controls:
 
 Primary controls that openc166 uses: `MOD167`/`M167`, `MOD166`/`M166`,
 `NOMOD166`/`NOM166`, `MODV2`, `CASE`, `NOCASE`, `INCDIR`/`ID`,
-`SEGMENTED`/`SG`, `NONSEGMENTED`/`NOSG`. Those it ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
+`SEGMENTED`/`SG`, `NONSEGMENTED`/`NOSG`, `TABS`/`TA`, `MACRO`, `NOMACRO`,
+`MPL`, `NOMPL`. Those it ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
 `NOSYMBOLS`/`NOSB`, `XREF`/`XR`, `NOXREF`/`NOXR`, `DEBUG`/`DB`,
 `NODEBUG`/`NODB`, `PRINT`/`PR`, `NOPRINT`/`NOPR`, `OBJECT`/`OJ`,
 `NOOBJECT`/`NOOJ`, `ERRORPRINT`/`EP`, `NOERRORPRINT`/`NOEP`, `PAGING`,
-`NOPAGING`, `TABS`, `DATE`, `LINES`, `NOLINES`, `TYPE`, `NOTYPE`, `AMAKE`,
-`NOAMAKE`, `USEDEXTONLY`, `EXTMAC`, `MACRO`,
-`NOMACRO`, `MPL`, `NOMPL`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
+`NOPAGING`, `DATE`, `LINES`, `NOLINES`, `TYPE`, `NOTYPE`, `AMAKE`,
+`NOAMAKE`, `USEDEXTONLY`, `EXTMAC`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
 
 General controls that openc166 uses: `INCLUDE`/`IC`, `SET`, `RESET`, `IF`,
-`ELSEIF`, `ELSE`, `ENDIF`, `COND`, `NOCOND`. Those it ignores: `LIST`,
-`NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`, `GEN`, `NOGEN`, `GENONLY`/`GO`,
-`SYMLIST`, `NOSYMLIST`, `SAVE`, `RESTORE`, `REGUSE`.
+`ELSEIF`, `ELSE`, `ENDIF`, `COND`, `NOCOND`, `GEN`/`GE`, `NOGEN`/`NOGE`,
+`GENONLY`/`GO`, `SAVE`/`SA`, `RESTORE`/`RS`. Those it ignores: `LIST`,
+`NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`, `SYMLIST`, `NOSYMLIST`, `REGUSE`.
 
 These lists come from testing A166 V5.38. The manual calls `TITLE` and
 `NOCOND` primary, but A166 accepts them anywhere. An unknown control is
 A16.
+
+**Contradicting controls.** A primary control that undoes an earlier one,
+such as `$NOCASE` after `$CASE` or `$NOMPL` after `$MPL`, is error A7. As
+in Keil, the control still takes effect, but the controls after it on the
+same line are dropped. Among the CPU controls, `$MOD167` after `$MOD166`
+or `$MODV2`, `$MOD166` after `$MODV2`, and `$MODV2` after `$MOD166` are A7;
+an earlier `$MOD167` never conflicts. `$MACRO` and `$MPL` are separate
+pairs, so `$NOMACRO` after `$MPL` is fine.
+
+**Tabs.** Before a line is read, tabs are expanded to spaces, also inside
+strings: `DB '<tab>'` stores spaces. Tab stops are every 8 columns, or
+every n columns after `$TABS(n)` (short form `$TA`), with n from 1 to 16.
+A value outside that range, or one that is not a number, is A19, and a
+missing parenthesis A22; both set the width to 1. Text after the number,
+as in `$TABS(2+2)`, is A22, but the number (here 2) is used. Keil does not
+evaluate an expression here. The width counts from the line after the
+control.
+
+**The MPL setting covers the whole control area.** Keil looks through the
+primary-control area for `$MPL`, `$NOMPL` and `$NOMACRO` before it reads
+the first line, and the last one found applies from line 1. So a `%` in a
+comment above `$NOMPL` is not an MPL call; openc166 does the same.
 
 **The end of the source.** As in Keil, the lines after `END` are listed but
 otherwise ignored, even controls and conditionals. Problems found at the end
@@ -333,6 +360,122 @@ like). Inside a section the label is still defined and the rest of the line
 is ignored, with A6 at the name and A6 at the directive. Outside a section
 it is a single A6 and nothing is defined.
 
+## Macros
+
+openc166 supports Keil's standard macros:
+
+```
+$NOMPL                           ; '%' is not an MPL call; see below
+LOADW   MACRO   DST, VAL         ; a macro with two parameters
+        LOCAL   SKIP             ; SKIP gets a new name in each expansion
+        MOV     DST, #VAL        ;; a ';;' comment is not copied
+        JMPR    cc_UC, SKIP
+SKIP:
+        ENDM
+
+        LOADW   R5, 1234H        ; MOV R5, #1234H ...
+        REPT    3                ; three NOPs
+        NOP
+        ENDM
+        IRP     REG, <R1, R2>    ; MOV R1, #0 and MOV R2, #0
+        MOV     REG, #0
+        ENDM
+        IRPC    CH, AB           ; DB 'A' and DB 'B'
+        DB      'CH'
+        ENDM
+```
+
+- **Definitions.** `name MACRO [param, ...]` up to `ENDM`. `LOCAL` may
+  only be the first line of the body. A macro is used from the line after
+  its definition. As in Keil, a macro cannot be defined again:
+  `M1 MACRO x`, where `M1` is already a macro, is a call to `M1`. An
+  instruction name cannot be a macro name (A6). `MACRO`, `REPT`, `IRP` and
+  `IRPC` blocks inside a body are expanded when the body is. A repeated
+  parameter name is A123 and the macro is not defined; a `LOCAL` name that
+  is also a parameter is A123 too. A missing `ENDM` is A120 (with warning
+  A89, since the `END` is then part of the macro), a stray `ENDM` or
+  `LOCAL` is A6, and `EXITM` outside a macro is A124. Names follow
+  `$CASE`/`$NOCASE`.
+- **Expansion.** Each parameter is replaced wherever it stands as a whole
+  word in the body, even inside strings and comments. `&` joins a parameter
+  to the text around it and is removed (`R&NUM`, `'R&NUM'`). `LOCAL` names
+  become `??0000`, `??0001` and so on, counting through the whole file.
+  Lines are expanded as they are assembled, so an `IF` inside a macro sees
+  the current value of a `SET` symbol, and a macro can call itself while a
+  `SET` counter counts down. `EXITM` ends the innermost expansion (the
+  whole of a `REPT`, `IRP` or `IRPC`), closing the `IF` blocks opened in
+  it. `LIT` names are replaced in call lines and expanded lines.
+- **Arguments** are split at commas and trimmed. A missing argument is
+  empty (test it with `IF NUL param`), and extra ones are ignored.
+  Parentheses do not protect commas. Quotes protect `,` and `;` and stay
+  part of the argument. `<...>` protects everything inside it, nests, and
+  loses its outer pair; the argument ends at the `>`, so `<a>b` passes `a`
+  and `b`. A `>` straight after that closing `>` is skipped (`<a>>b` passes
+  `a` and `b`). `!` at the start of an argument passes the one character
+  after it as the whole argument (`!,` passes a comma); elsewhere `!` is an
+  ordinary character, and there are no escapes inside `<...>`. A `;`
+  outside quotes ends the arguments, though a `<...>` argument that has
+  already started may run past it. A quote that is never closed is A2,
+  reported at the end of the line, and a `<` without `>` is A6.
+- **`%` under `$NOMPL`.** An argument that starts with `%` passes the value
+  of the expression after it as an unsigned decimal number:
+  `LOADW R1, %CNT*2` with `CNT SET 3` passes `6`. The expression may only
+  use symbols defined earlier; anything else is A71, and a label is A72
+  (the value is then 0). Keil has three faults here, which openc166 copies
+  because real code may depend on them, and warns about with OC26:
+  - a number in the expression counts as 0, so `%CNT+1` passes `3`, not
+    `4`;
+  - after a `,` the next argument starts right after the first token of
+    the expression: `%CNT, 4` passes `3`, an empty argument and `4`, and
+    `%CNT*CNT, 4` passes `9`, `*CNT` and `4`;
+  - any other text after the expression starts the next argument at the
+    expression itself: `%CNT X` passes `3` and `CNT X`.
+
+  So put a `%` argument last and use only `SET` or `EQU` names in it.
+- **MPL.** Keil also has a second, older macro language, MPL (`%DEFINE`,
+  `%IF` and so on), which is on by default. Under `$MPL` every `%` starts an
+  MPL call, even in comments and strings. openc166 does not support MPL and
+  reports such a `%` as OC3. Put `$NOMPL` at the top of the file when `%`
+  is meant as text, as most code that uses macros does. `$NOMACRO` turns
+  MPL off too; Keil then still processes `MACRO`, `REPT`, `IRP` and `IRPC`
+  but reports A6 on their first line, and so does openc166.
+- **Counts.** The count of `REPT` is a 16-bit value. A symbol defined
+  later is A71, a label is A72, and any error leaves the body out. `IRP`
+  with `<>` runs once with an empty value. `IRPC` runs once for each
+  character, quotes included, and once with an empty value for an empty
+  list.
+- **Listing.** Expanded lines are numbered and carry `+1`, `+2`, ... after
+  the number for the depth of expansion. Under `$NOGEN` (the default) and
+  `$GENONLY` they are hidden; `$GEN` shows them. `$SAVE` and `$RESTORE`
+  keep and bring back the `GEN` setting, 10 levels deep (A14 beyond, and
+  A13 for `$RESTORE` without `$SAVE`). A problem in an expanded line is
+  reported at the line of the outermost call, or, for a `REPT`, `IRP` or
+  `IRPC` written in the source, at its `ENDM` line.
+- **Limits.** A macro may call itself 9 levels deep; deeper is OC24 (Keil
+  hangs at 10). Calls and blocks may be nested 64 levels deep. More than
+  1,000,000 lines to assemble in all is OC25 and stops the assembly, so a
+  macro that never stops expanding fails quickly.
+
+Keil gets a few rare argument forms wrong, and openc166 does not copy
+them. After `!;` Keil passes garbage for the arguments that follow, and
+after a `!` at the end of the line it passes the line break. openc166
+passes `;` or an empty argument, stops there, and warns with OC27.
+
+Keil's listing has faults that openc166 does not copy; the code bytes are
+the same:
+
+- Under `$NOGEN`, Keil still lists the second and later rows of a hidden
+  line with more than 4 bytes of code.
+- Keil marks some lines after `$SAVE` with a stray `+1`.
+- For a hidden expanded line with an error, Keil lists only the
+  `*** ERROR` line; openc166 lists the line itself too.
+- A `REPT` whose count names a symbol defined later is expanded in pass 2
+  only, which skews Keil's listing. (openc166 reports A71 there anyway.)
+- After an argument with `!`, Keil often lists the expanded line wrongly.
+- A `MACRO` without `ENDM` marks the rest of Keil's listing with `+:`,
+  and A120 appears at the top. openc166 reports A120 and A89 on the last
+  line.
+
 ## openc166's own messages
 
 Messages that Keil does not have use codes starting with `OC`:
@@ -341,7 +484,7 @@ Messages that Keil does not have use codes starting with `OC`:
 |---|---|---|
 | OC1 | warning | two pieces of code or data overlap in the image |
 | OC2 | warning | `$MODV2`: the XC16x/Super10 extensions are not supported |
-| OC3 | error | a control or directive that openc166 does not support yet |
+| OC3 | error | a control or directive that openc166 does not support yet, or a `%` that starts an MPL call under `$MPL` |
 | OC4 | | no longer used (was: external symbols, before linking was supported) |
 | OC5 | error | an include file cannot be opened; the assembly stops |
 | OC6 | error | include files nested too deeply; the assembly stops |
@@ -362,6 +505,10 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC21 | error | a `DATA` or `CONST` section without `AT` that is bigger than a 16 KB page (L166: L129) |
 | OC22 | error | a `DGROUP` bigger than a 16 KB page or a `CGROUP` bigger than a 64 KB segment (L166: L115, L116), or a section with no room in the page or segment its group is tied to (L112) |
 | OC23 | error | `BOF` of a bit in a `BIT` section whose value Keil computes wrongly (see [BIT sections](#bit-sections)) |
+| OC24 | error | a macro that calls itself more than 9 levels deep, or macro calls and `REPT`/`IRP`/`IRPC` blocks nested more than 64 levels deep |
+| OC25 | error | more than 1,000,000 lines to assemble, usually a macro that never stops expanding; the assembly stops |
+| OC26 | warning | a `%` macro argument that Keil reads in a surprising way (see [Macros](#macros)) |
+| OC27 | warning | a macro argument `!;` or a `!` at the end of the line, which Keil garbles |
 
 ## Sections
 
@@ -915,6 +1062,11 @@ follow are unchanged. Other bad items are dropped.
 | `EQU` or `SET` with the name of a group | A166 hangs | error A25 |
 | `BOF` of a bit in a `BIT` section with `AT`, or outside the word at `0FD00H` in one without | wrong value | error OC23 |
 | `POF`, `SOF`, `PAG` or `SEG` of a bit | A45 or A70 in most places, but `DW POF` of `0FD10H.9` gives `0FD11H` and `EQU` gives a bit with no value | error A61 |
+| a macro that calls itself 10 or more levels deep | A166 hangs | error OC24 at the 10th level |
+| macro argument `!;` | garbles the arguments that follow | passes `;`, ignores the rest, warning OC27 |
+| macro argument `!` at the end of the line | passes the line break | passes an empty argument, warning OC27 |
+| `%CNT.1` in a macro argument | passes a number (64768) | error A103 |
+| `$OBJECT` without a file name | A22 | accepted and ignored |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

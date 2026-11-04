@@ -66,7 +66,7 @@ TEST_CASE("DBIT reserves bits, and a BIT section without AT starts at 0FD00H.0")
     CHECK(s->bit == 0);
     CHECK(s->bit_size == 18);
     CHECK(s->size == 3);  // bytes touched
-    CHECK(format_listing(r).find("FD00.4                            5  F3: DBIT 13\n") != std::string::npos);
+    CHECK(format_listing(r).find("FD00.4                            5    F3: DBIT 13\n") != std::string::npos);
     CHECK(format_listing(r).find("Flags                            BIT    BIT            00FD00H.0  size 0002H.2  "
                                  "located\n") != std::string::npos);
 }

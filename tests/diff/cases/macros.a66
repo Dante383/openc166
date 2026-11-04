@@ -1,0 +1,133 @@
+; Macros, REPT, IRP and IRPC. $NOMPL makes '%' pass the value of an
+; expression; $GEN lists the expanded lines, so that they are compared.
+$MOD167
+$NOMPL
+$GEN
+CNT     SET     3
+REGA    LIT     'R4'
+
+; Parameters and a local label: each expansion gets its own name for SKIP.
+LOADW   MACRO   DST, VAL
+        LOCAL   SKIP
+        MOV     DST, #VAL       ;; this comment is not copied
+        JMPR    cc_UC, SKIP     ; this one is: DST
+        NOP
+SKIP:
+        ENDM
+
+; '&' joins a parameter to the text around it, also in strings.
+JOIN    MACRO   NUM, SUFF
+        MOV     R&NUM, #NUM&SUFF
+        DB      'R&NUM'
+        ENDM
+
+; NUL tells whether an argument is missing.
+OPT     MACRO   AA, BB
+        IF      NUL BB
+        MOV     R1, #AA
+        ELSE
+        MOV     R1, #AA+BB
+        ENDIF
+        ENDM
+
+; EXITM ends the expansion early, closing the IF blocks opened in it.
+EARLY   MACRO   VAL
+        IF      VAL EQ 0
+        EXITM
+        ENDIF
+        ADD     R2, #VAL
+        MOV     REGA, R2
+        ENDM
+
+; A macro that calls itself while CNT counts down.
+DOWN    MACRO
+        IF      CNT GT 0
+        DB      CNT
+CNT     SET     CNT-1
+        DOWN
+        ENDIF
+        ENDM
+
+; A macro that calls another one and defines one.
+OUTER   MACRO   VAL
+        LOADW   R5, VAL
+INNER   MACRO
+        DW      VAL
+        ENDM
+        ENDM
+
+CODE1   SECTION CODE
+MAIN    PROC    NEAR
+        LOADW   R1, 1234H
+        LOADW   R2, 5
+L1:     JOIN    3, H
+        OPT     2
+        OPT     2, 3
+        OPT     <2>, <>
+        EARLY   0
+        EARLY   7
+        OUTER   0ABCDH
+        INNER
+        MOV     REGA, #CNT
+        JMPR    cc_UC, L1
+        RET
+MAIN    ENDP
+CODE1   ENDS
+
+DATA1   SECTION DATA
+        DOWN
+        IRP     XX, <1, 2, 3>
+        DB      XX
+        ENDM
+        IRP     XX, <'A', 9>
+        DB      XX, 0
+        ENDM
+L2:     REPT    3
+        DW      L2
+        ENDM
+        IRPC    CH, ABC
+        DB      'CH'
+        ENDM
+        IRPC    CH, <1 2>
+        DB      'CH'
+        ENDM
+        REPT    2
+        IRP     XX, <6, 7>
+        DB      XX
+        ENDM
+        ENDM
+        REPT    0
+        DB      0FFH
+        ENDM
+
+; Arguments in '<' and '>' may hold commas; '!' makes a '<' or a quote an
+; ordinary character.
+SHOW    MACRO   AA, BB, CC
+        DB      'AA|BB|CC'
+        ENDM
+        SHOW    <x, y>, z
+        SHOW    !<, ' , ', q
+        SHOW    a, , c
+        SHOW    a<b, c>d
+        SHOW    <1>2, 3
+        SHOW    a, b, c, d      ; extra arguments are ignored
+        SHOW
+
+; '%' passes the value of an expression in decimal.
+CNT     SET     5
+        SHOW    1, 2, %CNT
+        SHOW    %(CNT*CNT)
+        SHOW    %'A'
+        SHOW    %CNT, 2, 3      ; DIVERGES: warning OC26 (Keil passes 5, nothing and 2)
+        SHOW    %(CNT+1)        ; DIVERGES: warning OC26 (Keil counts the 1 as 0)
+
+; $NOGEN hides the expanded lines; $SAVE and $RESTORE keep the setting.
+$SAVE NOGEN
+        SHOW    1, 2            ; (Keil would list a hidden line of over 4 bytes)
+$RESTORE
+        SHOW    4, 5, 6
+
+; Keil turns tabs into spaces before it reads a line, even in strings.
+        DB      'a	b'
+DATA1   ENDS
+        END
