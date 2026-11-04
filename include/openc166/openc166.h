@@ -248,11 +248,12 @@ OC166_API int oc166_result_symbol_exported(const oc166_result *r, size_t index);
 
 typedef struct oc166_section {
     const char *name;
-    const char *type;       /* "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA" or "XCONST" */
-    const char *align;      /* "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT", "BITADDRESSABLE" or
-                               "PECADDRESSABLE" */
+    const char *type;       /* "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA", "XCONST"
+                               or "BIT" */
+    const char *align;      /* "BIT", "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT",
+                               "BITADDRESSABLE" or "PECADDRESSABLE" */
     int64_t address;
-    int64_t size;           /* in bytes */
+    int64_t size;           /* in bytes; a BIT section counts every byte it touches */
     /* How the address was chosen: "at" (AT in the source), "given"
      * (oc166_options_set_section_address) or "located" (by openc166). */
     const char *placement;
@@ -271,6 +272,13 @@ OC166_API const char *oc166_result_section_class(const oc166_result *r, size_t i
 /* The DGROUP or CGROUP that section 'index' belongs to, "" if none, or NULL
  * if 'index' is out of range. */
 OC166_API const char *oc166_result_section_group(const oc166_result *r, size_t index);
+
+/* For a BIT section: sets '*first_bit' to the bit (0..7) of its address it
+ * starts at and '*bit_count' to its size in bits. For other sections they are
+ * 0 and 8 times the size. Either pointer may be NULL. Returns 0, or -1 if
+ * 'index' is out of range. */
+OC166_API int oc166_result_section_bits(const oc166_result *r, size_t index, int *first_bit,
+                                        int64_t *bit_count);
 
 #ifdef __cplusplus
 }

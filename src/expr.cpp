@@ -110,13 +110,7 @@ public:
         case TokKind::Op:
             if (t.text == "$") {
                 cur_.next();
-                Value v = Value::number(ctx_.location());
-                v.rel = Rel::Addr;
-                v.unsig = true;
-                v.fixed = ctx_.location_fixed();
-                v.section = ctx_.section_index();
-                if (!v.fixed) v.movable = ctx_.section_index();
-                return v;
+                return ctx_.location_value();
             }
             if (t.text == "(") {
                 cur_.next();
@@ -353,6 +347,12 @@ private:
             return r;
         }
         if (a.type == VType::Bit && bit_word_address(a) >= 0) {
+            // Keil takes the byte address of a bit in a BIT section with AT,
+            // and the bit number counted from FD00H.0 for one in a section
+            // without AT, which is only right in the word at FD00H.
+            if (a.section && (a.fixed || a.num != 0))
+                throw AsmError("OC23", "BOF of a bit in a BIT section: Keil A166 miscomputes it unless the bit lies "
+                                       "in the word at 0FD00H of a section without AT", t.column);
             r.num = a.bit;
             return r;
         }
@@ -430,7 +430,11 @@ private:
             r.known = false;
             return r;
         }
-        return bit_value(bit_offset(bit, op == Sub ? -n.num : n.num, column));
+        // A bit of a BIT section stays one: the linker may still move it.
+        Value r = bit_value(bit_offset(bit, op == Sub ? -n.num : n.num, column));
+        r.section = bit.section;
+        r.fixed = bit.fixed;
+        return moving_with(r, bit);
     }
 
     enum Op { Mul, Div, Mod, Add, Sub, Shl, Shr, And, Or, Xor, Eq, Ne, Lt, Le, Gt, Ge, Ult, Ule, Ugt, Uge };

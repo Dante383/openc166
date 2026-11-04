@@ -1,0 +1,29 @@
+; Link case: the second module for 1main.a66, with more bits for Flags and
+; a BITADDRESSABLE data section.
+$MOD167
+        PUBLIC  Busy, Count
+        EXTRN   Ready:BIT
+
+Flags   SECTION BIT PUBLIC
+Busy:   DBIT    2
+Flags   ENDS
+
+Shared  SECTION BIT COMMON
+Sh1:    DBIT    5
+Shared  ENDS
+
+Ba      SECTION DATA BITADDRESSABLE
+Count:  DW      0
+        DW      0
+Ba      ENDS
+
+Prog2   SECTION CODE
+Helper  PROC    NEAR
+        BSET    Ready
+        BSET    Sh1
+        BSET    Count.3
+        BMOV    Sh1, Count.15
+        RET
+Helper  ENDP
+Prog2   ENDS
+        END

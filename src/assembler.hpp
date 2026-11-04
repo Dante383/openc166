@@ -61,6 +61,8 @@ struct ListingLine {
     bool skipped = false;  // in a false IF block: not assembled, listed without a line number
     bool hidden = false;   // left out of the printed listing by $NOCOND (assembly is off after it)
     bool has_address = false;
+    // In a BIT section, the address counts bits: byte address * 8 + bit.
+    bool bit_address = false;
     std::int64_t address = 0;
     std::vector<std::uint8_t> bytes;
     std::optional<Value> value;  // value assigned by EQU, SET or BIT
@@ -90,13 +92,15 @@ struct SectionInfo {
         Located,  // chosen by openc166
     };
     std::string name;
-    std::string type;   // CODE, DATA, CONST, HDATA, HCONST, XDATA or XCONST
-    std::string align;  // BYTE, WORD, DWORD, PAGE, SEGMENT, BITADDRESSABLE or PECADDRESSABLE
+    std::string type;   // CODE, DATA, CONST, HDATA, HCONST, XDATA, XCONST or BIT
+    std::string align;  // BIT, BYTE, WORD, DWORD, PAGE, SEGMENT, BITADDRESSABLE or PECADDRESSABLE
     std::int64_t address = 0;
-    std::int64_t size = 0;
+    std::int64_t size = 0;  // in bytes; a BIT section counts every byte it touches
     Placement placement = Placement::Located;
     std::string class_name;  // as in the SECTION line, or empty
     std::string group;       // name of its DGROUP or CGROUP as first spelled, or empty
+    int bit = 0;             // BIT section: the bit (0..7) of 'address' it starts at
+    std::int64_t bit_size = 0;  // size in bits (8 * size for other sections)
 };
 
 struct AssemblyResult {

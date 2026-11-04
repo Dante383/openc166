@@ -248,6 +248,7 @@ BitAddr bit_select(const Value& base, std::int64_t pos, int base_column, int pos
             return *r;
         }
         throw AsmError("A69", "not a bit-addressable base", base_column);
+    case VType::Bit: throw AsmError("A69", "not a bit-addressable base: a bit has no bits", base_column);
     default: throw AsmError("A70", "invalid type of expression", base_column);
     }
 }

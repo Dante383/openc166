@@ -149,13 +149,16 @@ class Symbol:
 class Section:
     """Where a SECTION went.
 
-    type is "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA" or "XCONST".
-    align is "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT", "BITADDRESSABLE"
-    or "PECADDRESSABLE". placement says how the address was chosen: "at"
+    type is "CODE", "DATA", "CONST", "HDATA", "HCONST", "XDATA", "XCONST"
+    or "BIT". align is "BIT", "BYTE", "WORD", "DWORD", "PAGE", "SEGMENT",
+    "BITADDRESSABLE" or "PECADDRESSABLE". placement says how the address was chosen: "at"
     (AT in the source), "given" (the 'sections' argument of assemble()) or
     "located" (by openc166, in the first free place from the origin on).
     class_name is the class from the SECTION line ('ROM' gives "ROM"), or "".
     group is the DGROUP or CGROUP the section belongs to, or "".
+    size counts bytes; a BIT section counts every byte it touches. For a BIT
+    section, bit is the bit (0..7) of address it starts at and bit_size its
+    size in bits; other sections have bit 0 and bit_size 8 * size.
     """
 
     name: str
@@ -166,6 +169,12 @@ class Section:
     placement: str
     class_name: str = ""
     group: str = ""
+    bit: int = 0
+    bit_size: int = -1  # -1 gives 8 * size
+
+    def __post_init__(self) -> None:
+        if self.bit_size < 0:
+            object.__setattr__(self, "bit_size", 8 * self.size)
 
     @property
     def end(self) -> int:
@@ -265,8 +274,11 @@ class Result:
         self.sections: Dict[str, Section] = {}
         """Sections in order of first appearance, by name as first spelled."""
         sec = _native.Section()
+        first_bit = ctypes.c_int()
+        bit_count = ctypes.c_int64()
         for i in range(_lib.oc166_result_section_count(handle)):
             _lib.oc166_result_section(handle, i, ctypes.byref(sec))
+            _lib.oc166_result_section_bits(handle, i, ctypes.byref(first_bit), ctypes.byref(bit_count))
             self.sections[_text(sec.name)] = Section(
                 name=_text(sec.name),
                 type=_text(sec.type),
@@ -276,6 +288,8 @@ class Result:
                 placement=_text(sec.placement),
                 class_name=_text(_lib.oc166_result_section_class(handle, i)),
                 group=_text(_lib.oc166_result_section_group(handle, i)),
+                bit=first_bit.value,
+                bit_size=bit_count.value,
             )
 
     @property

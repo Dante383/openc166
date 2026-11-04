@@ -327,6 +327,27 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(result.sections["Vars"].group, "VarGrp")
         self.assertEqual(result.sections["PROG"].group, "")
 
+    def test_bit_sections(self):
+        result = openc166.assemble(
+            "FLAGS  SECTION BIT\n"
+            "F1     DBIT 3\n"
+            "FLAGS  ENDS\n"
+            "FIXED  SECTION BIT AT 0FD02H.3\n"
+            "G1     DBIT 11\n"
+            "FIXED  ENDS\n"
+            "PROG   SECTION CODE AT 0E000H\n"
+            "       BSET G1\n"
+            "PROG   ENDS\n"
+            "       END\n"
+        )
+        self.assertTrue(result.ok, result.diagnostics)
+        flags, fixed, prog = (result.sections[n] for n in ("FLAGS", "FIXED", "PROG"))
+        self.assertEqual((flags.type, flags.align, flags.address, flags.size), ("BIT", "BIT", 0xFD00, 1))
+        self.assertEqual((flags.bit, flags.bit_size), (0, 3))
+        self.assertEqual((fixed.address, fixed.size, fixed.bit, fixed.bit_size), (0xFD02, 2, 3, 11))
+        self.assertEqual((prog.bit, prog.bit_size), (0, 16))
+        self.assertEqual(result.chunks[0].data.hex(), "3f01")
+
     def test_given_problems(self):
         result = openc166.assemble(self.SOURCE, sections={"FIXED": 0x100, "NONE": 0x200})
         self.assertEqual([d.code for d in result.errors], ["OC14"])

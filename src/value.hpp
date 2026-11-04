@@ -41,13 +41,15 @@ struct Value {
     std::int64_t num = 0;
     Rel rel = Rel::None;
     bool unsig = false;  // range checks treat num as unsigned
-    bool fixed = false;  // Addr: in a section with a fixed (AT) address
+    bool fixed = false;  // Addr, or Bit of a BIT section: in a section with a fixed (AT) address
     LType ltype = LType::None;
     bool short_jump = false;  // SHORT operator: JMP/CALL must use the relative form
     // A type operator (SHORT, NEAR, FAR, ...) was applied to a forward
     // reference. Keil refuses to use such a value in arithmetic.
     bool typed_forward = false;
-    std::uint16_t section = 0;  // Addr: index of the section that holds the address
+    // Addr: index of the section that holds the address. Bit: index of the
+    // BIT section that holds the bit, or 0 for a bit given by its address.
+    std::uint16_t section = 0;
     // Segmented mode: the DPPn: prefix (0..3) that selects the data page,
     // with num holding the page offset; -1 if none.
     std::int8_t dpp = -1;

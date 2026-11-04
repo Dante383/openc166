@@ -343,4 +343,12 @@ const char* oc166_result_section_group(const oc166_result* r, size_t index) {
     return r->res.sections[index].group.c_str();
 }
 
+int oc166_result_section_bits(const oc166_result* r, size_t index, int* first_bit, int64_t* bit_count) {
+    if (!r || index >= r->res.sections.size()) return -1;
+    const oc166::SectionInfo& s = r->res.sections[index];
+    if (first_bit) *first_bit = s.bit;
+    if (bit_count) *bit_count = s.bit_size;
+    return 0;
+}
+
 }  // extern "C"

@@ -97,15 +97,21 @@ struct AlignType {
     int align;
 };
 // BITADDRESSABLE sections lie in FD00H..FDFFH; PECADDRESSABLE only tells
-// the linker that PEC pointers may address the section.
+// the linker that PEC pointers may address the section. BIT (one bit) is
+// only for BIT sections, which count their alignment in bits.
 constexpr AlignType kAlignTypes[] = {
     {"BYTE", 1}, {"WORD", 2}, {"DWORD", 4}, {"PAGE", 0x4000}, {"SEGMENT", 0x10000},
-    {"BITADDRESSABLE", 2}, {"PECADDRESSABLE", 2},
+    {"BITADDRESSABLE", 2}, {"PECADDRESSABLE", 2}, {"BIT", 1},
 };
 constexpr std::string_view kCombineTypes[] = {"PUBLIC", "PRIVATE", "COMMON", "GLOBAL", "SYSSTACK", "USRSTACK"};
 constexpr std::int64_t kBitAreaStart = 0xFD00, kBitAreaEnd = 0xFE00;
+// A BIT section with AT must start below this byte address, as in Keil.
+constexpr std::int64_t kBitSectionAtEnd = 0xFDE0;
 
 bool align_allowed(std::string_view align, std::string_view type) {
+    if (type == "BIT")
+        return align == "BIT" || align == "BYTE" || align == "WORD" || align == "DWORD" || align == "BITADDRESSABLE";
+    if (align == "BIT") return false;
     if (align == "BYTE") return type != "CODE";
     if (align == "BITADDRESSABLE") return type == "CODE" || type == "DATA" || type == "HDATA";
     if (align == "PECADDRESSABLE") return type == "CODE" || type == "DATA";
@@ -288,6 +294,10 @@ public:
         dollar = true;
         return outer_.location();
     }
+    Value location_value() const override {
+        dollar = true;
+        return outer_.location_value();
+    }
     bool location_fixed() const override { return outer_.location_fixed(); }
     std::uint16_t section_index() const override { return outer_.section_index(); }
     bool has_esfr() const override { return outer_.has_esfr(); }
@@ -360,12 +370,15 @@ struct Section {
     std::string combine = "PRIVATE";  // or "AT" for a section with a fixed address
     std::string class_name;
     bool placed = false;  // AssembleOptions::section_addresses gives the address
+    // BIT section: base, loc, size and align count bits (byte address * 8 +
+    // bit), so 0FD02H.3 is 7E813H.
+    bool bits = false;
     // Final pass: the listing line and column of the first SECTION line.
     std::size_t listing = SIZE_MAX;
     int column = 0;
 };
 
-// Keil's A86 check, made by DS and ORG only (data never triggers it): has
+// Keil's A86 check, made by DS, DBIT and ORG only (data never triggers it): has
 // the location counter outgrown what the section type allows? Returns why,
 // or an empty string. A DATA section at a fixed address must stay in the
 // 16 KB data page it starts in, which one DPP register selects. A CONST
@@ -373,6 +386,15 @@ struct Section {
 // one counts from its start). A CODE, HDATA or HCONST section may be 64 KB
 // long. Other sections are not checked.
 std::string length_overflow(const Section& s, std::int64_t loc) {
+    // A BIT section with AT must end below FE00H; one without AT must not
+    // grow beyond 2048 bits (256 bytes), the size of the bit area, nor
+    // shrink below its start.
+    if (s.bits) {
+        if (s.absolute && loc >= kBitAreaEnd * 8) return "a BIT section must end below 0FE00H";
+        if (!s.absolute && loc < s.base) return "the location is before the start of the BIT section";
+        if (!s.absolute && loc - s.base > 0x800) return "a BIT section must not be longer than 256 bytes";
+        return {};
+    }
     const std::int64_t page_end = (s.absolute ? s.base & ~std::int64_t{0x3FFF} : s.base) + 0x4000;
     if (s.type == "DATA" && s.absolute && loc > page_end) return "a DATA section must fit in one 16 KB page";
     if (s.type == "CONST" && loc >= page_end)
@@ -425,7 +447,8 @@ public:
     std::vector<std::pair<std::string, PublicDef>> exported() const;
 
     std::optional<Value> lookup(std::string_view name) override;
-    std::int64_t location() const override { return sections_[cur_].loc + item_offset_; }
+    std::int64_t location() const override { return sections_[cur_].loc + item_offset_ * unit(); }
+    Value location_value() const override { return here(LType::None); }
     bool location_fixed() const override { return sections_[cur_].absolute; }
     std::uint16_t section_index() const override { return static_cast<std::uint16_t>(cur_); }
     bool has_esfr() const override { return cpu_ == isa::Cpu::C167; }
@@ -571,6 +594,7 @@ private:
     void assumed_section_page(Value& v) const;
     void check_section_name(const Token& name) const;
     void section_start(const Token& name, TokenCursor& cur, Reporter& rep);
+    std::int64_t bit_section_at(TokenCursor& cur, Reporter& rep);
     void section_end(const Token& name, Reporter& rep);
     std::optional<std::int64_t> option_address(const std::string& name_key) const;
 
@@ -586,8 +610,17 @@ private:
     void advance(std::int64_t n);
     void align(int n);
     void check_alignment(int need, const Token& name, Reporter& rep);
-    void check_byte_section(int need, int column);
+    void check_byte_section(int need, int column, bool label = false);
     Section& section() { return sections_[cur_]; }
+    // The location counter of a BIT section counts bits.
+    int unit() const { return sections_[cur_].bits ? 8 : 1; }
+    void mark_address(ListingLine& lst) const {
+        lst.has_address = true;
+        lst.address = location();
+        lst.bit_address = sections_[cur_].bits;
+    }
+    void bit_directive(const Token* name, const Token& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
+    int data_need(const std::string& dir) const;
     // Alignment counts from the start of a relocatable section, as Keil
     // cannot know where the linker will put it.
     std::int64_t align_offset() const {
@@ -654,9 +687,23 @@ void Assembler::undefine(const Token& name) {
 }
 
 // Value of a label at the current location: an address, which Keil treats as
-// relocatable.
+// relocatable. In a BIT section a label is a bit, except in front of data,
+// where it is the byte address of the data.
 Value Assembler::here(LType type) const {
-    Value v = Value::number(location());
+    const Section& s = sections_[cur_];
+    if (s.bits && !is_data_type(type)) {
+        // The bit area FD00H..FDFFH holds 128 words of 16 bits.
+        const std::int64_t n = (location() - kBitAreaStart * 8) & 0x7FF;
+        Value v;
+        v.type = VType::Bit;
+        v.num = n >> 4;
+        v.bit = static_cast<std::uint8_t>(n & 15);
+        v.fixed = s.absolute;
+        v.section = section_index();
+        if (!v.fixed) v.movable = section_index();
+        return v;
+    }
+    Value v = Value::number(location() / unit());
     v.rel = Rel::Addr;
     v.unsig = true;
     v.fixed = location_fixed();
@@ -681,7 +728,7 @@ std::int64_t Assembler::absolute(TokenCursor& cur, const char* what, bool offset
     if (v.movable) {
         if (!offset || v.movable != cur_ || v.rel != Rel::Addr)
             throw AsmError("A72", "absolute expression required", column);
-        v.num -= section().base;
+        v.num -= section().base / unit();
     }
     return v.dpp >= 0 ? v.num | (std::int64_t{v.dpp} << 14) : v.num;
 }
@@ -702,11 +749,13 @@ void Assembler::expect_end(TokenCursor& cur) {
     if (!cur.at_end()) throw AsmError("A6", "syntax error: unexpected '" + std::string(cur.peek().text) + "'", cur.peek().column);
 }
 
+// Moves the location counter by n bytes, or n bits in a BIT section.
 void Assembler::advance(std::int64_t n) {
     Section& s = section();
     s.loc += n;
-    if (s.loc < 0 || s.loc > kAddressLimit) throw AsmError("A66", "location counter out of the 16 MB address space");
-    free_ = std::max(free_, s.loc);
+    if (s.loc < 0 || s.loc > kAddressLimit * unit())
+        throw AsmError("A66", "location counter out of the 16 MB address space");
+    if (!s.bits) free_ = std::max(free_, s.loc);
     s.size = std::max(s.size, s.loc - s.base);
     if (cur_ == 0 && n > 0) {
         if (!outside_.empty() && outside_.back().second == s.loc - n)
@@ -716,8 +765,11 @@ void Assembler::advance(std::int64_t n) {
     }
 }
 
+// Aligns the location counter to n bytes (n * 8 bits in a BIT section).
 void Assembler::align(int n) {
-    if (std::int64_t r = align_offset() % n) advance(n - r);
+    if (n <= 0) return;
+    const std::int64_t step = std::int64_t{n} * unit();
+    if (std::int64_t r = align_offset() % step) advance(step - r);
 }
 
 // Keil warns when a label was misaligned in any pass, even if shortening
@@ -728,16 +780,36 @@ void Assembler::check_alignment(int need, const Token& name, Reporter& rep) {
 }
 
 // A relocatable BYTE section may start at any address, so Keil refuses data
-// that needs an even address there and drops the line.
-void Assembler::check_byte_section(int need, int column) {
+// that needs an even address there and drops the line. Likewise in a
+// relocatable BIT section that is not WORD or DWORD aligned. With 'label',
+// Keil also reports a byte label in a relocatable BIT section aligned to
+// bits, but keeps the label and the data. 'need' is the alignment of the
+// data in bytes (0: none).
+void Assembler::check_byte_section(int need, int column, bool label) {
     const Section& s = section();
-    if (need > 1 && !s.absolute && s.align == 1)
+    if (need == 0 || s.absolute) return;
+    if (s.bits) {
+        if (need > 1 && s.align < 16)
+            throw AsmError("A48", "insufficient alignment: a BIT section not aligned to words cannot hold "
+                                  "word-aligned data", column);
+        if (label && need == 1 && s.align < 8)
+            soft_error(AsmError("A48", "insufficient alignment: a byte label in a BIT section aligned to bits",
+                                column));
+        return;
+    }
+    if (need > 1 && s.align == 1)
         throw AsmError("A48", "insufficient alignment: a BYTE section cannot hold word-aligned data", column);
+}
+
+// The alignment in bytes that data needs. DS in a BIT section reserves
+// bytes from the current bit on.
+int Assembler::data_need(const std::string& dir) const {
+    return sections_[cur_].bits && dir == "DS" ? 0 : data_alignment(dir);
 }
 
 void Assembler::emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst) {
     if (n == 0) return;
-    std::int64_t at = location();
+    std::int64_t at = location() / unit();
     if (at + static_cast<std::int64_t>(n) > kAddressLimit)
         throw AsmError("A66", "location counter out of the 16 MB address space");
     if (final_) {
@@ -747,7 +819,7 @@ void Assembler::emit(const std::uint8_t* bytes, std::size_t n, ListingLine& lst)
             chunks.push_back(Chunk{at, {}});
         chunks.back().bytes.insert(chunks.back().bytes.end(), bytes, bytes + n);
     }
-    advance(static_cast<std::int64_t>(n));
+    advance(static_cast<std::int64_t>(n) * unit());
 }
 
 std::size_t Assembler::add_file(std::string name, std::string text) {
@@ -1103,17 +1175,20 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
             // Keil reports the data and the line, and leaves the label undefined.
             const int column = cur.peek().column;
             try {
-                check_byte_section(data_alignment(next), column);
+                check_byte_section(data_need(next), column, true);
             } catch (const AsmError& e) {
                 rep.error(e.code(), e.message(), e.column());
                 throw AsmError("A6", "syntax error: the label is ignored", column);
             }
-            align(data_alignment(next));
+            align(data_need(next));
         }
-        lst.has_address = true;
-        lst.address = location();
-        // Keil gives plain labels outside CODE sections the type BYTE.
-        LType type = data_follows ? data_type(next) : section().code ? LType::Near : LType::Byte;
+        mark_address(lst);
+        // Keil gives plain labels outside CODE sections the type BYTE. In a
+        // BIT section they, and labels of DS, are bits.
+        LType type = data_follows && data_need(next) ? data_type(next)
+                   : section().bits                  ? LType::None
+                   : section().code                  ? LType::Near
+                                                     : LType::Byte;
         define(label, SymbolKind::Label, here(type));
         if (!data_follows && section().code) check_alignment(2, label, rep);
         if (named) {
@@ -1539,8 +1614,10 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             throw AsmError("A70", "invalid type of expression: BIT cannot name a GPR bit", column);
         if (kind == SymbolKind::Bit && v.known && v.type != VType::Bit)
             throw AsmError("A70", "invalid type of expression: bit address expected", column);
-        if (kind != SymbolKind::Bit && v.type == VType::Bit && !v.external())
-            throw AsmError("A70", "invalid type of expression: use BIT for bit addresses", column);
+        // EQU and SET take any bit, but, as in Keil, a bit of a GPR becomes
+        // its bit number.
+        if (kind != SymbolKind::Bit && v.type == VType::Bit && v.known && !v.external() && v.num >= 0xF0)
+            v = Value::number(v.bit);
         // A DPPn: prefix stays with a label; a number takes the DPP number
         // into bits 14 and up (without clearing them first, as Keil does).
         if (v.dpp >= 0 && v.rel != Rel::Addr) {
@@ -1548,23 +1625,41 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
             v.dpp = -1;
         }
         // Only a plain label keeps its section for ASSUME; a section name or
-        // "label + n" becomes a plain number.
-        if (v.rel != Rel::Addr) v.section = 0;
+        // "label + n" becomes a plain number. A bit keeps its BIT section.
+        if (v.rel != Rel::Addr && v.type != VType::Bit) v.section = 0;
         v.data_bits = 0;
         define(name, kind, v, kind == SymbolKind::Bit);
         if (v.known) lst.value = v;
+    } else if (dir == "LABEL" && section().bits) {
+        // A BIT section only takes LABEL BIT (or just LABEL): a bit.
+        if (!cur.at_end()) {
+            const Token& t = cur.next();
+            if (!ieq(t.text, "BIT")) {
+                undefine(name);
+                throw AsmError("A45", "keyword not allowed in current context: a label in a BIT section is a bit",
+                               t.column);
+            }
+        }
+        expect_end(cur);
+        mark_address(lst);
+        define(name, SymbolKind::Label, here(LType::None));
     } else if (dir == "LABEL") {
         int need = 1;
         LType type = section().code ? LType::Near : LType::Byte;
         if (!cur.at_end()) {
-            std::string t = upper(cur.next().text);
+            const Token& tok = cur.next();
+            std::string t = upper(tok.text);
+            if (t == "BIT") {
+                undefine(name);
+                throw AsmError("A45", "keyword not allowed in current context: LABEL BIT needs a BIT section",
+                               tok.column);
+            }
             need = t == "DWORD" ? 4 : t == "WORD" || t == "NEAR" || t == "FAR" ? 2 : 1;
             type = t == "NEAR" ? LType::Near : t == "FAR" ? LType::Far : t == "BYTE" ? LType::Byte
                  : t == "WORD" ? LType::Word : t == "DWORD" ? LType::Dword : type;
         }
         expect_end(cur);
-        lst.has_address = true;
-        lst.address = location();
+        mark_address(lst);
         define(name, SymbolKind::Label, here(type));
         check_alignment(need, name, rep);
     } else if (dir == "SECTION") {
@@ -1573,6 +1668,10 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         expect_end(cur);
         section_end(name, rep);
     } else if (dir == "PROC") {
+        if (section().bits) {
+            undefine(name);
+            throw AsmError("A6", "syntax error: a BIT section holds no procedures", name.column);
+        }
         if (proc_ != ProcKind::None) throw AsmError("A75", "can't nest procedures", name.column);
         ProcKind kind = ProcKind::Near;
         if (cur.accept_keyword("FAR"))
@@ -1582,8 +1681,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         else
             cur.accept_keyword("NEAR");
         // Interrupt names, numbers and USING clauses only matter to the linker.
-        lst.has_address = true;
-        lst.address = location();
+        mark_address(lst);
         define(name, SymbolKind::Label, here(kind == ProcKind::Far ? LType::Far : LType::Near));
         check_alignment(2, name, rep);
         proc_ = kind;
@@ -1667,12 +1765,14 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
         // Keil keeps the first string of 'name LIT 'a', 'b''.
         expect_end(cur);
     } else if (contains(kDataDirectives, dir)) {
-        check_byte_section(data_alignment(dir), name.column);
-        align(data_alignment(dir));
-        lst.has_address = true;
-        lst.address = location();
-        define(name, SymbolKind::Label, here(data_type(dir)));
+        const int need = data_need(dir);
+        check_byte_section(need, name.column, true);
+        align(need);
+        mark_address(lst);
+        define(name, SymbolKind::Label, here(need ? data_type(dir) : LType::None));
         data(dir, cur, rep, lst);
+    } else if (dir == "DBIT") {
+        bit_directive(&name, name, cur, rep, lst);
     } else if (dir == "DGROUP" || dir == "CGROUP") {
         group(name, dir == "CGROUP", cur, rep);
     } else if (contains(kIgnoredDirectives, dir)) {
@@ -1689,27 +1789,29 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         std::int64_t v = absolute(cur, "ORG", true);
         expect_end(cur);
         Section& s = section();
-        std::int64_t target = s.absolute ? v : s.base + v;
+        // In a BIT section, too, ORG takes a byte address or offset.
+        std::int64_t target = s.absolute ? v * unit() : s.base + v * unit();
         if (target < s.base) throw AsmError("A132", "location counter may not point below section base", column);
         // Like Keil, the location counter stays where it was.
         if (std::string why = length_overflow(s, target); !why.empty())
             throw AsmError("A86", "section length overflow: " + why, column);
         s.loc = target;
-        free_ = std::max(free_, target);
+        if (!s.bits) free_ = std::max(free_, target);
     } else if (kw == "EVEN") {
         expect_end(cur);
         check_byte_section(2, tok.column);
-        if (align_offset() & 1) advance(1);
+        align(2);
     } else if (kw == "END") {
         expect_end(cur);
         ended_ = true;
         end_line_ = res_.listing.size();
     } else if (contains(kDataDirectives, kw)) {
-        check_byte_section(data_alignment(kw), tok.column);
-        align(data_alignment(kw));
-        lst.has_address = true;
-        lst.address = location();
+        check_byte_section(data_need(kw), tok.column);
+        align(data_need(kw));
+        mark_address(lst);
         data(kw, cur, rep, lst);
+    } else if (kw == "DBIT") {
+        bit_directive(nullptr, tok, cur, rep, lst);
     } else if (kw == "ASSUME") {
         assume(cur, rep);
     } else if (kw == "EXTERN" || kw == "EXTRN") {
@@ -1732,6 +1834,36 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
     }
 }
 
+// [label:] DBIT [n] and name DBIT [n] reserve n bits (one if n is left out)
+// in a BIT section. Like Keil, a forward reference is reported but still
+// used, and a value that is not a number reserves one bit.
+void Assembler::bit_directive(const Token* name, const Token& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
+    if (cur_ == 0) throw AsmError("A44", "no currently active section: DBIT needs a BIT section");
+    if (!section().bits) {
+        if (name) undefine(*name);
+        throw AsmError("A45", "keyword not allowed in current context: DBIT needs a BIT section", dir.column);
+    }
+    mark_address(lst);
+    if (name) define(*name, SymbolKind::Label, here(LType::None));
+    std::int64_t n = 1;
+    const int column = cur.peek().column;
+    if (!cur.at_end()) {
+        forward_ref_ = false;
+        Value v = expression(cur);
+        expect_end(cur);
+        if (v.type != VType::Number || v.movable) {
+            rep.error("A72", "absolute expression required: DBIT takes a number of bits", column);
+        } else {
+            if (forward_ref_) rep.error("A71", "expression with forward reference not permitted in DBIT", column);
+            n = v.num;
+        }
+    }
+    advance(n);
+    // Keil still reserves the bits after this error.
+    if (std::string why = length_overflow(section(), section().loc); !why.empty())
+        rep.error("A86", "section length overflow: " + why, column);
+}
+
 void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
     if (is_pointer_directive(dir)) return pointer_data(dir, cur, rep, lst);
     if (dir == "DS" || dir == "DSB" || dir == "DSW" || dir == "DSD") {
@@ -1739,7 +1871,7 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
         std::int64_t n = absolute(cur, dir.c_str());
         expect_end(cur);
         if (n < 0) throw AsmError("A19", "numeric value out of range", column);
-        advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1));
+        advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1) * unit());
         // Keil still reserves the space after this error.
         if (std::string why = length_overflow(section(), section().loc); !why.empty())
             rep.error("A86", "section length overflow: " + why, column);
@@ -2040,6 +2172,8 @@ void Assembler::check_public(const Token& name, Reporter& rep) {
 
 // A section name stands for the section's start address. Keil applies the
 // DPP that ASSUME ties to a data section to it, but not to a code section.
+// A BIT section with AT stands for the byte address it starts in; one
+// without AT has no value.
 std::optional<Value> Assembler::section_value(std::string_view name) {
     const std::string k = key(name);
     for (const auto* list : {&sections_, &prev_sections_}) {
@@ -2049,6 +2183,13 @@ std::optional<Value> Assembler::section_value(std::string_view name) {
             if (list == &prev_sections_) {
                 forward_ref_ = true;
                 ++forward_count_;
+            }
+            if (s.bits) {
+                if (!s.absolute)
+                    throw AsmError("A70", "invalid type of expression: '" + s.name + "' is a BIT section without AT");
+                Value v = Value::number(s.base / 8);
+                v.unsig = true;
+                return v;
             }
             Value v = Value::number(s.base);
             v.rel = s.absolute ? Rel::None : Rel::Addr;
@@ -2238,6 +2379,12 @@ void Assembler::assume(TokenCursor& cur, Reporter& rep) {
                 if (key(prev_sections_[i].name) == k) target = static_cast<int>(i);
             // Keil quietly ignores a name it does not know.
             if (!target && pass_ == 1) changed_ = true;
+            if (target && *target < Value::kGroupBase) {
+                const std::size_t i = static_cast<std::size_t>(*target);
+                const bool bits = i < sections_.size() ? sections_[i].bits
+                                                       : i < prev_sections_.size() && prev_sections_[i].bits;
+                if (bits) throw AsmError("A56", "illegal component: a BIT section has no data page", t.column);
+            }
             if (target) target = assume_key(*target);
         }
         if (target) {
@@ -2280,8 +2427,8 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     const Token& type_tok = cur.peek();
     if (type_tok.kind != TokKind::Ident || !contains(kSectionTypes, upper(type_tok.text)))
         throw AsmError("A34", "illegal section type", type_tok.column);
-    if (ieq(type_tok.text, "BIT")) throw AsmError("OC3", "BIT sections are not supported yet", type_tok.column);
     const std::string type = upper(cur.next().text);
+    const bool bits = type == "BIT";
 
     const std::string k = key(name.text);
     std::size_t old = 0;
@@ -2314,18 +2461,27 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     int combine_column = cur.peek().column;
     if (cur.accept_keyword("AT")) {
         int column = cur.peek().column;
-        try {
-            at = absolute(cur, "AT");
-        } catch (const AsmError& e) {
-            // Keil opens the section anyway.
-            if (e.code() != "A72") throw;
-            rep.error(e.code(), e.message(), e.column());
-            at = 0;
-        }
-        // Without $SEGMENTED, everything lives in the first 64 KB.
-        if (!segmented_ && *at > 0xFFFF) {
-            rep.error("A19", "numeric value out of range: AT above 0FFFFH needs $SEGMENTED", column);
-            at = 0;
+        if (bits) {
+            at = bit_section_at(cur, rep);
+        } else {
+            try {
+                at = absolute(cur, "AT");
+            } catch (const AsmError& e) {
+                // Keil opens the section anyway.
+                if (e.code() != "A72") throw;
+                rep.error(e.code(), e.message(), e.column());
+                at = 0;
+            }
+            // Without $SEGMENTED, everything lives in the first 64 KB.
+            if (!segmented_ && *at > 0xFFFF) {
+                rep.error("A19", "numeric value out of range: AT above 0FFFFH needs $SEGMENTED", column);
+                at = 0;
+            }
+            if (type == "DATA" && align && align->name == "BITADDRESSABLE" &&
+                (*at < kBitAreaStart || *at >= kBitAreaEnd)) {
+                rep.error("A91", "not in bit-addressable range (0FD00H-0FDFFH)", column);
+                at = 0;
+            }
         }
         combine = "AT";
     } else if (const Token& t = cur.peek(); t.kind == TokKind::Ident && contains(kCombineTypes, upper(t.text))) {
@@ -2346,7 +2502,10 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
             rep.error("A31", "redefinition: align type: '" + s.name + "' is " + s.align_type, align_column);
         if (combine && (*combine != s.combine || (at && *at != s.base)))
             rep.error("A32", "redefinition: combine type: '" + s.name + "' is " +
-                                 (s.absolute ? "AT " + hex(s.base, 4) + "H" : s.combine), combine_column);
+                                 (!s.absolute ? s.combine
+                                  : s.bits    ? "AT " + hex(s.base / 8, 4) + "H." + std::to_string(s.base % 8)
+                                              : "AT " + hex(s.base, 4) + "H"),
+                       combine_column);
         if (class_name && *class_name != s.class_name)
             rep.error("A33", "redefinition: class name of '" + s.name + "'", class_column);
         open_.push_back(old);
@@ -2358,9 +2517,14 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     s.name = std::string(name.text);
     s.type = type;
     s.code = type == "CODE";
+    s.bits = bits;
+    if (bits) {
+        s.align_type = "BIT";
+        s.align = 1;
+    }
     if (align) {
         s.align_type = std::string(align->name);
-        s.align = align->align;
+        s.align = bits && align->name != "BIT" ? align->align * 8 : align->align;
     }
     if (combine) s.combine = *combine;
     if (class_name) s.class_name = *class_name;
@@ -2372,8 +2536,10 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     else if (auto it = layout_.find(k); it != layout_.end())
         s.base = it->second;
     else if (given)
-        s.base = *given;
-    else  // the first pass: a guess that the following passes correct
+        s.base = *given * (bits ? 8 : 1);
+    else if (bits)  // the first pass: a guess that the following passes correct
+        s.base = align_up(kBitAreaStart * 8, s.align);
+    else
         s.base = align_up(std::max(free_, s.align_type == "BITADDRESSABLE" ? kBitAreaStart : std::int64_t{0}), s.align);
     s.loc = s.base;
     if (final_) {
@@ -2383,7 +2549,42 @@ void Assembler::section_start(const Token& name, TokenCursor& cur, Reporter& rep
     sections_.push_back(s);
     cur_ = sections_.size() - 1;
     open_.push_back(cur_);
-    free_ = std::max(free_, s.loc);
+    if (!bits) free_ = std::max(free_, s.loc);
+}
+
+// The address after AT in a BIT section: a byte address or a bit (word.bit,
+// counted on linearly as in Keil, so 0FD01H.3 is 0FD00H.11), in bits. Like
+// Keil, a section outside 0FD00H..0FDDFH is reported and starts at 0FD00H.0,
+// and so does one with a bad address: Keil opens the section anyway.
+std::int64_t Assembler::bit_section_at(TokenCursor& cur, Reporter& rep) {
+    const int column = cur.peek().column;
+    forward_ref_ = false;
+    Value v;
+    try {
+        v = expression(cur);
+    } catch (const AsmError& e) {
+        rep.error(e.code(), e.message(), e.column());
+        while (!cur.at_end()) cur.next();
+        return kBitAreaStart * 8;
+    }
+    if (forward_ref_) {
+        rep.error("A71", "expression with forward reference not permitted in AT", column);
+        return kBitAreaStart * 8;
+    }
+    std::int64_t at = -1;
+    if (v.type == VType::Bit && !v.movable && bit_word_address(v) >= 0)
+        at = bit_word_address(v) * 8 + v.bit;
+    else if (v.type == VType::Number && !v.movable)
+        at = v.num * 8;
+    if (at < 0) {
+        rep.error("A72", "absolute expression required: AT takes a byte or bit address", column);
+        return kBitAreaStart * 8;
+    }
+    if (at < kBitAreaStart * 8 || at >= kBitSectionAtEnd * 8) {
+        rep.error("A91", "not in bit-addressable range: a BIT section must start in 0FD00H..0FDDFH", column);
+        return kBitAreaStart * 8;
+    }
+    return at;
 }
 
 std::optional<std::int64_t> Assembler::option_address(const std::string& name_key) const {
@@ -2419,6 +2620,7 @@ void Assembler::section_end(const Token& name, Reporter& rep) {
 void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
     const std::size_t index = insn_++;
     if (index >= sizes_.size()) sizes_.resize(index + 1, 0);
+    if (section().bits) throw AsmError("A45", "keyword not allowed in current context: a BIT section holds no code");
     const std::int64_t pc = location();
     lst.has_address = true;
     lst.address = pc;
@@ -2573,7 +2775,8 @@ private:
         std::int64_t base = 0;
         std::int64_t size = 0;
         int align = 1;
-        bool bit = false;  // BITADDRESSABLE
+        bool bit = false;   // BITADDRESSABLE
+        bool bits = false;  // BIT section: base, size and align count bits
     };
 
     const AssembleOptions& opt_;
@@ -2751,22 +2954,38 @@ std::vector<Program::Unit> Program::units() {
             u.size = common ? std::max(u.size, s.size) : p.offset + s.size;
             u.align = std::max(u.align, s.align);
             u.bit = u.bit || s.align_type == "BITADDRESSABLE";
+            u.bits = s.bits;
         }
     }
     return out;
 }
 
 // Puts the sections without AT where L166 would by default: in the order in
-// which they first appear, each at the lowest suitably aligned address from
-// the origin on where it fits between the sections and code placed so far,
-// without crossing the page or segment boundary its type forbids. Sections
-// with an address in AssembleOptions::section_addresses go there first. The
-// next pass assembles with these addresses.
+// which they first appear (BITADDRESSABLE and BIT sections in FD00H..FDFFH
+// first), each at the lowest suitably aligned address from the origin on
+// where it fits between the sections and code placed so far, without
+// crossing the page or segment boundary its type forbids. Sections with an
+// address in AssembleOptions::section_addresses go there first. The next
+// pass assembles with these addresses. Like L166, a BIT section takes only
+// the bits it needs, so two of them may share a byte, but no other section
+// uses a byte that a BIT section touches.
 void Program::locate(bool final) {
     std::vector<Unit> all = units();
-    std::vector<std::pair<std::int64_t, std::int64_t>> used;
+    using Ranges = std::vector<std::pair<std::int64_t, std::int64_t>>;
+    Ranges used;      // [from, to) in bytes
+    Ranges bit_used;  // [from, to) in bits, of BIT sections
     for (const auto& m : mods_) used.insert(used.end(), m->outside_.begin(), m->outside_.end());
     auto top_of = [](const Assembler& m) { return m.segmented_ ? kAddressLimit : std::int64_t{0x10000}; };
+    // What a unit must stay clear of, in its own unit (bits or bytes).
+    auto taken = [&](bool bits) {
+        Ranges r;
+        for (const auto& [a, b] : used) r.emplace_back(bits ? a * 8 : a, bits ? b * 8 : b);
+        for (const auto& [a, b] : bit_used) r.emplace_back(bits ? a : a / 8, bits ? b : (b + 7) / 8);
+        return r;
+    };
+    auto occupy = [&](const Unit& u, std::int64_t base) {
+        if (u.size > 0) (u.bits ? bit_used : used).emplace_back(base, base + u.size);
+    };
 
     for (Unit& u : all) {
         Assembler& m = *u.parts[0].m;
@@ -2779,18 +2998,23 @@ void Program::locate(bool final) {
                                                      hex(*given, 6) + "H");
             u.base = s.base;
         } else if (given) {
-            u.base = *given;
-            if (*given < 0 || *given + u.size > top)
+            const int unit = u.bits ? 8 : 1;
+            u.base = *given * unit;
+            const std::int64_t end = (u.base + u.size + unit - 1) / unit;  // in bytes
+            if (*given < 0 || end > top)
                 m.report(Severity::Error, "OC14", "section '" + s.name + "' cannot be placed at " + hex(*given, 6) +
                                                      "H: it would end beyond " + hex(top - 1, 6) + "H" +
                                                      (m.segmented_ ? "" : " (higher addresses need $SEGMENTED)"));
-            else if (*given % u.align || (u.bit && (*given < kBitAreaStart || *given + u.size > kBitAreaEnd)))
+            else if (u.bits && (*given < kBitAreaStart || end > kBitAreaEnd))
+                m.report(Severity::Warning, "OC13", "section '" + s.name + "' is placed at " + hex(*given, 6) +
+                                                       "H, outside the bit area FD00H..FDFFH");
+            else if (u.base % u.align || (u.bit && (*given < kBitAreaStart || end > kBitAreaEnd)))
                 m.report(Severity::Warning, "OC13", "section '" + s.name + "' is placed at " + hex(*given, 6) +
                                                        "H, which does not suit its alignment " + s.align_type);
         } else {
             continue;
         }
-        if (u.size > 0) used.emplace_back(u.base, u.base + u.size);
+        occupy(u, u.base);
     }
     std::set<std::string> unknown;
     for (const auto& [name, address] : opt_.section_addresses) {
@@ -2804,20 +3028,20 @@ void Program::locate(bool final) {
     }
 
     // The lowest address in [from, to) from which u fits between the ranges
-    // in 'taken', suitably aligned and without crossing a multiple of
+    // in 'occupied', suitably aligned and without crossing a multiple of
     // 'boundary' (0: none).
     auto first_fit = [](const Unit& u, std::int64_t from, std::int64_t to, std::int64_t boundary,
-                        const std::vector<std::pair<std::int64_t, std::int64_t>>& taken) -> std::optional<std::int64_t> {
+                        const Ranges& occupied) -> std::optional<std::int64_t> {
         std::int64_t a = align_up(from, u.align);
         while (a + u.size <= to) {
             if (boundary && u.size > 0 && u.size <= boundary && a / boundary != (a + u.size - 1) / boundary) {
                 a = align_up((a / boundary + 1) * boundary, u.align);
                 continue;
             }
-            auto clash = std::find_if(taken.begin(), taken.end(), [&](const auto& r) {
+            auto clash = std::find_if(occupied.begin(), occupied.end(), [&](const auto& r) {
                 return r.first < a + std::max<std::int64_t>(u.size, 1) && a < r.second;
             });
-            if (clash == taken.end()) return a;
+            if (clash == occupied.end()) return a;
             a = align_up(clash->second, u.align);
         }
         return std::nullopt;
@@ -2899,7 +3123,7 @@ void Program::locate(bool final) {
             const std::int64_t top = top_of(m);
             for (std::int64_t page = pinned ? *pinned : opt_.origin / region * region;
                  page < top && (!pinned || page == *pinned) && !g.placed; page += region) {
-                auto trial = used;
+                Ranges trial = taken(false), added;
                 std::vector<std::pair<std::size_t, std::int64_t>> bases;
                 std::vector<std::size_t> left_out;
                 bool fits = true;
@@ -2925,10 +3149,13 @@ void Program::locate(bool final) {
                         break;
                     }
                     bases.emplace_back(u, *a);
-                    if (un.size > 0) trial.emplace_back(*a, *a + un.size);
+                    if (un.size > 0) {
+                        trial.emplace_back(*a, *a + un.size);
+                        added.emplace_back(*a, *a + un.size);
+                    }
                 }
                 if (!fits) continue;
-                used = std::move(trial);
+                used.insert(used.end(), added.begin(), added.end());
                 for (const auto& [u, a] : bases) {
                     all[u].base = a;
                     done[u] = true;
@@ -2944,27 +3171,35 @@ void Program::locate(bool final) {
         }
     }
 
-    for (std::size_t i = 0; i < all.size(); ++i) {
-        if (done[i]) continue;
-        Unit& u = all[i];
-        Assembler& m = *u.parts[0].m;
-        const Section& s = u.parts[0].section();
-        const std::int64_t from = u.bit ? kBitAreaStart : opt_.origin, to = u.bit ? kBitAreaEnd : top_of(m);
-        const std::int64_t boundary = section_boundary(s.type);
-        if (boundary == 0x4000 && u.size > boundary && final)
-            m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
-                                "section '" + s.name + "' (" + hex(u.size, 4) + "H bytes) does not fit in one 16 KB data page "
-                                "(L166 reports L129)");
-        std::optional<std::int64_t> a = first_fit(u, from, to, boundary, used);
-        if (!a) {
-            m.report(Severity::Error, "OC12", "no room for section '" + s.name + "' (" + hex(u.size, 4) + "H bytes" +
-                                                 (u.bit ? " in FD00H..FDFFH)" : ")"));
-            a = s.base;
-        } else if (u.size > 0) {
-            used.emplace_back(*a, *a + u.size);
+    // Like L166, BITADDRESSABLE sections go first, then the others.
+    for (const bool first_round : {true, false})
+        for (std::size_t i = 0; i < all.size(); ++i) {
+            Unit& u = all[i];
+            if (done[i] || u.bit != first_round) continue;
+            Assembler& m = *u.parts[0].m;
+            const Section& s = u.parts[0].section();
+            const std::int64_t unit = u.bits ? 8 : 1;
+            const bool bit_area = u.bit || u.bits;
+            const std::int64_t from = bit_area ? kBitAreaStart * unit : opt_.origin;
+            const std::int64_t to = bit_area ? kBitAreaEnd * unit : top_of(m);
+            const std::int64_t boundary = section_boundary(s.type);
+            if (boundary == 0x4000 && u.size > boundary && final)
+                m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
+                                    "section '" + s.name + "' (" + hex(u.size, 4) +
+                                        "H bytes) does not fit in one 16 KB data page (L166 reports L129)");
+            std::optional<std::int64_t> a = first_fit(u, from, to, boundary, taken(u.bits));
+            if (!a) {
+                m.report(Severity::Error, "OC12",
+                         "no room for section '" + s.name + "' (" +
+                             (u.bits ? std::to_string(u.size) + " bits" : hex(u.size, 4) + "H bytes") +
+                             (bit_area ? " in FD00H..FDFFH)" : ")"));
+                a = s.base;
+            } else {
+                occupy(u, *a);
+            }
+            u.base = *a;
+            done[i] = true;
         }
-        u.base = *a;
-    }
 
     for (const Unit& u : all)
         for (const Part& p : u.parts)
@@ -2988,12 +3223,17 @@ void Program::locate(bool final) {
     for (std::size_t i = 0; i < all.size(); ++i) {
         const Unit& u = all[i];
         const Section& s = u.parts[0].section();
-        infos_.push_back({s.name, s.type, s.align_type, s.base, u.size,
+        const std::int64_t unit = u.bits ? 8 : 1;
+        const std::int64_t address = s.base / unit;
+        const std::int64_t size = u.bits && u.size ? (s.base + u.size + 7) / 8 - address : u.size / unit;
+        infos_.push_back({s.name, s.type, s.align_type, address, size,
                           s.absolute ? SectionInfo::Placement::At
                           : s.placed ? SectionInfo::Placement::Given
                                      : SectionInfo::Placement::Located,
                           s.class_name, group_names[i]});
-        if (u.parts.size() > 1 && s.combine == "COMMON") common_.emplace_back(s.base, s.base + u.size);
+        infos_.back().bit = static_cast<int>(s.base % unit);
+        infos_.back().bit_size = u.size * 8 / unit;
+        if (u.parts.size() > 1 && s.combine == "COMMON") common_.emplace_back(address, address + size);
     }
 }
 
@@ -3064,6 +3304,13 @@ std::string format_listing(const AssemblyResult& result) {
             out += " (" + d.file + ")";
         out += "\n";
     };
+    // In a BIT section, the location counter counts bits; Keil shows it as
+    // word address.bit (0..15).
+    auto address_text = [](const ListingLine& l, std::int64_t offset) {
+        if (!l.bit_address) return hex(l.address + offset, 8);
+        const std::int64_t a = l.address + offset * 8;
+        return hex((a >> 4) << 1, 4) + "." + std::to_string(a & 15);
+    };
     int module = -1;
     for (const auto& l : result.listing) {
         if (multi && l.module != module) {
@@ -3072,7 +3319,7 @@ std::string format_listing(const AssemblyResult& result) {
             out += std::string(out.empty() ? "" : "\n") + "MODULE " + main_file + "\n\n" + kHeader;
         }
         if (l.hidden && l.diagnostics.empty()) continue;
-        std::string loc = l.has_address ? hex(l.address, 8) : l.value ? "=" + value_text(*l.value) : "";
+        std::string loc = l.has_address ? address_text(l, 0) : l.value ? "=" + value_text(*l.value) : "";
         std::string obj;
         std::size_t shown = 0;
         for (; shown < l.bytes.size() && shown < 8; ++shown) obj += hex(l.bytes[shown], 2);
@@ -3089,7 +3336,7 @@ std::string format_listing(const AssemblyResult& result) {
             std::string more;
             std::size_t row = shown;
             for (; shown < l.bytes.size() && shown < row + 8; ++shown) more += hex(l.bytes[shown], 2);
-            std::snprintf(head, sizeof head, "%-9s %-18s\n", hex(l.address + static_cast<std::int64_t>(row), 8).c_str(),
+            std::snprintf(head, sizeof head, "%-9s %-18s\n", address_text(l, static_cast<std::int64_t>(row)).c_str(),
                           more.c_str());
             out += head;
         }
@@ -3133,9 +3380,14 @@ std::string format_listing(const AssemblyResult& result) {
         for (const auto& s : result.sections) {
             static constexpr const char* kPlacement[] = {"AT", "given", "located"};
             char row[160];
-            std::snprintf(row, sizeof row, "%-32s %-6s %-14s %sH  size %sH  %s", s.name.c_str(), s.type.c_str(),
-                          s.align.c_str(), hex(s.address, 6).c_str(), hex(s.size, 4).c_str(),
-                          kPlacement[static_cast<int>(s.placement)]);
+            // A BIT section shows where it starts and how long it is as
+            // byte.bit.
+            const bool bits = s.type == "BIT";
+            const std::string address = hex(s.address, 6) + "H" + (bits ? "." + std::to_string(s.bit) : "");
+            const std::string size = bits ? hex(s.bit_size / 8, 4) + "H." + std::to_string(s.bit_size % 8)
+                                          : hex(s.size, 4) + "H";
+            std::snprintf(row, sizeof row, "%-32s %-6s %-14s %s  size %s  %s", s.name.c_str(), s.type.c_str(),
+                          s.align.c_str(), address.c_str(), size.c_str(), kPlacement[static_cast<int>(s.placement)]);
             out += row;
             if (!s.class_name.empty()) out += "  class '" + s.class_name + "'";
             if (!s.group.empty()) out += "  group " + s.group;

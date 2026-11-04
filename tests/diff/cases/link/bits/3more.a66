@@ -1,0 +1,25 @@
+; Link case: the third module for 1main.a66. Its part of the COMMON section
+; is the longer one, and its BITADDRESSABLE section must skip the byte that
+; Pins uses.
+$MOD167
+Shared  SECTION BIT COMMON
+Sh2:    DBIT    9
+Shared  ENDS
+
+Late    SECTION BIT BYTE
+L1:     DBIT
+Late    ENDS
+
+More    SECTION DATA BITADDRESSABLE
+        DB      1
+More    ENDS
+
+Prog3   SECTION CODE
+Helper3 PROC    NEAR
+        BSET    Sh2
+        BSET    Sh2+8
+        BSET    L1
+        RET
+Helper3 ENDP
+Prog3   ENDS
+        END

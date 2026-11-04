@@ -235,6 +235,39 @@ static void test_sections(void) {
     oc166_options_free(opts);
 }
 
+static void test_bit_sections(void) {
+    oc166_section s;
+    int first_bit = -1;
+    int64_t bit_count = -1;
+    oc166_result *r = assemble_text(NULL,
+                                    "FLAGS  SECTION BIT\n"
+                                    "F1     DBIT 3\n"
+                                    "FLAGS  ENDS\n"
+                                    "FIXED  SECTION BIT AT 0FD02H.3\n"
+                                    "G1     DBIT 11\n"
+                                    "FIXED  ENDS\n"
+                                    "PROG   SECTION CODE AT 0E000H\n"
+                                    "       DB 1\n"
+                                    "PROG   ENDS\n"
+                                    "       END\n");
+    CHECK(oc166_result_error_count(r) == 0);
+    CHECK(oc166_result_section(r, 0, &s) == 0);
+    CHECK(strcmp(s.type, "BIT") == 0 && strcmp(s.align, "BIT") == 0);
+    CHECK(s.address == 0xFD00 && s.size == 1);
+    CHECK(oc166_result_section_bits(r, 0, &first_bit, &bit_count) == 0);
+    CHECK(first_bit == 0 && bit_count == 3);
+    CHECK(oc166_result_section(r, 1, &s) == 0);
+    CHECK(s.address == 0xFD02 && s.size == 2);
+    CHECK(oc166_result_section_bits(r, 1, &first_bit, &bit_count) == 0);
+    CHECK(first_bit == 3 && bit_count == 11);
+    CHECK(oc166_result_section_bits(r, 2, &first_bit, &bit_count) == 0);
+    CHECK(first_bit == 0 && bit_count == 8);
+    CHECK(oc166_result_section_bits(r, 2, NULL, NULL) == 0);
+    CHECK(oc166_result_section_bits(r, 3, &first_bit, &bit_count) == -1);
+    CHECK(oc166_result_section_bits(NULL, 0, &first_bit, &bit_count) == -1);
+    oc166_result_free(r);
+}
+
 static void test_linking(void) {
     const char *main_src = "EXTERN COUNT:WORD, LIMIT:DATA16\n"
                            "PUBLIC MAIN\n"
@@ -339,6 +372,7 @@ int main(void) {
     test_diagnostics();
     test_symbols();
     test_sections();
+    test_bit_sections();
     test_linking();
     test_edge_cases();
     if (failures) {

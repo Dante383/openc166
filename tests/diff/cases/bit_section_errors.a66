@@ -1,0 +1,72 @@
+; Mistakes with BIT sections and DBIT.
+$MOD167
+$SEGMENTED
+
+; DBIT belongs in a BIT section.
+        DBIT    1
+Dat     SECTION DATA
+        DBIT    1
+Dat     ENDS
+
+; A BIT section takes BIT, BYTE, WORD, DWORD or BITADDRESSABLE alignment.
+B1      SECTION BIT BYTE
+B1      ENDS
+B2      SECTION BIT PAGE
+B2      ENDS
+B3      SECTION BIT SEGMENT
+B3      ENDS
+B4      SECTION BIT PECADDRESSABLE
+B4      ENDS
+
+; AT must be in the bit-addressable area, FD00H..FDDFH, and known.
+A1      SECTION BIT AT 0FDE0H
+A1      ENDS
+A2      SECTION BIT AT 0FCFEH.15    ; DIVERGES: openc166 refuses the bit (A103), Keil uses 0FD00H.0
+A2      ENDS
+A3      SECTION BIT AT Later
+A3      ENDS
+D1      SECTION DATA BITADDRESSABLE AT 0FE00H
+D1      ENDS
+
+Flags   SECTION BIT
+F1:     DBIT    3
+F2:     DBIT    Later
+F3:     DBIT    F1
+L1:     DB      1
+        DW      1
+        EVEN
+        NOP
+F4:     DBIT
+Flags   ENDS
+
+; An AT section must end below FE00H; a relocatable one must not go below
+; its start.
+Fix     SECTION BIT AT 0FDD0H
+        DBIT    3
+Fx1:    DBIT    1
+        DBIT    380
+        DBIT    1
+Fix     ENDS
+Rel     SECTION BIT
+        DBIT    4
+        DBIT    -10
+Rel     ENDS
+
+Later   EQU     2
+Bad1    EQU     F1.1
+Bad2    BIT     F4.2
+
+Prog    SECTION CODE
+Main    PROC    NEAR
+        MOV     R1, #Flags
+        BSET    F1.1
+        BFLDL   R3.4, #1, #1
+        MOV     R2, #BOF F1
+        MOV     R2, #BOF Fx1    ; DIVERGES: openc166 refuses (OC23); Keil gives 0, not 3
+        MOV     R3, #POF F1     ; DIVERGES: openc166 refuses POF of a bit (A61); Keil's value is odd
+        RET
+Main    ENDP
+Prog    ENDS
+
+        ASSUME  DPP1:Flags
+        END

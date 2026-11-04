@@ -1,0 +1,91 @@
+; BIT sections and DBIT: bit variables in the bit-addressable area
+; FD00H..FDFFH. In a BIT section the location counter counts bits, and the
+; listing shows it as word.bit.
+$MOD167
+
+Lamp    BIT     0FD10H.3
+
+Flags   SECTION BIT
+Ready:  DBIT
+Mode:   DBIT    3
+Busy:   DBIT    1
+Tail    LABEL   BIT
+More:   DBIT    12
+Flags   ENDS
+
+; Whole bytes and words in a BIT section start on a byte or word.
+Words   SECTION BIT WORD
+W1:     DBIT    2
+W2:     DSB     1
+W3:     DSW     1
+W4:     DBIT
+        EVEN
+W5:     DBIT    2
+Words   ENDS
+
+Fixed   SECTION BIT AT 0FD20H.5
+G1:     DBIT    4
+G2:     DBIT
+Fixed   ENDS
+
+; A BIT section at a whole word, with ORG in words.
+Fixed2  SECTION BIT AT 0FDD0H
+        ORG     0FDD8H
+H1:     DBIT
+        ORG     0FDD2H
+H2:     DBIT    2
+Fixed2  ENDS
+
+; Names for bits. EQU of a register bit gives its bit number.
+Alias1  EQU     Ready
+Alias2  BIT     Mode+1
+Alias3  EQU     G1+2
+Copy    EQU     Lamp
+Psw3    EQU     PSW.3
+GprBit  EQU     R3.4
+
+Prog    SECTION CODE
+Main    PROC    NEAR
+        BSET    Ready
+        BCLR    Mode
+        BMOV    Busy, Lamp
+        BSET    Tail
+        BSET    More
+        BSET    W1
+        BSET    W4
+        BSET    W5
+        BSET    G1
+        BSET    G2
+        BSET    H1
+        BSET    H2
+        BSET    Alias1
+        BSET    Alias2
+        BSET    Alias3
+        BSET    Copy
+        BSET    Psw3
+        JB      Ready, Main
+        JNB     G2, Main
+        JBC     Alias3, Main
+; BFLDL and BFLDH take a bit and use its word.
+        BFLDL   Lamp, #0FH, #GprBit
+        BFLDH   G1, #0F0H, #20H
+        BFLDL   0FD10H.9, #3, #1
+        BFLDH   Ready, #1, #1
+        MOV     R4, #GprBit
+        RET
+Main    ENDP
+Prog    ENDS
+
+Ba      SECTION DATA BITADDRESSABLE
+Cnt1:  DW      0
+Cnt2:  DW      0
+Ba      ENDS
+
+Prog2   SECTION CODE
+Helper  PROC    NEAR
+        BSET    Cnt1.3
+        BCLR    Cnt2.15
+        RET
+Helper  ENDP
+Prog2   ENDS
+        END

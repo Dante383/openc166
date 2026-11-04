@@ -1,0 +1,38 @@
+; Link case: BIT sections from several modules. L166 places the
+; BITADDRESSABLE sections first, then the BIT sections bit by bit from
+; 0FD00H.0, each in the first gap that holds it; a byte section avoids any
+; byte that bits use. BIT sections with the same name are joined (PUBLIC)
+; or overlap (COMMON).
+$MOD167
+        PUBLIC  Ready, Mode
+        EXTRN   Busy:BIT, Count:WORD
+
+Flags   SECTION BIT PUBLIC
+Ready:  DBIT
+Mode:   DBIT    3
+Flags   ENDS
+
+Pins    SECTION BIT AT 0FD04H.6
+Pin1:   DBIT    2
+Pins    ENDS
+
+Vars    SECTION DATA
+Temp:   DW      0
+Vars    ENDS
+
+Prog    SECTION CODE AT 0C000H
+Main    PROC    NEAR
+        BSET    Ready
+        BCLR    Mode
+        BSET    Mode+2
+        BSET    Busy
+        BCLR    Busy+1
+        BSET    Pin1
+        JB      Ready, Main
+        BFLDL   Mode, #0FH, #5
+        MOV     R1, Temp
+        MOV     R2, Count
+        RET
+Main    ENDP
+Prog    ENDS
+        END

@@ -66,11 +66,24 @@ class Line:
 
 
 def symbol_value(text):
-    """'C001H', '0000C001H' or 'FD00H.3' -> (number, bit); None if undefined."""
+    """'C001H' or '0000C001H' -> (number, None); a bit 'FD00H.3' -> (byte
+    address * 8 + bit, "bit"), so that FD00H.11 and FD01H.3 are equal; None
+    if undefined."""
     m = re.fullmatch(r"([0-9A-F]+)H(?:\.(\d+))?", text)
     if not m:
         return None
-    return int(m.group(1), 16), int(m.group(2)) if m.group(2) else None
+    if m.group(2):
+        return int(m.group(1), 16) * 8 + int(m.group(2)), "bit"
+    return int(m.group(1), 16), None
+
+
+# In a BIT section, Keil lists the location as word address.bit (0..15).
+BIT_LOC = re.compile(r"([0-9A-F]{4})\.(\d+)")
+
+
+def bit_loc(text):
+    m = BIT_LOC.fullmatch(text.strip())
+    return int(m.group(1), 16) * 8 + int(m.group(2)) if m else None
 
 
 def locate(source, number, text, wrap=None):
@@ -91,22 +104,24 @@ def locate(source, number, text, wrap=None):
 def parse_keil_listing(text, source=()):
     """'source' holds the expanded source lines; it tells the rows of lines
     in false IF blocks (listed without a number) from long lines that Keil
-    wraps onto extra rows."""
+    wraps onto extra rows. Returns the lines, the symbols, and for each
+    relocatable symbol the section its value is an offset in."""
     lines = {}
     symbols = {}
+    sections = {}
     last = None
     in_symbols = False
     body = False
     number = 0  # last line listed
     printed = 0  # characters of its source printed so far
     # Lines from include files carry a nesting marker (+1, +2, ...).
-    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
+    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}| [0-9A-F]{4}\.\d\d| [0-9A-F]{4}\.\d ) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+) ")
     # The linker fills in the digits that Keil lists as '?' (marked R).
-    more = re.compile(r"^[0-9A-F]{8} ([0-9A-F?]+)(?:\s+R)?\s*$")
+    more = re.compile(r"^(?:[0-9A-F]{8}| [0-9A-F]{4}\.\d[\d ]) ([0-9A-F?]+)(?:\s+R)?\s*$")
     unnumbered = re.compile(r" *(?:\+\d+)? *")
     # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
-    sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)")
+    sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)(?:\s+R\s+SEC=(\S+))?")
     for l in text.splitlines():
         if l.startswith("N A M E"):
             in_symbols = True
@@ -114,7 +129,12 @@ def parse_keil_listing(text, source=()):
         if in_symbols:
             m = sym.match(l)
             if m and m.group(2) != "----":
-                symbols[m.group(1).upper()] = symbol_value(m.group(3))
+                # Keil lists odd values for LABEL BIT and for a label alone
+                # on a line in a BIT section ("BIT 0H").
+                bad = m.group(2) == "BIT" and "." not in m.group(3)
+                symbols[m.group(1).upper()] = None if bad else symbol_value(m.group(3))
+                if m.group(4):
+                    sections[m.group(1).upper()] = m.group(4).upper()
             continue
         if l.startswith("LOC ") and "SOURCE" in l:
             body = True
@@ -149,9 +169,11 @@ def parse_keil_listing(text, source=()):
             last = lines.setdefault(number, Line())
             if re.fullmatch(r"[0-9A-F]{8}", m.group(1)) and last.loc is None:
                 last.loc = int(m.group(1), 16)
+            elif bit_loc(m.group(1)) is not None and last.loc is None:
+                last.loc = bit_loc(m.group(1))
             if re.fullmatch(r"[0-9A-F?]+", m.group(2)):
                 last.code += m.group(2)
-    return lines, symbols
+    return lines, symbols, sections
 
 
 SECTION_START = re.compile(r"\s*([A-Za-z_?@][\w?@]*)\s+SECTION\b", re.I)
@@ -159,9 +181,10 @@ SECTION_END = re.compile(r"\s*([A-Za-z_?@][\w?@]*)\s+ENDS\b", re.I)
 
 
 def relocatable_bases(source, sections):
-    """{line number: address} for the lines inside sections that openc166
-    placed itself (no AT). Keil lists offsets from the start of such
-    sections, openc166 the final addresses."""
+    """{line number: (address, BIT section)} for the lines inside sections
+    that openc166 placed itself (no AT). Keil lists offsets from the start of
+    such sections, openc166 the final addresses. The address of a BIT
+    section counts bits (byte address * 8 + bit)."""
     bases = {}
     stack = []
     for n, l in enumerate(source, 1):
@@ -176,20 +199,19 @@ def relocatable_bases(source, sections):
                 stack.pop()
             continue
         if stack and stack[-1] in sections and sections[stack[-1]][1] != "AT":
-            bases[n] = sections[stack[-1]][0]
+            bases[n] = sections[stack[-1]][0], sections[stack[-1]][2]
     return bases
 
 
 def parse_openc166_listing(text, source=()):
     lines = {}
     symbols = {}
-    labels = set()
     sections = {}
     last = None
     in_symbols = in_sections = False
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) (\w+):")
     sym = re.compile(r"^(\S+)\s+(LABEL|EQU|SET|BIT)\s+(?:SFR\s+)?(\S+)")
-    sec = re.compile(r"^(\S+)\s+[A-Z]+\s+[A-Z]+\s+([0-9A-F]+)H\s+size [0-9A-F]+H\s+(\S+)")
+    sec = re.compile(r"^(\S+)\s+[A-Z]+\s+[A-Z]+\s+([0-9A-F]+)H(?:\.(\d))?\s+size [0-9A-F]+H(?:\.\d)?\s+(\S+)")
     for l in text.splitlines():
         if l == "SYMBOLS":
             in_symbols = True
@@ -200,14 +222,14 @@ def parse_openc166_listing(text, source=()):
         if in_sections:
             m = sec.match(l)
             if m:
-                sections[m.group(1).upper()] = (int(m.group(2), 16), m.group(3))
+                bits = m.group(3) is not None
+                base = int(m.group(2), 16) * 8 + int(m.group(3)) if bits else int(m.group(2), 16)
+                sections[m.group(1).upper()] = (base, m.group(4), bits)
             continue
         if in_symbols:
             m = sym.match(l)
             if m:
                 symbols[m.group(1).upper()] = symbol_value(m.group(3))
-                if m.group(2) == "LABEL":
-                    labels.add(m.group(1).upper())
             continue
         m = diag.match(l)
         if m:
@@ -220,8 +242,10 @@ def parse_openc166_listing(text, source=()):
             last = lines.setdefault(int(number), Line())
             if obj and re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last.loc is None:
                 last.loc = int(l[0:8], 16)
+            elif bit_loc(l[0:9]) is not None and last.loc is None:
+                last.loc = bit_loc(l[0:9])
             last.code += obj
-        elif re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last is not None:
+        elif (re.fullmatch(r"[0-9A-F]{8}", l[0:8]) or bit_loc(l[0:9]) is not None) and last is not None:
             last.code += obj
         elif len(l) >= 37 and not l[:27].strip() and not number and re.fullmatch(r"(\+\d)? *", l[27:29]):
             # a line in a false IF block, listed without a number
@@ -229,14 +253,17 @@ def parse_openc166_listing(text, source=()):
             last.skipped = True
     bases = relocatable_bases(source, sections)
     for n, line in lines.items():
-        if line.loc is not None:
-            line.loc -= bases.get(n, 0)
-    defs = definitions(source)
-    for name in labels:
-        v, where = symbols.get(name), defs.get(name)
-        if v is not None and where and where[0] in bases:
-            symbols[name] = (v[0] - bases[where[0]], v[1])
-    return lines, symbols
+        if line.loc is not None and n in bases:
+            line.loc -= bases[n][0]
+    return lines, symbols, sections
+
+
+def section_offset(value, section):
+    """'value' (as from symbol_value) as an offset in 'section' (base,
+    placement, BIT section), as Keil lists relocatable symbols."""
+    base, _, bits = section
+    base_bits = base if bits else base * 8
+    return value[0] - (base_bits if value[1] == "bit" else base_bits // 8), value[1]
 
 
 def keil_tool(keil, name, args, workdir):
@@ -501,8 +528,8 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
     text = expand(source)
     counts = {"ok": 0, "soft": 0, "hard": 0, "diverges": 0, "symbols": 0, "image": None}
     with tempfile.TemporaryDirectory() as work:
-        k, ksym = run_keil(keil, source, work)
-        o, osym = run_openc166(tool, source, work)
+        k, ksym, ksec = run_keil(keil, source, work)
+        o, osym, osec = run_openc166(tool, source, work)
         # A166 cannot see what L166 reports (OC15..OC21 in openc166); those
         # are checked against L166 when the image is, and not line by line.
         link_codes = []
@@ -554,6 +581,9 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
         lines = defs.get(name, [])
         if kv is None or ov is None or not lines:
             continue
+        # Keil lists a symbol in a relocatable section as an offset in it.
+        if name in ksec and ksec[name] in osec and osec[ksec[name]][1] != "AT":
+            ov = section_offset(ov, osec[ksec[name]])
         if any(shift_at.get(n, 0) is None or k.get(n, Line()).errors() or o.get(n, Line()).errors()
                or "DIVERGES:" in text[n - 1] for n in lines):
             continue
@@ -563,7 +593,7 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
         counts["ok" if same else "hard"] += 1
         if not same:
             if not quiet:
-                print(f"{os.path.basename(source)}: symbol {name}: keil {ksym[name]} openc166 {osym[name]}")
+                print(f"{os.path.basename(source)}: symbol {name}: keil {kv} openc166 {ov}")
     return counts
 
 

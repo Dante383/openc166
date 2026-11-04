@@ -29,6 +29,8 @@ Early development (version 0.x). What works today:
   addresses you give (`--section NAME=ADDR`), so code that leaves placement
   to the linker can still be assembled straight to a binary. `DGROUP` and
   `CGROUP` keep sections in one data page or code segment, as in L166.
+  `BIT` sections and `DBIT` hold bit variables, placed bit by bit as L166
+  places them.
 - `PROC`/`ENDP`, `ORG`, `EVEN`, `EQU`/`SET`/`BIT`, `DB`/`DW`/`DD`,
   `DS`/`DSB`/`DSW`/`DSD`, and `DPPTR`/`DSPTR`/`DBPTR`, including Keil's
   automatic alignment of word data.

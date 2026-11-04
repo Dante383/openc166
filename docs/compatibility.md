@@ -45,12 +45,14 @@ since OH166 starts a new record at each section.
   [Segmented mode and DPPs](#segmented-mode-and-dpps).
 - **Sections:** `SECTION` with or without `AT`, with Keil's types, align
   types, combine types and class names. Sections without `AT` are placed as
-  L166 would place them. See [Sections](#sections).
+  L166 would place them. See [Sections](#sections). `BIT` sections hold
+  bit variables (`DBIT`); see [BIT sections](#bit-sections).
 - **Groups:** `DGROUP` and `CGROUP`, which keep sections together in one
   data page or code segment. See [Groups](#groups).
 - **Directives:** `SECTION` / `ENDS`, `PROC [NEAR|FAR|INTERRUPT|TASK]`
-  / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DB`, `DW`, `DD`, `DS`, `DSB`, `DSW`,
-  `DSD`, `DPPTR`, `DSPTR`, `DBPTR`, `ASSUME`, `ORG`, `EVEN` and `END`.
+  / `ENDP`, `LABEL`, `EQU`, `SET`, `BIT`, `DBIT`, `DB`, `DW`, `DD`, `DS`,
+  `DSB`, `DSW`, `DSD`, `DPPTR`, `DSPTR`, `DBPTR`, `ASSUME`, `ORG`, `EVEN`
+  and `END`.
 - **Register definitions:** `DEFR`, `DEFA` and `DEFB`, the directives that
   register files such as `reg167.inc` use. See
   [Register definitions](#register-definitions).
@@ -77,7 +79,7 @@ since OH166 starts a new record at each section.
 These produce error OC3, so a missing feature is never silently skipped:
 
 - `MACRO` and the other macro facilities
-- `DBIT`, `COMREG`, and BIT sections
+- `COMREG`
 - the XC16x/Super10 extended instruction set
 
 ## Register definitions
@@ -359,6 +361,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC20 | warning | a module whose `$SEGMENTED` setting differs from the first module's (L166: L15) |
 | OC21 | error | a `DATA` or `CONST` section without `AT` that is bigger than a 16 KB page (L166: L129) |
 | OC22 | error | a `DGROUP` bigger than a 16 KB page or a `CGROUP` bigger than a 64 KB segment (L166: L115, L116), or a section with no room in the page or segment its group is tied to (L112) |
+| OC23 | error | `BOF` of a bit in a `BIT` section whose value Keil computes wrongly (see [BIT sections](#bit-sections)) |
 
 ## Sections
 
@@ -373,8 +376,8 @@ name ENDS
   type, operator or condition code such as `cc_UC`) gives A6. Either way
   the section is not opened, so its `ENDS` gives A6 and A27, as in Keil.
   Defining a symbol with the name of a section gives A25 too.
-- **Types:** `CODE`, `DATA`, `CONST`, `HDATA`, `HCONST`, `XDATA`, `XCONST`.
-  `BIT` sections are not supported yet (OC3).
+- **Types:** `CODE`, `DATA`, `CONST`, `HDATA`, `HCONST`, `XDATA`, `XCONST`
+  and `BIT` (see [BIT sections](#bit-sections)).
 - **Align types:** `BYTE`, `WORD` (the default), `DWORD`, `PAGE` (16 KB),
   `SEGMENT` (64 KB), `BITADDRESSABLE` and `PECADDRESSABLE`. A type that
   does not suit the section gives A43, as in Keil (`CODE BYTE`,
@@ -405,7 +408,8 @@ default:
 - each at the lowest free address that suits its align type, from
   `--origin` on (default 0, as in L166), around the sections with `AT` and
   the code outside sections;
-- `BITADDRESSABLE` sections in `0FD00H..0FDFFH`;
+- `BITADDRESSABLE` sections in `0FD00H..0FDFFH`, before all others, and
+  then `BIT` sections (see [BIT sections](#bit-sections));
 - the sections of [groups](#groups) first, then the others;
 - `DATA` and `CONST` sections inside one 16 KB data page, and `CODE`,
   `HDATA` and `HCONST` sections inside one 64 KB segment, unless they are
@@ -499,6 +503,64 @@ on any one of them.
   of a group.
 
 A section named before its `SECTION` line is fine.
+
+### BIT sections
+
+```
+name SECTION BIT [BIT|BYTE|WORD|DWORD|BITADDRESSABLE] [AT address | combine] ['class']
+label:  DBIT [n]
+name ENDS
+```
+
+A `BIT` section holds one-bit variables in the bit-addressable area
+`0FD00H..0FDFFH`, where `BSET`, `BCLR`, `JB` and the other bit
+instructions reach them. Its location counter counts bits. The listing
+shows it as a word address and a bit, `FD02.3`, as Keil does.
+
+- **`DBIT n`** reserves `n` bits (1 if `n` is left out). Its label is a
+  bit, used like `PSW.3`: `BSET Ready`, `JB Ready, Loop`, `BSET Ready+2`.
+  `n` must be a plain number known at that point: a name defined later is
+  A71, a bit or label A72. `DBIT` outside sections is A44, in another type
+  of section A45.
+- **Align types:** `BIT` (the default: no gap), `BYTE`, `WORD`, `DWORD`
+  and `BITADDRESSABLE`. Others give A43.
+- **Bytes and words:** `DB`, `DS` and `DSB` move to the next whole byte;
+  `DW`, `DSW`, `DD` and `EVEN` to the next word. `DS n` reserves `n` bytes.
+  As in Keil, word data and `EVEN` in a section without `AT` that is
+  aligned to bits or bytes give A48, and so does a labelled `DB` in one
+  aligned to bits. `ORG` takes a byte address, or an offset in bytes
+  without `AT`. Instructions are A45 and `PROC` is A6.
+- **`AT address`** takes a byte address or a bit (`AT 0FD10H.3`) in
+  `0FD00H..0FDDFH`. Outside that range it is A91, and the section starts at
+  `0FD00H.0`, as in Keil. A section with `AT` must end below `0FE00H`, and
+  one without `AT` may hold up to 2048 bits; past that, or before its
+  start, is A86.
+- **Placement**, as L166 does it: first the `BITADDRESSABLE` sections of
+  any type, then the `BIT` sections, each in the first gap from
+  `0FD00H.0` that holds it, counted in bits. Other sections stay out of
+  every byte that bits use. Parts of a `BIT` section in several modules
+  join (`PUBLIC`) or overlap (`COMMON`) like other sections, in bits.
+- **Names for bits:** `EQU`, `SET` and `BIT` take any bit, `DBIT` labels
+  included. As in Keil, `EQU` of a register bit (`R3.4`) gives the bit
+  number (4), not a bit. A bit has no bits of its own, so `Ready.1` is
+  A69.
+- **`BFLDL` and `BFLDH`** take a bit as well as a word, and use the word
+  the bit is in: `BFLDL Ready, #3, #1`. A register bit there is A74.
+- **The section name** of a `BIT` section with `AT` is its byte address.
+  That of one without `AT` is not a value (A70), and `ASSUME` cannot take
+  either (A56).
+- **`BOF`** of a bit in a `BIT` section works in a section without `AT`,
+  for a bit in the word at `0FD00H`. Elsewhere Keil computes a wrong value
+  (`BOF` of `0FDD0H.3` is 0, not 3), so openc166 gives OC23. `POF`, `SOF`,
+  `PAG` and `SEG` of a bit are A61. Keil rejects most of them too, but
+  not all: `DW POF` of `0FD10H.9` gives `0FD11H`.
+
+The section table at the end of the listing shows the address and size of
+a `BIT` section in bytes and bits: `00FD02H.3  size 0001H.3` is 11 bits
+from bit 3 of `0FD02H`. The `size` that the C and Python interfaces report
+counts every byte the section touches; `Section.bit` and
+`Section.bit_size` in Python, and `oc166_result_section_bits()` in C, give
+the first bit and the size in bits.
 
 ## Linking several files
 
@@ -755,7 +817,8 @@ Unlike C, `A AND B > 1` means `(A AND B) > 1`, and `A OR B AND C` means
 
 **`BOF`** gives the position (0..15) of a bit, and applies only to the name
 or the parenthesised expression right after it: write `BOF (PSW.3)`, as
-`BOF PSW.3` means `(BOF PSW).3` and fails with A61.
+`BOF PSW.3` means `(BOF PSW).3` and fails with A61. For bits in `BIT`
+sections, see [BIT sections](#bit-sections).
 
 **`BYTE0`..`BYTE7` and `WORD0`, `WORD2`, `WORD4`, `WORD6`** pick a byte or a
 16-bit word of a value: `BYTE1 12345678H` is 56H, `WORD2 12345678H` is
@@ -850,6 +913,8 @@ follow are unchanged. Other bad items are dropped.
 | sections with `AT` and the same name in two modules | L166 error L113 | error OC19 (and OC1 if they overlap) |
 | code outside sections in several modules | error A44 | each module's starts at `--origin`; overlaps give OC1 |
 | `EQU` or `SET` with the name of a group | A166 hangs | error A25 |
+| `BOF` of a bit in a `BIT` section with `AT`, or outside the word at `0FD00H` in one without | wrong value | error OC23 |
+| `POF`, `SOF`, `PAG` or `SEG` of a bit | A45 or A70 in most places, but `DW POF` of `0FD10H.9` gives `0FD11H` and `EQU` gives a bit with no value | error A61 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

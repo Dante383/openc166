@@ -25,12 +25,23 @@ public:
     virtual ~SymbolContext() = default;
     // Value of a symbol, or nullopt if it is (not yet) defined.
     virtual std::optional<Value> lookup(std::string_view name) = 0;
-    // Value of '$', the current location counter.
+    // The current location counter.
     virtual std::int64_t location() const = 0;
     // True if the current section has a fixed (AT) address.
     virtual bool location_fixed() const = 0;
     // Index of the current section; addresses remember where they lie.
     virtual std::uint16_t section_index() const { return 0; }
+    // Value of '$': the address of the location counter, or the current bit
+    // in a BIT section.
+    virtual Value location_value() const {
+        Value v = Value::number(location());
+        v.rel = Rel::Addr;
+        v.unsig = true;
+        v.fixed = location_fixed();
+        v.section = section_index();
+        if (!v.fixed) v.movable = section_index();
+        return v;
+    }
     // True if extended SFRs exist (C167); the C166 has none.
     virtual bool has_esfr() const { return true; }
     // Number of lookups so far that found a symbol defined later in the source.

@@ -216,6 +216,13 @@ FieldMatch match(Cls cls, const Operand& op, const EncodeContext& ctx, std::int6
     case Cls::BitOff: {
         if (!direct) return {};
         if (v.type == VType::Gpr) return fits(Fit::Strict, 0xF0 + v.num);
+        // Like Keil, a bit stands for the word it lies in, but not a bit of
+        // a GPR.
+        if (v.type == VType::Bit) {
+            if (!v.known) return fits(Fit::Strict, 0);
+            if (v.num >= 0xF0) return {};
+            return fits(Fit::Strict, v.num, bitoff_space(v.num, v.ext));
+        }
         if (v.type != VType::Sfr && v.type != VType::Number) return {};
         if (!v.known) return fits(Fit::Strict, 0);
         BitAddr b = word_bitoff(v, op.column);
