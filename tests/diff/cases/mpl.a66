@@ -1,0 +1,60 @@
+; MPL, Keil's macro processing language: '%' calls run before assembly and
+; the assembler sees only the text they produce.
+$MOD167
+$INCLUDE (inc/mpl.inc)
+%DEFINE (BASE) (0C000H)
+%*DEFINE (LD(R,V)) (MOV %R,#%V)
+%*DEFINE (TWICE(I)) (
+ %I
+ %I)
+%*DEFINE (SAVE(R)) LOCAL L (
+%L: PUSH %R)
+%SET (N, 3)
+C1 SECTION CODE AT %BASE
+PR PROC
+ %LD(R1,1234H)
+ %LD (R2, %N)
+ %TWICE(NOP)
+ %SAVE(R4)
+ %SAVE(R5)
+ %CLR(R6)
+ DW %INCV
+ DW %EVAL(%N * 100), %LEN(ABCDE)
+ DW %EVAL(65535), %EVAL(300), %EVAL(10 SHR 1), %EVAL(-1), %EVAL(7 MOD 4)
+ DB %EQS(AB,AB), %NES(AB,AB), %LTS(A,B), %GES(A,B)
+ DB '%SUBSTR(HELLO,2,4)'
+ DW %EVAL(%SUBSTR(12345,2,2) + 1)
+%IF (%N GT 2) THEN ( MOV R3,#1) ELSE ( MOV R3,#2) FI
+%IF (%N EQ 2) THEN ( MOV R7,#1) ELSE ( MOV R7,#2) FI
+%IF (1) THEN ( NOP) FI
+%SET (I, 0)
+%WHILE (%I LT 3) ( DW %I
+%SET (I, %I + 1))
+%REPEAT (2) ( NOP
+)
+%SET (J, 0)
+%WHILE (1) (%SET (J, %J + 1)%IF (%J GT 4) THEN (%EXIT) FI DB %J
+)
+%MATCH (FIRST,REST) (R7,R8,R9)
+ MOV %FIRST,%SUBSTR(%REST,1,2)
+%MATCH (A B) (  ONE TWO THREE)
+ ; %A / %B
+%' this comment line disappears
+ NOP %'and this comment' ; but not this one
+ ; %3%%% escaped, %(%N is not called)
+ DB '%(a%(b)c)', '%(x%'comment' yz)'
+%*DEFINE (CP A @TO B) (MOV %A,%B)
+ %CP R10 TO R11
+%*DEFINE (PAIR[X;Y]) (DW %X,%Y)
+ %PAIR[1;2]
+%*DEFINE (LEN(X)) (DW 99)
+ DW %LEN(AB)            ; the built-in LEN wins over a macro named LEN
+%*DEFINE (M(SET)) (DW %SET)
+ %M(5)                  ; a parameter wins over the built-in SET
+%METACHAR (&)
+ DB &N, &EVAL(&N+1)
+&METACHAR (%)
+ RET
+PR ENDP
+C1 ENDS
+ END

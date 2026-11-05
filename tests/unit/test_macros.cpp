@@ -217,19 +217,20 @@ TEST_CASE("'%' under $NOMPL passes the value of an expression") {
     CHECK(bytes(r) == "00FF");
     CHECK(all_diags(data(defs, " Q %\n")) == "12:A6E");
 
-    // $MPL (the default) makes '%' a call of the macro processor, which
-    // openc166 does not have.
-    CHECK(all_diags(data(defs, " Q %CNT\n", false)).rfind("11:OC3E", 0) == 0);
+    // $MPL (the default) makes '%' a call of the macro processor: CNT is
+    // not an MPL macro.
+    CHECK(all_diags(data(defs, " Q %CNT\n", false)).rfind("11:A160E", 0) == 0);
 }
 
 TEST_CASE("$NOMPL in the primary controls covers the lines above it") {
     CHECK(all_diags(test::run("; 50% sure\n$NOMPL\n END\n")) == "");
-    // The last of them counts for the lines above, but each applies from
-    // its own line on.
+    // The last of them counts. MPL's error about the undefined macro SURE
+    // turns it off for the rest of the source, as in Keil.
     auto r = test::run("; 50% sure\n$NOMPL\n; 60% sure\n$MPL\n; 70% sure\n END\n");
-    CHECK(all_diags(r) == "1:OC3E 4:A7E 5:OC3E");
+    CHECK(all_diags(r) == "1:A160E 4:A7E");
+    CHECK(r.listing[0].source == "; 50");
     // After the first statement it is too late for $NOMPL.
-    CHECK(all_diags(test::run("X EQU 1\n; 50% sure\n$NOMPL\n END\n")) == "2:OC3E 3:A8E");
+    CHECK(all_diags(test::run("X EQU 1\n; 50% sure\n$NOMPL\n END\n")) == "2:A160E 3:A8E");
 }
 
 TEST_CASE("REPT counts") {

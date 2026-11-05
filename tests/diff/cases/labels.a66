@@ -1,0 +1,33 @@
+; 'name: LABEL type' is read as 'name LABEL type' (Keil's START167.A66
+; has '?C_STARTUP: LABEL Model').
+$NOMPL
+S SECTION CODE AT 0C000H
+PR PROC NEAR
+A1:     LABEL   NEAR
+A2      LABEL   NEAR
+A3:     LABEL   FAR
+A4:     LABEL   WORD
+A5:     LABEL   BYTE
+A6:     LABEL
+A7:     LABEL   NEAR    ; comment
+ NOP
+ CALL A1
+ CALL A3
+ MOV R1,A4
+ MOV R1,A5
+ DB 1
+Z1:     LABEL   NEAR    ; at an odd address: one A48
+Z2      LABEL   NEAR
+Z3:     LABEL   BYTE
+ DB 1
+ NOP
+ RET
+PR ENDP
+S ENDS
+D SECTION DATA AT 8000H
+D1:     LABEL   WORD
+D2:     LABEL
+D3:     LABEL   DWORD
+ DW 1, 2
+D ENDS
+ END

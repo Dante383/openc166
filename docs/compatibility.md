@@ -66,6 +66,9 @@ since OH166 starts a new record at each section.
 - **Text replacement:** `name LIT 'text'`. See [LIT](#lit).
 - **Macros:** `MACRO`/`ENDM`, `LOCAL`, `REPT`, `IRP`, `IRPC`, `EXITM`, the
   `NUL` operator, `&` and `%`. See [Macros](#macros).
+- **MPL:** Keil's macro processing language (`%DEFINE`, `%SET`, `%EVAL`,
+  `%IF`, `%WHILE` and the rest), which Keil runs before assembly and has
+  on by default. See [mpl.md](mpl.md).
 - **Several modules:** `EXTERN`/`EXTRN`, `PUBLIC` and `GLOBAL`, with
   sections combined across modules as L166 combines them. See
   [Linking several files](#linking-several-files).
@@ -86,9 +89,6 @@ since OH166 starts a new record at each section.
 
 These produce error OC3, so a missing feature is never silently skipped:
 
-- Keil's MPL macro processor: under `$MPL`, which is Keil's default, every
-  `%` starts an MPL call, even in comments and strings (see
-  [Macros](#macros))
 - the XC16x/Super10 extended instruction set
 
 ## Register definitions
@@ -213,7 +213,9 @@ openc166 does the same, and warns with OC8 when both parts contain text.
 **Errors.** A missing file (OC5) or nesting deeper than 32 levels (OC6)
 stops the assembly; Keil stops too. `$INCLUDE` must be the first control on
 its line: `$INCLUDE(x) MOD167` is A171 and includes nothing, and
-`$NOLIST INCLUDE(x)` is ignored with warning OC7.
+`$NOLIST INCLUDE(x)` is ignored with warning OC7. Under MPL the same holds
+for `$INCDIR`: Keil ignores it when it is not the first control on its
+line, and openc166 warns with OC7.
 
 ## Controls
 
@@ -271,7 +273,8 @@ comment above `$NOMPL` is not an MPL call; openc166 does the same.
 **The end of the source.** As in Keil, the lines after `END` are listed but
 otherwise ignored, even controls and conditionals. Problems found at the end
 (a missing `END`, A89; an unclosed `IF`, A12) are reported on the last line
-of the file; an unclosed `SECTION` or `PROC` (A106) on the `END` line.
+of the file; an unclosed `SECTION` or `PROC` (A106) on the `END` line (with
+no `END` at all, Keil reports only A89).
 
 ## Conditional assembly
 
@@ -437,11 +440,11 @@ SKIP:
 
   So put a `%` argument last and use only `SET` or `EQU` names in it.
 - **MPL.** Keil also has a second, older macro language, MPL (`%DEFINE`,
-  `%IF` and so on), which is on by default. Under `$MPL` every `%` starts an
-  MPL call, even in comments and strings. openc166 does not support MPL and
-  reports such a `%` as OC3. Put `$NOMPL` at the top of the file when `%`
-  is meant as text, as most code that uses macros does. `$NOMACRO` turns
-  MPL off too; Keil then still processes `MACRO`, `REPT`, `IRP` and `IRPC`
+  `%IF` and so on), which is on by default and runs before the assembler
+  reads the source. Under `$MPL` every `%` starts an MPL call, even in
+  comments and strings. openc166 supports it; see [mpl.md](mpl.md). Put
+  `$NOMPL` at the top of the file when `%` is meant as text, as most code
+  that uses standard macros does. `$NOMACRO` turns MPL off too; Keil then still processes `MACRO`, `REPT`, `IRP` and `IRPC`
   but reports A6 on their first line, and so does openc166.
 - **Counts.** The count of `REPT` is a 16-bit value. A symbol defined
   later is A71, a label is A72, and any error leaves the body out. `IRP`
@@ -488,11 +491,11 @@ Messages that Keil does not have use codes starting with `OC`:
 |---|---|---|
 | OC1 | warning | two pieces of code or data overlap in the image |
 | OC2 | warning | `$MODV2`, or TASKING's `EXTEND1`, `EXTEND2`, `EXTEND22` or `EXTMAC`: the XC16x/Super10 extensions are not supported |
-| OC3 | error | a control or directive that openc166 does not support yet, or a `%` that starts an MPL call under `$MPL` |
+| OC3 | error | a control or directive that openc166 does not support yet |
 | OC4 | | no longer used (was: external symbols, before linking was supported) |
 | OC5 | error | an include file cannot be opened; the assembly stops |
 | OC6 | error | include files nested too deeply; the assembly stops |
-| OC7 | warning | `$INCLUDE` that is not the first control on its line, ignored |
+| OC7 | warning | `$INCLUDE`, or under MPL `$INCDIR`, that is not the first control on its line, ignored |
 | OC8 | warning | the last line of an include file was joined to the next line |
 | OC9 | warning | an `IF`-statement structure that Keil accepts but that is probably a mistake |
 | OC10 | warning | a condition that counts as false because only bit 0 is tested (`IF 2`) |
@@ -510,7 +513,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC22 | error | a `DGROUP` bigger than a 16 KB page or a `CGROUP` bigger than a 64 KB segment (L166: L115, L116), or a section with no room in the page or segment its group is tied to (L112) |
 | OC23 | error | `BOF` of a bit in a `BIT` section whose value Keil computes wrongly (see [BIT sections](#bit-sections)) |
 | OC24 | error | a macro that calls itself more than 9 levels deep, or macro calls and `REPT`/`IRP`/`IRPC` blocks nested more than 64 levels deep |
-| OC25 | error | more than 1,000,000 lines to assemble, usually a macro that never stops expanding; the assembly stops |
+| OC25 | error | more than 1,000,000 lines to assemble (or produced by MPL), usually a macro that never stops expanding; the assembly stops |
 | OC26 | warning | a `%` macro argument that Keil reads in a surprising way (see [Macros](#macros)) |
 | OC27 | warning | a macro argument `!;` or a `!` at the end of the line, which Keil garbles |
 | OC28 | error | a register bank with no room left in `0FC00H..0FDFFH` (L166: L123) |
@@ -518,6 +521,8 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC30 | error | TASKING: a mistake in m166 text, such as an undefined macro or an `@ENDI` without `@IF` |
 | OC31 | warning | TASKING: `NOOPTIMIZE`, which openc166 does not support |
 | OC32 | warning | TASKING: a `STDNAMES` file that cannot be found; openc166's built-in `REG167.INC` is used instead |
+| OC33 | error | an MPL macro or `%WHILE` that never stops: calls nested more than 256 deep, or more than 20 million calls and loop rounds; the assembly stops (see [mpl.md](mpl.md)) |
+| OC34 | warning | MPL `%IN` or `%OUT`, which use the console in Keil |
 
 ## Sections
 
@@ -896,7 +901,16 @@ Labels have a type, shown in the symbol table of the listing:
 | `DD`/`DSD`, `LABEL DWORD` | DWORD |
 
 A colon label in front of data (`T: DW 1`) takes the type of the data. A
-colon label inside a `FAR` procedure is still NEAR.
+colon label inside a `FAR` procedure is still NEAR. `name: LABEL type` is
+the same as `name LABEL type`, as in Keil's `START167.A66`. `LABEL` without
+a type is NEAR in a `CODE` section and BYTE elsewhere; an unknown type is
+A6, and the label is still defined.
+
+A directive that needs a name (`EQU`, `SET`, `BIT`, `LABEL`, `SECTION`,
+`PROC`, `DEFR`, `DEFB`, `DEFA`, `LIT`, `DPPTR`, `DSPTR`, `DBPTR`) but has
+none, as in ` EQU 5`, is A6. After a colon label (`B: EQU 5`) the label is
+defined as an ordinary colon label, and, as in Keil, A6 is reported twice:
+at the directive and at the word after it.
 
 **Type operators.** `NEAR`, `FAR`, `BYTE`, `WORD` and `DWORD`, with or
 without `PTR`, change the type of an address: `FAR x` and `FAR PTR x` are
@@ -1142,6 +1156,8 @@ follow are unchanged. Other bad items are dropped.
 | macro argument `!` at the end of the line | passes the line break | passes an empty argument, warning OC27 |
 | `%CNT.1` in a macro argument | passes a number (64768) | error A103 |
 | `$OBJECT` without a file name | A22 | accepted and ignored |
+| MPL macro or `%WHILE` that never stops | A166 runs until it is stopped | error OC33 or OC25 |
+| `%%` under MPL | A166 crashes | error A151 |
 
 Keil's wrong values for negated addresses also appear in the linked program,
 so they are real miscompilations, not listing glitches. Keil appears to

@@ -73,5 +73,5 @@ TEST_CASE("strings") {
     auto b = string_bytes(t[0]);
     CHECK(std::string(b.begin(), b.end()) == "It's");
     CHECK(error_code("'open") == "A2");
-    CHECK(error_code("MOV R1, @R2") == "A3");
+    CHECK(error_code("MOV R1, @R2") == "A6");
 }

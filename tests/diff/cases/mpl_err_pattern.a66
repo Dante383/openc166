@@ -1,0 +1,11 @@
+; MPL error: a call that does not match the macro's pattern
+$MOD167
+%*DEFINE (CP A @TO B) (MOV %A,%B)
+C1 SECTION CODE AT 0C000H
+PR PROC
+ %CP R1 FROM R2
+ NOP
+ RET
+PR ENDP
+C1 ENDS
+ END

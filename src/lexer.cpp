@@ -119,7 +119,7 @@ std::vector<Token> tokenize(std::string_view line) {
                 }
             }
             if (t.text.size() == 1 && kOps1.find(c) == std::string_view::npos)
-                throw AsmError("A3", std::string("illegal character '") + c + "'", column);
+                throw AsmError("A6", std::string("syntax error: illegal character '") + c + "'", column);
             i += t.text.size();
         }
         out.push_back(t);

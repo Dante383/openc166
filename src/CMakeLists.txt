@@ -43,6 +43,7 @@ add_library(openc166_core STATIC
     expr.cpp
     lexer.cpp
     m166.cpp
+    mpl.cpp
     operand.cpp
     output.cpp
     predef.cpp)

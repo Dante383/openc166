@@ -1,0 +1,10 @@
+; MPL error: an IF call without FI
+$MOD167
+C1 SECTION CODE AT 0C000H
+PR PROC
+%IF (1) THEN ( NOP)
+ NOP
+ RET
+PR ENDP
+C1 ENDS
+ END

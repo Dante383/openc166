@@ -7,7 +7,9 @@ A line matches when both assemblers agree on whether it has an error and, for
 error-free lines, on the address, the code bytes and the warning codes. Code
 bytes on error lines are ignored (no binary is produced then). Lines where
 only the error codes differ are reported as soft differences with --codes.
-The values of all symbols in both symbol tables are compared too.
+The values of all symbols in both symbol tables are compared too. In sources
+that use MPL (a '%' and no $NOMPL or $NOMACRO), the listed text of each line,
+which is MPL's output, must be the same too.
 
 With --image, sources that both assemblers accept without errors are also
 linked with Keil L166 and converted with OH166, and the resulting memory
@@ -55,6 +57,7 @@ class Line:
         self.code = ""
         self.diags = []
         self.skipped = False  # in a false IF block: listed without a number
+        self.text = None  # the source as listed
 
     def errors(self):
         # Keil may report one problem more than once (in DW, A63 at both the
@@ -113,14 +116,15 @@ def parse_keil_listing(text, source=()):
     number = 0  # last line listed
     printed = 0  # characters of its source printed so far
     # Lines from include files carry a nesting marker (+1, +2, ...) before
-    # the number, lines of macro expansions one after it.
-    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}| [0-9A-F]{4}\.\d\d| [0-9A-F]{4}\.\d ) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+)(?:\+\S)*\s")
+    # the number, lines of macro expansions one after it. An EQU lists its
+    # value as " 0000".
+    row = re.compile(r"^([0-9A-F]{8}|-{8}| {8}| [0-9A-F]{4}\.\d\d| [0-9A-F]{4}\.\d | [0-9A-F]{4}   ) (\S*)\s+(?:[A-Z]\s+)?(?:\+\d+\s+)?(\d+)(?:\+\S)*\s")
     # The linker fills in the digits that Keil lists as '?' (marked R).
     more = re.compile(r"^(?:[0-9A-F]{8}| [0-9A-F]{4}\.\d[\d ]) ([0-9A-F?]+)(?:\s+R)?\s*$")
     unnumbered = re.compile(r" *(?:\+\S *)*")
     # "IN n" is the listing line; Keil's "LINE n" within a file is unreliable.
     diag = re.compile(r"^\*\*\* (ERROR|WARNING) #(A\d+) IN (\d+) \(")
-    sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)(?:\s+R\s+SEC=(\S+))?")
+    sym = re.compile(r"^([A-Za-z_?@][\w?@]*)[ .]+\s(\S+)\s+(\S+)(?:\s+R\s+(?:\S+\s+)*?SEC=(\S+))?")
     for l in text.splitlines():
         if l.startswith("N A M E"):
             in_symbols = True
@@ -155,10 +159,13 @@ def parse_keil_listing(text, source=()):
             want = len(source[number - 1].rstrip().expandtabs(8)) if 0 < number <= len(source) else 0
             if printed < want:  # the rest of a long line
                 printed += len(l) - 34
+                if last is not None and last.text is not None:
+                    last.text += l[34:]
                 continue
             number = locate(source, number, l[34:], wrap=86)
             last = lines.setdefault(number, Line())
             last.skipped = True
+            last.text = l[34:]
             printed = len(l) - 34
             continue
         m = row.match(l)
@@ -166,6 +173,8 @@ def parse_keil_listing(text, source=()):
             number = int(m.group(3))
             printed = len(l) - 34
             last = lines.setdefault(number, Line())
+            if last.text is None:
+                last.text = l[34:]
             if re.fullmatch(r"[0-9A-F]{8}", m.group(1)) and last.loc is None:
                 last.loc = int(m.group(1), 16)
             elif bit_loc(m.group(1)) is not None and last.loc is None:
@@ -240,6 +249,8 @@ def parse_openc166_listing(text, source=()):
         # l[35:37] marks lines of macro expansions; the source starts at l[39:].
         if number.isdigit():
             last = lines.setdefault(int(number), Line())
+            if last.text is None:
+                last.text = l[39:]
             if obj and re.fullmatch(r"[0-9A-F]{8}", l[0:8]) and last.loc is None:
                 last.loc = int(l[0:8], 16)
             elif bit_loc(l[0:9]) is not None and last.loc is None:
@@ -251,6 +262,7 @@ def parse_openc166_listing(text, source=()):
             # a line in a false IF block, listed without a number
             last = lines.setdefault(locate(source, max(lines, default=0), l[39:]), Line())
             last.skipped = True
+            last.text = l[39:]
     bases = relocatable_bases(source, sections)
     for n, line in lines.items():
         if line.loc is not None and n in bases:
@@ -332,16 +344,17 @@ def expand(source):
     return out
 
 
+NOMPL = re.compile(r"\s*\$.*\bNO(?:MPL|MACRO)\b", re.I)
 MACRO_HEAD = re.compile(r"\s*(?:(?:[A-Za-z_?@][\w?@]*\s*:\s*)?(?:REPT|IRPC?)\b|[A-Za-z_?@][\w?@]*\s+MACRO\b)", re.I)
 
 
 def listed_source(tool, source, workdir):
     """Like expand(), but with the lines of macro, REPT, IRP and IRPC
-    expansions, which the listings number too: line n is the source that
-    openc166 lists for line n. Lines it leaves out ($NOGEN, $NOCOND) are
-    empty."""
+    expansions and of MPL's output, which the listings number too: line n is
+    the source that openc166 lists for line n. Lines it leaves out ($NOGEN,
+    $NOCOND) are empty."""
     text = expand(source)
-    if not any(MACRO_HEAD.match(l) for l in text):
+    if not any(MACRO_HEAD.match(l) or "%" in l for l in text):
         return text
     lines = {}
     number = 0
@@ -361,8 +374,8 @@ def listed_source(tool, source, workdir):
 
 def run_keil(keil, source, workdir, text):
     # Include files are looked up relative to the source, so the whole source
-    # directory goes along.
-    if any(INCLUDE.match(l) for l in expand(source)):
+    # directory goes along. MPL can make $INCLUDE lines too.
+    if any(INCLUDE.match(l) or "%" in l for l in expand(source)):
         shutil.copytree(os.path.dirname(os.path.abspath(source)), workdir, dirs_exist_ok=True)
     shutil.copy(source, os.path.join(workdir, "t.a66"))
     keil_tool(keil, os.path.basename(keil), ["t.a66"], workdir)
@@ -457,8 +470,9 @@ def compare_image(source, keil, tool, workdir, link_codes=()):
 
 # L166 codes and the openc166 codes for the same problem. None marks follow-on
 # errors that openc166 does not repeat: L118 and L128 at each reference to a
-# duplicate or missing external, L120 for content of a section that failed.
-LINK_CODES = {"L15": "OC20", "L21": "OC17", "L101": "OC19", "L104": "OC16", "L121": "OC18",
+# duplicate or missing external, L120 for content of a section that failed,
+# and L22 about the L166 command line (openc166 takes no class ranges).
+LINK_CODES = {"L22": None, "L15": "OC20", "L21": "OC17", "L101": "OC19", "L104": "OC16", "L121": "OC18",
               "L123": "OC28", "L127": "OC15", "L129": "OC21", "L112": "OC22", "L115": "OC22", "L116": "OC22", "L118": None,
               "L119": None, "L120": None, "L128": None}
 LINK_ONLY = {c for c in LINK_CODES.values() if c}
@@ -518,10 +532,15 @@ def compare_link(directory, keil, tool, quiet=False):
     return problems
 
 
-def classify(kl, ol, shift):
+def same_text(kl, ol):
+    return kl.text is None or ol.text is None or kl.text.rstrip() == ol.text.rstrip()
+
+
+def classify(kl, ol, shift, text=False):
     """Return 'ok', 'soft' (only error codes differ) or 'hard'. 'shift' is the
-    expected difference between the Keil and openc166 addresses."""
-    if kl.skipped != ol.skipped:
+    expected difference between the Keil and openc166 addresses. With 'text'
+    the listed sources must be the same too."""
+    if kl.skipped != ol.skipped or text and not same_text(kl, ol):
         return "hard"
     if bool(kl.errors()) != bool(ol.errors()):
         return "hard"
@@ -580,6 +599,9 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
                 print(f"{os.path.basename(source)}: memory images differ")
                 for p in problems[:20]:
                     print("    " + p)
+    # With MPL the listed lines are its output, which must be the same.
+    expanded = expand(source)
+    mpl = any("%" in l for l in expanded) and not any(NOMPL.match(l) for l in expanded)
     shift = 0
     shift_at = {}
     for n in sorted(set(k) | set(o)):
@@ -590,7 +612,7 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
             continue
         kl, ol = k.get(n, Line()), o.get(n, Line())
         shift_at[n] = shift
-        kind = classify(kl, ol, shift)
+        kind = classify(kl, ol, shift, mpl)
         counts[kind] += 1
         # Keil may emit code where openc166 reports an error (or the other way
         # round), which moves every later address; compare the following
@@ -603,6 +625,9 @@ def compare(source, keil, tool, quiet=False, codes=False, image=False):
             print(f"{os.path.basename(source)}:{n}: {src}" + ("  [codes only]" if kind == "soft" else ""))
             print(f"    keil:     {fmt_loc(kl)}{fmt_code(kl):16} {' '.join(sorted(kl.diags))}")
             print(f"    openc166: {fmt_loc(ol)}{fmt_code(ol):16} {' '.join(sorted(ol.diags))}")
+            if mpl and not same_text(kl, ol):
+                print(f"    keil text:     {kl.text.rstrip()!r}")
+                print(f"    openc166 text: {ol.text.rstrip()!r}")
     # Symbols are compared like lines: skipped when a defining line has an
     # error or a documented divergence, and addresses allow for the shift
     # caused by earlier divergences.

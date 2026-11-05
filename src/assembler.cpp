@@ -6,6 +6,7 @@
 #include "expr.hpp"
 #include "lexer.hpp"
 #include "m166.hpp"
+#include "mpl.hpp"
 #include "operand.hpp"
 #include "predef.hpp"
 
@@ -82,6 +83,11 @@ constexpr std::string_view kNamedDirectives[] = {
     "EQU", "SET", "BIT", "LABEL", "SECTION", "ENDS", "PROC", "ENDP", "DB", "DW", "DD", "DS", "DSB", "DSW", "DSD",
     "DEFR", "DEFB", "DEFA", "LIT", "REGDEF", "REGBANK", "DBIT", "DGROUP", "CGROUP", "MACRO",
     "DPPTR", "DSPTR", "DBPTR",
+};
+
+// Named directives that have no form without the name.
+constexpr std::string_view kNameRequired[] = {
+    "EQU", "SET", "BIT", "LABEL", "SECTION", "PROC", "DEFR", "DEFB", "DEFA", "LIT", "DPPTR", "DSPTR", "DBPTR",
 };
 
 // COMREG is not a Keil A166 directive: A166 takes it as an ordinary name, so
@@ -849,6 +855,7 @@ private:
         std::size_t next = 0;
         int level = 0;
         std::shared_ptr<Expansion> exp;  // null for a file
+        bool mpl = false;  // the output of MPL (mpl_lines_) rather than a file
     };
 
     friend class Program;
@@ -877,6 +884,10 @@ private:
     bool gen_ = false;  // $GEN: list the lines of expansions
     bool macro_ = true;  // standard macros allowed ($NOMACRO turns them off)
     bool mpl_ = true;  // MPL macro processing: '%' is its metacharacter ($NOMPL and $NOMACRO turn it off)
+    // MPL's output for the source and its include files, made in the first
+    // pass; when MPL is on, the passes read these lines instead of the files.
+    std::optional<std::vector<MplLine>> mpl_lines_;
+    bool from_mpl_ = false;  // this pass reads mpl_lines_: MPL has read the include files
     std::vector<bool> saved_gen_;  // gen_ of each $SAVE
     bool fatal_ = false;  // stops the pass, like Keil's fatal errors
     bool primary_done_ = false;  // a statement was seen: primary controls are no longer allowed
@@ -942,7 +953,7 @@ private:
     // TASKING dialect: the m166 preprocessor runs on each line first.
     const bool tasking_ = opt_.dialect == Dialect::Tasking;
     M166 m166_;
-    Reporter m166_rep_;  // m166's problems with the current line
+    Reporter pre_rep_;  // m166's or MPL's problems with the current line
     bool m166_skipped_ = false;  // m166 dropped the whole line: list it as skipped
     std::string m166_source_;  // the line as written, listed when m166 left nothing of it
     std::ptrdiff_t commanded_ = 0;  // include files from command-line controls, waiting to be read
@@ -970,6 +981,8 @@ private:
     void set_tabs(std::optional<std::string_view> arg, bool closed, int column);
     bool contradicts(std::string_view name);
     void include(std::string_view name, int column);
+    void add_incdirs(std::string_view dirs);
+    void run_mpl_once();
     MacroWord macro_word(std::string_view text, std::size_t lead, std::size_t& head, std::size_t& after) const;
     void macro_statement(MacroWord word, std::string_view text, std::size_t head, std::size_t after, Reporter& rep);
     void macro_header(BlockKind kind, std::string_view text, std::size_t head, std::size_t after, Reporter& rep);
@@ -1321,13 +1334,20 @@ void Assembler::run_lines() {
     tabs_ = 8;
     saved_gen_.clear();
     m166_.reset();
-    m166_rep_ = Reporter{};
+    pre_rep_ = Reporter{};
     m166_skipped_ = false;
     m166_source_.clear();
     commanded_ = 0;
     stdnames_.clear();
     stdnames_files_.clear();
     for (const auto& c : opt_.controls) command_control(c);
+    from_mpl_ = false;
+    if (mpl_ && !fatal_) {
+        run_mpl_once();
+        stack_.assign(1, Frame{});
+        stack_[0].mpl = true;
+        from_mpl_ = true;
+    }
     // Keil joins the last line of an include file that does not end with a
     // newline to the line read after it.
     std::string carry;
@@ -1335,6 +1355,7 @@ void Assembler::run_lines() {
     int carry_line = 0, carry_level = 0;
     while ((!stack_.empty() || !carry.empty()) && !fatal_) {
         std::string text;
+        bool stop = false;  // MPL stopped after this line
         if (stack_.empty()) {
             text = expand_tabs(carry, tabs_);
             file_ = carry_file;
@@ -1342,6 +1363,34 @@ void Assembler::run_lines() {
             level_ = carry_level;
             macro_level_ = 0;
             joined_.clear();
+        } else if (stack_.back().mpl) {
+            Frame& f = stack_.back();
+            if (f.next == mpl_lines_->size()) {
+                stack_.pop_back();
+                continue;
+            }
+            const MplLine& l = (*mpl_lines_)[f.next++];
+            file_ = l.file;
+            file_line_ = l.line;
+            level_ = l.level;
+            macro_level_ = 0;
+            joined_ = l.joined;
+            text = expand_tabs(l.text, tabs_);
+            for (const Diagnostic& d : l.diagnostics) {
+                // MPL's columns are in the line before tabs are expanded.
+                const int column =
+                    d.column > 0 ? static_cast<int>(expand_tabs(std::string_view(l.text).substr(
+                                                                    0, static_cast<std::size_t>(d.column) - 1),
+                                                                tabs_)
+                                                        .size()) +
+                                       1
+                                 : 0;
+                if (d.severity == Severity::Error)
+                    pre_rep_.error(d.code, d.message, column);
+                else
+                    pre_rep_.warning(d.code, d.message, column);
+            }
+            stop = l.fatal;
         } else if (stack_.back().exp) {
             Expansion& e = *stack_.back().exp;
             std::string line;
@@ -1392,16 +1441,40 @@ void Assembler::run_lines() {
         m166_skipped_ = false;
         m166_source_.clear();
         if (tasking_ && macro_level_ == 0) {
-            M166::Line l = m166_.process(text, case_, m166_rep_);
+            M166::Line l = m166_.process(text, case_, pre_rep_);
             const bool blank = trim(l.text).empty();
             m166_skipped_ = blank && !l.active_before && !l.active_after;
             if (blank && (l.calls || m166_skipped_)) m166_source_ = text;
             text = std::move(l.text);
         }
         process_line(text);
+        if (stop) fatal_ = true;
         if (include_) stack_.push_back(Frame{*include_, 0, level_ + 1, nullptr});
         if (expansion_) stack_.push_back(Frame{0, 0, 0, std::move(expansion_)});
     }
+}
+
+// Runs MPL over the source, and the include files from command-line
+// controls ahead of it, the first time it is needed. MPL's output is the
+// same in every pass.
+void Assembler::run_mpl_once() {
+    if (mpl_lines_) return;
+    std::vector<std::pair<std::size_t, int>> sources;
+    for (auto it = stack_.rbegin(); it != stack_.rend(); ++it) sources.emplace_back(it->file, it->level);
+    MplHost host;
+    host.text = [this](std::size_t f) -> const std::string& { return files_[f]->text; };
+    host.name = [this](std::size_t f) -> const std::string& { return files_[f]->name; };
+    host.include = [this](std::string_view name, std::size_t file, int level, int column) {
+        file_ = file;
+        level_ = level;
+        include_.reset();
+        include(name, column);
+        return *std::exchange(include_, std::nullopt);
+    };
+    host.incdirs = [this](std::string_view dirs) { add_incdirs(dirs); };
+    mpl_lines_ = run_mpl(sources, host);
+    // A missing include file is reported on its line in the pass.
+    fatal_ = false;
 }
 
 // The next line of the expansion, or false at its end.
@@ -1469,7 +1542,8 @@ bool Assembler::finish_pass() {
     std::string open;
     if (proc_ != ProcKind::None) open = "procedure '" + proc_name_ + "'";
     for (auto i : open_) open += (open.empty() ? "section '" : ", section '") + sections_[i].name + "'";
-    if (!open.empty()) add(Severity::Error, "A106", "unterminated " + open, true);
+    // Without END, Keil gives only A89.
+    if (!open.empty() && ended_) add(Severity::Error, "A106", "unterminated " + open, true);
     return changed_;
 }
 
@@ -1521,11 +1595,11 @@ void Assembler::process_line(std::string_view text) {
     lst.source = m166_source_.empty() ? std::string(text) : m166_source_;
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
-        m166_rep_ = Reporter{};
+        pre_rep_ = Reporter{};
         if (final_) res_.listing.push_back(std::move(lst));
         return;
     }
-    Reporter rep = std::exchange(m166_rep_, Reporter{});
+    Reporter rep = std::exchange(pre_rep_, Reporter{});
     rep_ = &rep;
     if (!joined_.empty())
         rep.warning("OC8", "the last line of '" + joined_ +
@@ -1617,15 +1691,6 @@ bool Assembler::expand_lits(std::string_view text, std::string& out, std::vector
 }
 
 void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst) {
-    // Keil's MPL macro processor, on unless $NOMPL, takes every '%' as the
-    // start of an MPL call, even in comments and strings.
-    if (mpl_ && macro_level_ == 0) {
-        if (std::size_t p = text.find('%'); p != std::string_view::npos)
-            rep.error("OC3",
-                      "'%' starts an MPL macro call in Keil; openc166 does not support MPL macros yet "
-                      "(put $NOMPL at the top of the file if '%' is meant as text)",
-                      static_cast<int>(p) + 1);
-    }
     if (block_) {
         collect(text, rep);
         return;
@@ -1686,6 +1751,13 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     if (cur.peek().kind == TokKind::Ident && cur.peek(1).is_op(":")) {
         const Token& label = cur.next();
         cur.next();
+        // Keil reads 'name: LABEL type' as 'name LABEL type' (START167.A66 has one).
+        if (!tasking_ && mw == MacroWord::None && cur.peek().kind == TokKind::Ident &&
+            ieq(cur.peek().text, "LABEL")) {
+            cur.next();
+            named_directive(label, "LABEL", cur, rep, lst);
+            return;
+        }
         // Keil rejects 'label: name EQU ...' and the like. Inside a section the
         // label is still defined, and both the name and the directive are
         // reported; outside one, the name is reported and nothing is defined.
@@ -1730,6 +1802,11 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
                                                      : LType::Byte;
         define(label, SymbolKind::Label, here(type));
         if (!data_follows && section().code) check_alignment(2, label, rep);
+        // 'label: EQU 5' and the like: Keil reports the directive and what follows it.
+        if (!tasking_ && contains(kNameRequired, next) && cur.peek(1).kind != TokKind::End) {
+            rep.error("A6", "syntax error: " + next + " needs a name in front", cur.peek().column);
+            throw AsmError("A6", "syntax error", cur.peek(1).column);
+        }
         if (named) {
             rep.error("A6", misplaced, name.column);
             throw AsmError("A6", "syntax error: " + upper(dir.text) + " is ignored after a label", dir.column);
@@ -1849,14 +1926,6 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
     }
     auto arg = [&](const Control& c) { return text.substr(c.arg, c.arg_end - c.arg); };
 
-    auto add_incdirs = [&](std::string_view dirs) {
-        for (std::size_t pos = 0; pos <= dirs.size();) {
-            std::size_t semi = std::min(dirs.find(';', pos), dirs.size());
-            if (std::string dir = portable_path(dirs.substr(pos, semi - pos)); !dir.empty())
-                incdirs_.push_back(std::move(dir));
-            pos = semi + 1;
-        }
-    };
     // Primary controls must come before the first statement; otherwise Keil
     // ignores the whole line (though it still uses INCDIR directories).
     if (primary_done_) {
@@ -1865,7 +1934,7 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
         });
         if (primary != list.end()) {
             for (const auto& c : list)
-                if (c.name == "INCDIR" || c.name == "ID") add_incdirs(arg(c));
+                if ((c.name == "INCDIR" || c.name == "ID") && !from_mpl_) add_incdirs(arg(c));
             throw AsmError("A8", "misplaced primary control, line ignored: $" + primary->name +
                                      " must come before the first statement",
                            primary->column);
@@ -1891,9 +1960,16 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             }
             if (list.size() > 1 || cond)
                 throw AsmError("A171", "error in include directive: no other control may follow it", column);
-            include(file, column);
+            // With MPL on, MPL has read the file already.
+            if (!from_mpl_) include(file, column);
         } else if (name == "INCDIR" || name == "ID") {
-            add_incdirs(arg(list[k]));
+            if (!from_mpl_)
+                add_incdirs(arg(list[k]));
+            else if (k > 0)
+                rep.warning("OC7",
+                            "$" + name +
+                                " ignored: with MPL on, it must be the first control on the line (as in Keil)",
+                            column);
         } else if (name == "MOD167" || name == "M167") {
             cpu_ = isa::Cpu::C167;
             sys166_ = false;
@@ -2261,6 +2337,16 @@ void Assembler::cond_statement(const std::string& kw, std::string_view text, std
     if (top.in_else) rep.warning("OC9", "second ELSE: Keil assembles it too if no IF or ELSEIF was true", column);
     top.in_else = true;
     top.active = !top.taken;
+}
+
+// $INCDIR (dirs): directories separated by ';'.
+void Assembler::add_incdirs(std::string_view dirs) {
+    for (std::size_t pos = 0; pos <= dirs.size();) {
+        std::size_t semi = std::min(dirs.find(';', pos), dirs.size());
+        if (std::string dir = portable_path(dirs.substr(pos, semi - pos)); !dir.empty())
+            incdirs_.push_back(std::move(dir));
+        pos = semi + 1;
+    }
 }
 
 // Finds an include file and arranges for it to be read after the current
@@ -2732,6 +2818,7 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
     } else if (dir == "LABEL") {
         int need = 1;
         LType type = section().code ? LType::Near : LType::Byte;
+        const Token* bad = nullptr;  // not a type: Keil reports it but still defines the label
         if (!cur.at_end()) {
             const Token& tok = cur.next();
             std::string t = upper(tok.text);
@@ -2740,14 +2827,22 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
                 throw AsmError("A45", "keyword not allowed in current context: LABEL BIT needs a BIT section",
                                tok.column);
             }
-            need = t == "DWORD" ? 4 : t == "WORD" || t == "NEAR" || t == "FAR" ? 2 : 1;
-            type = t == "NEAR" ? LType::Near : t == "FAR" ? LType::Far : t == "BYTE" ? LType::Byte
-                 : t == "WORD" ? LType::Word : t == "DWORD" ? LType::Dword : type;
+            if (t == "NEAR" || t == "FAR" || t == "BYTE" || t == "WORD" || t == "DWORD") {
+                need = t == "DWORD" ? 4 : t == "BYTE" ? 1 : 2;
+                type = t == "NEAR" ? LType::Near : t == "FAR" ? LType::Far : t == "BYTE" ? LType::Byte
+                     : t == "WORD" ? LType::Word : LType::Dword;
+            } else {
+                bad = &tok;
+            }
         }
-        expect_end(cur);
+        if (!bad) expect_end(cur);
         mark_address(lst);
         define(name, SymbolKind::Label, here(type));
         check_alignment(need, name, rep);
+        if (bad)
+            throw AsmError("A6", "syntax error: '" + std::string(bad->text) +
+                                     "' is not a label type (BYTE, WORD, DWORD, NEAR or FAR)",
+                           bad->column);
     } else if (dir == "SECTION") {
         section_start(name, cur, rep);
     } else if (dir == "ENDS") {
@@ -2951,6 +3046,8 @@ void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& 
         throw AsmError("A6", "syntax error: MACRO needs the name of the macro in front", tok.column);
     } else if (kw == "COMREG") {
         throw AsmError("A6", kComregMessage, tok.column);
+    } else if (contains(kNameRequired, kw)) {
+        throw AsmError("A6", "syntax error: " + kw + " needs a name in front", tok.column);
     } else if (tasking_ && kw == "DEFVAL") {
         // A bit field value for the CrossView Pro debugger: TASKING ignores it.
         while (!cur.at_end()) cur.next();

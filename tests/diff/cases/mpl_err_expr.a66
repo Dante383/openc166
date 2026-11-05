@@ -1,0 +1,10 @@
+; MPL errors in expressions: division by zero
+$MOD167
+C1 SECTION CODE AT 0C000H
+PR PROC
+ DW %EVAL(1/0)
+ DW %EVAL(2)
+ RET
+PR ENDP
+C1 ENDS
+ END

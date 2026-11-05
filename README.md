@@ -56,6 +56,10 @@ Early development (version 0.x). What works today:
   labels, `REPT`, `IRP`, `IRPC`, `EXITM`, `NUL`, `&` and `%`, with Keil's
   rules for splitting arguments. `$GEN`/`$NOGEN` choose whether the listing
   shows expanded lines.
+- Keil's MPL macro language (`%DEFINE`, `%SET`, `%EVAL`, `%IF`, `%WHILE`,
+  ...), which runs before assembly and is on by default, checked against
+  Keil's output line by line and against Keil's own `START167.A66`. See
+  [docs/mpl.md](https://github.com/Dante383/openc166/blob/main/docs/mpl.md).
 - The `$MOD167`, `$CASE`, `$SEGMENTED` and `$TABS` controls, with Keil's
   rule that these come before the first statement. Listing-only controls
   are accepted and ignored.
@@ -80,8 +84,6 @@ Early development (version 0.x). What works today:
 
 Not done yet:
 
-- Keil's MPL macro language (`%DEFINE` and the like); put `$NOMPL` at the
-  top of the file to use `%` as text
 - OMF-166 object files and libraries
 - TASKING's m166 macros with parameters (`@DEFINE`), loops and string
   functions

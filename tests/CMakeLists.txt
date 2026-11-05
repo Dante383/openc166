@@ -17,6 +17,7 @@ add_executable(openc166_tests
     unit/test_groups.cpp
     unit/test_bits.cpp
     unit/test_macros.cpp
+    unit/test_mpl.cpp
     unit/test_tasking.cpp)
 target_include_directories(openc166_tests PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
 # doctest's own declarations of std types break with newer MSVC libraries.

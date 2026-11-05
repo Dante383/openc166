@@ -192,6 +192,41 @@ TEST_CASE("labels at odd addresses") {
     CHECK(diags(r, 22) == "");
 }
 
+TEST_CASE("LABEL after a label with a colon") {
+    // Keil reads 'name: LABEL type' as 'name LABEL type'.
+    auto r = run("S SECTION CODE AT 0C000H\nP PROC NEAR\n"
+                 " DB 1\n"
+                 "A1: LABEL FAR\n"     // 4: one A48
+                 "A2: LABEL BYTE\n"    // 5
+                 "A3: LABEL BOGUS\n"   // 6: A6, but A3 is still defined
+                 " DB 1\n"
+                 " RET\nP ENDP\nS ENDS\n END\n");
+    CHECK(diags(r, 4) == "A48W");
+    CHECK(diags(r, 5) == "");
+    CHECK(diags(r, 6) == "A6E");
+    CHECK(symbol(r, "A3") == 0xC001);
+    for (const auto& s : r.symbols) {
+        if (s.name == "A1") CHECK(s.value.ltype == LType::Far);
+        if (s.name == "A2") CHECK(s.value.ltype == LType::Byte);
+    }
+}
+
+TEST_CASE("named directives without their name") {
+    // Keil reports the directive and, after a label with a colon, also what
+    // follows it; the label is still defined.
+    auto r = run("S SECTION CODE AT 0C000H\nP PROC NEAR\n"
+                 " PROC NEAR\n"     // 3
+                 " EQU 5\n"         // 4
+                 "B1: EQU 5\n"      // 5
+                 "B2: PROC\n"       // 6
+                 " NOP\n RET\nP ENDP\nS ENDS\n END\n");
+    CHECK(diags(r, 3) == "A6E");
+    CHECK(diags(r, 4) == "A6E");
+    CHECK(diags(r, 5) == "A6E A6E");
+    CHECK(diags(r, 6) == "A6E");
+    CHECK(symbol(r, "B1") == 0xC000);
+}
+
 TEST_CASE("data keeps going after a bad element") {
     // An undefined name keeps its place; other bad elements are dropped.
     auto r = run("S SECTION DATA AT 1000H\n"

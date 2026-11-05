@@ -1,0 +1,12 @@
+; MPL error in an expression: two numbers without an operator (a missing
+; operand, as in "1 +", is no error: Keil makes the whole expression 0)
+$MOD167
+C1 SECTION CODE AT 0C000H
+PR PROC
+ DW %EVAL(1 +), %EVAL(())
+ DW %EVAL(1 2)
+ DW %EVAL(2)
+ RET
+PR ENDP
+C1 ENDS
+ END

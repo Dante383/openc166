@@ -1,0 +1,14 @@
+; MPL error: a call of an undefined macro (often a '%' in a comment). Keil
+; turns MPL off after its first MPL error, so later '%' calls stay as they
+; are and the assembler then rejects them.
+$MOD167
+%DEFINE (V) (5)
+C1 SECTION CODE AT 0C000H
+PR PROC
+ MOV R1,#%V
+ NOP            ; 50% sure
+ MOV R2,#%V
+ RET
+PR ENDP
+C1 ENDS
+ END
