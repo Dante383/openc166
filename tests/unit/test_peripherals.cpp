@@ -116,7 +116,7 @@ TEST_CASE("CAPCOM timers: T1 counts and overflows with reload") {
     m->run(4000);  // 16000 cycles
     const std::uint16_t t1 = m->sfr_get(0xFE52);
     (void)t1;
-    auto* tm = m->find_device<CapcomTimers>();
+    auto* tm = m->find_device<Capcom>();
     CHECK(tm->value(*m, 1) == 0xFF00 + (m->cycles() - start) / 128);
     CHECK((m->sfr_get(0xFF9E) & 0x80) == 0);
     m->run(5000);  // past 32768 cycles
@@ -162,4 +162,82 @@ TEST_CASE("ASC0: a low pulse is framed at the current baud rate") {
     m->run(10);
     CHECK(m->sfr_get(0xFEB2) == 0x00);
     CHECK((m->sfr_get(0xFFB0) & 0x0200) != 0);
+}
+
+namespace {
+
+// A machine looping on itself with the CAPCOM unit, set up by direct
+// register writes (as the CPU would make them).
+std::unique_ptr<Machine> idle_machine(const std::string& tail = "") {
+    std::string src = "$MOD167\n$SEGMENTED\n$INCLUDE(REG167.INC)\nCODE0 SECTION CODE AT 0\nDISWDT\nEINIT\n"
+                      "L: JMPR cc_UC, L\nCODE0 ENDS\n" + tail + " END\n";
+    auto r = test::run(src);
+    REQUIRE(r.ok());
+    auto img = oc166::flat_image(r, 0);
+    img.bytes.resize(0x10000, 0xFF);
+    Board b = simple_board(img.bytes);
+    add_c167_peripherals(b);
+    auto m = std::make_unique<Machine>(std::move(b));
+    m->run(2);
+    return m;
+}
+
+}  // namespace
+
+TEST_CASE("CAPCOM: a periodic compare interrupt re-armed by its handler") {
+    // The 5WY19 scheduler's pattern: CC26 in compare mode 1 on T8, the
+    // handler moves CC26 on by one period.
+    auto m = idle_machine(
+        "VEC26 SECTION CODE AT 0E8H\nJMPA cc_UC, H\nVEC26 ENDS\n"
+        "HND SECTION CODE AT 200H\nH: ADD CC26, #100\nADD R4, #1\nRETI\nHND ENDS\n");
+    m->write16(0xFE74, 100);     // CC26
+    m->write16(0xFF26, 0x0D00);  // CCM6: CC26 compare mode 1, T8
+    m->write16(0xF174, 0x0058);  // CC26IC: IE, ILVL 6
+    m->write16(0xFF20, 0x4400);  // T78CON: T8 runs at fCPU / 128
+    m->set_psw(0x0800);          // IEN
+    const std::uint64_t start = m->cycles();
+    m->run(100000);
+    const std::uint64_t elapsed = m->cycles() - start;
+    auto* cc = m->find_device<Capcom>();
+    const std::uint64_t expected = elapsed / (100 * 128);
+    CHECK(m->gpr(4) >= expected - 1);
+    CHECK(m->gpr(4) <= expected + 1);
+    CHECK(cc->matches(26) == m->gpr(4));
+    CHECK(cc->output(26) == (cc->matches(26) % 2 == 1));
+}
+
+TEST_CASE("CAPCOM: compare mode 2 matches once per period, mode 3 drives the output") {
+    auto m = idle_machine();
+    auto* cc = m->find_device<Capcom>();
+    m->write16(0xFE56, 0xFF00);  // T1REL: period of 256 counts
+    m->write16(0xFE52, 0xFF00);  // T1
+    m->write16(0xFE84, 0xFF80);  // CC2
+    m->write16(0xFE86, 0xFF40);  // CC3
+    m->write16(0xFF52, 0xFE00);  // CCM0: CC2 mode 2 (T1), CC3 mode 3 (T1)
+    m->write16(0xFF50, 0x0000);  // T01CON: T1 stopped
+    m->write16(0xFF50, 0x4000);  // T1 runs at fCPU / 8
+    m->run(256 * 8 / 4 * 3 / 2);  // about 1.5 periods of 2048 cycles
+    CHECK(cc->matches(2) == 2);
+    CHECK(cc->matches(3) == 2);
+    // CC3: set at FF40H, cleared at the overflow: 0FF00H..0FF3FH low.
+    const std::uint16_t t1 = cc->value(*m, 1);
+    CHECK(cc->output(3) == (t1 >= 0xFF40));
+    // Rewriting CC2 within the period does not give a second match.
+    m->write16(0xFE84, static_cast<std::uint16_t>(cc->value(*m, 1) + 4));
+    const std::uint64_t before = cc->matches(2);
+    m->run(30);
+    CHECK(cc->matches(2) <= before + 1);
+}
+
+TEST_CASE("CAPCOM: capture latches the timer on an input edge") {
+    auto m = idle_machine();
+    auto* cc = m->find_device<Capcom>();
+    m->write16(0xFF56, 0x0A00);  // CCM2: CC10 captures falling edges, T1
+    m->write16(0xFF50, 0x4000);
+    m->run(1000);
+    cc->input_edge(*m, 10, true);  // a rising edge: ignored
+    CHECK((m->sfr_get(0xFF8C) & 0x80) == 0);
+    cc->input_edge(*m, 10, false);
+    CHECK(m->sfr_get(0xFE94) == cc->value(*m, 1));
+    CHECK((m->sfr_get(0xFF8C) & 0x80) != 0);  // CC10IR
 }

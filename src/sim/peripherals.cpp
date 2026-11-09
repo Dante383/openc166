@@ -283,9 +283,29 @@ void Asc0::after_load(Machine& m, bool replay) {
     inputs_seen_ = log_.size();
 }
 
-// ---- CAPCOM timers ---------------------------------------------------------
+// ---- CAPCOM ----------------------------------------------------------------
 
-std::uint16_t CapcomTimers::value(const Machine& m, int i) const {
+namespace {
+constexpr Addr kCcm[8] = {0xFF52, 0xFF54, 0xFF56, 0xFF58, 0xFF22, 0xFF24, 0xFF26, 0xFF28};
+Addr cc_addr(int ch) { return ch < 16 ? 0xFE80u + 2u * static_cast<Addr>(ch) : 0xFE60u + 2u * static_cast<Addr>(ch - 16); }
+Addr cc_ic(int ch) {
+    if (ch < 16) return 0xFF78u + 2u * static_cast<Addr>(ch);
+    if (ch <= 28) return 0xF160u + 2u * static_cast<Addr>(ch - 16);
+    return 0xF184u + 8u * static_cast<Addr>(ch - 29);  // CC29IC 0F184H, CC30IC 0F18CH, CC31IC 0F194H
+}
+enum : std::uint32_t { kOverflow = 0, kCompare = 0x100 };
+}  // namespace
+
+int Capcom::mode(const Machine& m, int ch) const {
+    return (m.sfr_get(kCcm[ch / 4]) >> (4 * (ch % 4))) & 7;
+}
+
+int Capcom::timer_of(const Machine& m, int ch) const {
+    const bool acc = (m.sfr_get(kCcm[ch / 4]) >> (4 * (ch % 4) + 3)) & 1;
+    return (ch < 16 ? 0 : 2) + (acc ? 1 : 0);
+}
+
+std::uint16_t Capcom::value(const Machine& m, int i) const {
     const Timer& t = t_[static_cast<std::size_t>(i)];
     if (!t.running) return t.base;
     const std::uint64_t ticks = (m.cycles() - t.base_cycle) >> t.shift;
@@ -298,17 +318,39 @@ std::uint16_t CapcomTimers::value(const Machine& m, int i) const {
     return static_cast<std::uint16_t>(v);
 }
 
-void CapcomTimers::schedule(Machine& m, int i) {
-    m.cancel(*this, static_cast<std::uint32_t>(i));
+void Capcom::schedule_overflow(Machine& m, int i) {
+    m.cancel(*this, kOverflow | static_cast<std::uint32_t>(i));
     const Timer& t = t_[static_cast<std::size_t>(i)];
     if (!t.running) return;
-    // Cycles until the count passes 0FFFFH.
-    const std::uint64_t ticks_left = 0x10000u - t.base;
-    const std::uint64_t at = t.base_cycle + (ticks_left << t.shift);
-    m.schedule(*this, at > m.cycles() ? at - m.cycles() : 0, static_cast<std::uint32_t>(i));
+    const std::uint64_t at = t.base_cycle + ((0x10000u - std::uint64_t{t.base}) << t.shift);
+    m.schedule(*this, at > m.cycles() ? at - m.cycles() : 0, kOverflow | static_cast<std::uint32_t>(i));
 }
 
-void CapcomTimers::rebase(Machine& m, int i) {
+void Capcom::schedule_compare(Machine& m, int ch) {
+    m.cancel(*this, kCompare | static_cast<std::uint32_t>(ch));
+    const int md = mode(m, ch);
+    if (md < 4) return;
+    const int ti = timer_of(m, ch);
+    const Timer& t = t_[static_cast<std::size_t>(ti)];
+    if (!t.running) return;
+    // Modes 2 and 3 match once per timer period.
+    if (md >= 6 && ((matched_this_period_ >> ch) & 1)) return;
+    // The timer counts up from 'base' at base_cycle until it overflows (the
+    // overflow event then rebases it), so only a match before then is
+    // scheduled here: the timer passes CCx at tick (c - base).
+    const std::uint16_t c = m.sfr_get(cc_addr(ch));
+    const std::uint16_t now = value(m, ti);
+    if (c <= now || c < t.base) return;  // next period (rescheduled at the overflow)
+    const std::uint64_t at = t.base_cycle + (std::uint64_t{static_cast<std::uint16_t>(c - t.base)} << t.shift);
+    m.schedule(*this, at > m.cycles() ? at - m.cycles() : 0, kCompare | static_cast<std::uint32_t>(ch));
+}
+
+void Capcom::schedule_timer_channels(Machine& m, int ti) {
+    for (int ch = 0; ch < 32; ++ch)
+        if ((ch < 16) == (ti < 2) && timer_of(m, ch) == ti) schedule_compare(m, ch);
+}
+
+void Capcom::rebase(Machine& m, int i) {
     Timer& t = t_[static_cast<std::size_t>(i)];
     t.base = value(m, i);
     // Keep the prescaler phase: count from the last tick.
@@ -316,7 +358,7 @@ void CapcomTimers::rebase(Machine& m, int i) {
     else t.base_cycle = m.cycles();
 }
 
-void CapcomTimers::configure(Machine& m, int i) {
+void Capcom::configure(Machine& m, int i) {
     const std::uint16_t con = m.sfr_get(i < 2 ? T01CON : T78CON);
     const int shift = (i & 1) ? 8 : 0;
     Timer& t = t_[static_cast<std::size_t>(i)];
@@ -325,10 +367,11 @@ void CapcomTimers::configure(Machine& m, int i) {
     if (run && !t.running) t.base_cycle = m.cycles();
     t.running = run;
     t.shift = ((con >> shift) & 7) + 3;
-    schedule(m, i);
+    schedule_overflow(m, i);
+    schedule_timer_channels(m, i);
 }
 
-void CapcomTimers::attach(Machine& m) {
+void Capcom::attach(Machine& m) {
     for (int i = 0; i < 4; ++i) {
         SfrHook h;
         h.read = [this, i](Machine& mm, Addr, std::uint16_t) { return value(mm, i); };
@@ -336,7 +379,8 @@ void CapcomTimers::attach(Machine& m) {
             Timer& t = t_[static_cast<std::size_t>(i)];
             t.base = v;
             t.base_cycle = mm.cycles();
-            schedule(mm, i);
+            schedule_overflow(mm, i);
+            schedule_timer_channels(mm, i);
         };
         m.set_hook(kTimer[i], h);
         m.set_hook(kReload[i], SfrHook{});
@@ -350,23 +394,82 @@ void CapcomTimers::attach(Machine& m) {
         };
         m.set_hook(con, h);
     }
+    for (int g = 0; g < 8; ++g) {
+        SfrHook h;
+        h.write = [this, g](Machine& mm, Addr, std::uint16_t, std::uint16_t) {
+            for (int ch = 4 * g; ch < 4 * g + 4; ++ch) schedule_compare(mm, ch);
+        };
+        m.set_hook(kCcm[g], h);
+    }
+    for (int ch = 0; ch < 32; ++ch) {
+        SfrHook h;
+        h.write = [this, ch](Machine& mm, Addr, std::uint16_t, std::uint16_t) { schedule_compare(mm, ch); };
+        m.set_hook(cc_addr(ch), h);
+    }
 }
 
-void CapcomTimers::reset(bool) { t_ = {}; }
+void Capcom::reset(bool) {
+    t_ = {};
+    outputs_ = 0;
+    matched_this_period_ = 0;
+}
 
-void CapcomTimers::event(Machine& m, std::uint32_t tag) {
+void Capcom::event(Machine& m, std::uint32_t tag) {
+    if (tag & kCompare) {
+        const int ch = static_cast<int>(tag & 0x1F);
+        const int md = mode(m, ch);
+        if (md < 4) return;
+        ++matches_[static_cast<std::size_t>(ch)];
+        if (md == 5) outputs_ ^= 1u << ch;
+        if (md == 7) outputs_ |= 1u << ch;
+        if (md >= 6) matched_this_period_ |= 1u << ch;
+        set_ir(m, cc_ic(ch));
+        return;
+    }
     const int i = static_cast<int>(tag & 3);
     Timer& t = t_[static_cast<std::size_t>(i)];
     if (!t.running) return;
-    const std::uint64_t ticks_left = 0x10000u - t.base;
+    t.base_cycle += (0x10000u - std::uint64_t{t.base}) << t.shift;
     t.base = m.sfr_get(kReload[i]);
-    t.base_cycle += ticks_left << t.shift;
     set_ir(m, kTimerIc[i]);
-    schedule(m, i);
+    // A new period: modes 2 and 3 may match again; mode 3 outputs clear.
+    for (int ch = 0; ch < 32; ++ch) {
+        if ((ch < 16) != (i < 2) || timer_of(m, ch) != i) continue;
+        matched_this_period_ &= ~(1u << ch);
+        if (mode(m, ch) == 7) outputs_ &= ~(1u << ch);
+        // A channel equal to the reload value matches as the timer reloads.
+        if (mode(m, ch) >= 4 && m.sfr_get(cc_addr(ch)) == t.base) {
+            m.cancel(*this, kCompare | static_cast<std::uint32_t>(ch));
+            m.schedule(*this, 0, kCompare | static_cast<std::uint32_t>(ch));
+            continue;
+        }
+        schedule_compare(m, ch);
+    }
+    schedule_overflow(m, i);
 }
 
-void CapcomTimers::save(StateWriter& w) const { w.put(t_); }
-void CapcomTimers::load(StateReader& r) { r.get(t_); }
+void Capcom::input_edge(Machine& m, int ch, bool rising) {
+    if (ch < 0 || ch > 31) return;
+    const int md = mode(m, ch);
+    const bool take = (md == 1 && rising) || (md == 2 && !rising) || md == 3;
+    if (!take) return;
+    m.sfr_set(cc_addr(ch), value(m, timer_of(m, ch)));
+    set_ir(m, cc_ic(ch));
+}
+
+void Capcom::save(StateWriter& w) const {
+    w.put(t_);
+    w.put(outputs_);
+    w.put(matched_this_period_);
+    w.put(matches_);
+}
+
+void Capcom::load(StateReader& r) {
+    r.get(t_);
+    r.get(outputs_);
+    r.get(matched_this_period_);
+    r.get(matches_);
+}
 
 // ---- ADC -------------------------------------------------------------------
 
@@ -437,7 +540,7 @@ void Adc::load(StateReader& r) {
 void add_c167_peripherals(Board& b) {
     auto asc = std::make_shared<Asc0>();
     b.devices.push_back(asc);
-    b.devices.push_back(std::make_shared<CapcomTimers>());
+    b.devices.push_back(std::make_shared<Capcom>());
     b.devices.push_back(std::make_shared<Adc>());
 }
 

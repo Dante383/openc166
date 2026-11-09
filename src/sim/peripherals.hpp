@@ -83,12 +83,22 @@ private:
     Machine* m_ = nullptr;
 };
 
-// The CAPCOM timers T0 and T1 (T01CON) and T7 and T8 (T78CON) in timer
-// mode, counting fCPU / 2^(TxI + 3) and reloading from TxREL on overflow,
-// which sets TxIR. Counter mode (TxM) holds the timer.
-class CapcomTimers final : public Device {
+// The capture/compare unit (CAPCOM1 and CAPCOM2 of the C167): timers T0
+// and T1 (T01CON) and T7 and T8 (T78CON) in timer mode, counting
+// fCPU / 2^(TxI + 3) and reloading from TxREL on overflow, which sets TxIR
+// (counter mode, TxM, holds the timer); and the 32 channels CC0..CC31 with
+// their modes in CCM0..CCM7. CC0..CC15 count with T0 or T1, CC16..CC31
+// with T7 or T8.
+//
+// Compare modes 0 and 1 interrupt when the timer reaches CCx (mode 1 also
+// toggles the channel's output); modes 2 and 3 likewise, once per timer
+// period (mode 3 sets the output on the match and clears it when the timer
+// overflows). Matches are exact events on the clock. Capture modes latch
+// the timer into CCx on an input edge given by input_edge().
+// Double-register compare mode is not modelled.
+class Capcom final : public Device {
 public:
-    std::string name() const override { return "CAPCOM timers"; }
+    std::string name() const override { return "CAPCOM"; }
     std::uint8_t read8(Addr) override { return 0xFF; }
     void write8(Addr, std::uint8_t) override {}
     void attach(Machine& m) override;
@@ -97,7 +107,14 @@ public:
     void load(StateReader& r) override;
     void event(Machine& m, std::uint32_t tag) override;
 
+    // Timer 0..3 = T0, T1, T7, T8.
     std::uint16_t value(const Machine& m, int timer) const;
+    // An edge on the input of channel 'ch' (a crank or cam sensor, say).
+    void input_edge(Machine& m, int ch, bool rising);
+    // The level of channel 'ch's compare output (modes 1 and 3).
+    bool output(int ch) const { return (outputs_ >> ch) & 1; }
+    // Compare events so far on channel 'ch'.
+    std::uint64_t matches(int ch) const { return matches_[static_cast<std::size_t>(ch)]; }
 
 private:
     struct Timer {
@@ -106,11 +123,17 @@ private:
         bool running = false;
         int shift = 3;            // log2 of the prescaler
     };
-    // Settles 'timer' at the current cycle and reschedules its overflow.
     void rebase(Machine& m, int timer);
     void configure(Machine& m, int timer);
-    void schedule(Machine& m, int timer);
+    void schedule_overflow(Machine& m, int timer);
+    void schedule_compare(Machine& m, int ch);
+    void schedule_timer_channels(Machine& m, int timer);
+    int mode(const Machine& m, int ch) const;   // CCMODx, 0..7
+    int timer_of(const Machine& m, int ch) const;  // 0..3
     std::array<Timer, 4> t_{};  // T0, T1, T7, T8
+    std::uint32_t outputs_ = 0;
+    std::uint32_t matched_this_period_ = 0;  // modes 2 and 3
+    std::array<std::uint64_t, 32> matches_{};
 };
 
 // The 10-bit A/D converter: single or continuous conversion of one
