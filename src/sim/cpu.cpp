@@ -205,7 +205,11 @@ struct Exec {
 
     void flags(std::uint16_t set, std::uint16_t mask) {
         const std::uint16_t p = m.psw();
-        m.sfr_set(reg::PSW, static_cast<std::uint16_t>((p & ~mask) | (set & mask)));
+        const std::uint16_t v = static_cast<std::uint16_t>((p & ~mask) | (set & mask));
+        m.sfr_set(reg::PSW, v);
+        // Flag updates are not bus accesses, but watchpoints on PSW bits
+        // must see them.
+        if (v != p && m.on_access) m.on_access({AccessKind::Write, reg::PSW, 2, v, p});
     }
     bool flag(std::uint16_t f) const { return m.psw() & f; }
 

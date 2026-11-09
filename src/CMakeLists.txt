@@ -52,6 +52,7 @@ add_library(openc166_core STATIC
     predef.cpp
     sim/boards.cpp
     sim/cpu.cpp
+    sim/debug.cpp
     sim/machine.cpp)
 add_library(openc166::core ALIAS openc166_core)
 
