@@ -53,7 +53,8 @@ add_library(openc166_core STATIC
     sim/boards.cpp
     sim/cpu.cpp
     sim/debug.cpp
-    sim/machine.cpp)
+    sim/machine.cpp
+    sim/peripherals.cpp)
 add_library(openc166::core ALIAS openc166_core)
 
 target_include_directories(openc166_core

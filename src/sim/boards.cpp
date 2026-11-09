@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "sim/boards.hpp"
 
+#include "sim/peripherals.hpp"
+
 #include <stdexcept>
 
 namespace oc166::sim {
@@ -28,6 +30,7 @@ Board c167cs_board() {
     b.internal.push_back({0xEF00, 0x0100, 0, std::make_shared<StubDevice>("CAN1", 0xEF00, 0x100)});
     b.internal.push_back({0xEE00, 0x0100, 1, std::make_shared<StubDevice>("CAN2", 0xEE00, 0x100)});
     b.interrupts = c167_interrupts();
+    add_c167_peripherals(b);
     return b;
 }
 
@@ -52,7 +55,9 @@ std::vector<std::string> board_names() { return {"c167", "c167cs", "5wy19"}; }
 Board board_by_name(const std::string& name, std::vector<std::uint8_t> image) {
     if (name == "5wy19") return siemens_5wy19(std::move(image));
     if (name == "c167" || name == "c166") {
-        return simple_board(std::move(image), name == "c166" ? isa::Cpu::C166 : isa::Cpu::C167);
+        Board b = simple_board(std::move(image), name == "c166" ? isa::Cpu::C166 : isa::Cpu::C167);
+        add_c167_peripherals(b);
+        return b;
     }
     if (name == "c167cs") {
         Board b = c167cs_board();

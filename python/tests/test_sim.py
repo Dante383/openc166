@@ -182,9 +182,9 @@ class SimulatorTest(unittest.TestCase):
         self.assertEqual(s.unmodelled, [])
         s.write16(0xFC70, 0)
         s.pc = 0  # rerun from the start with a peripheral access patched in
-        s.write(0x0000, bytes.fromhex("f2f4b0fe"))  # MOV R4, S0TBUF
+        s.write(0x0000, bytes.fromhex("f2f440fe"))  # MOV R4, T2 (GPT1: not modelled)
         s.step()
-        self.assertEqual([u.what for u in s.unmodelled], ["SFR S0TBUF (00FEB0H)"])
+        self.assertEqual([u.what for u in s.unmodelled], ["SFR T2 (00FE40H)"])
 
     def test_disassemble_at_pc(self):
         s = self.s

@@ -148,6 +148,8 @@ Machine::Machine(Board board) : board_(std::move(board)), iram_(0x1000, 0) {
         if (r.device) add_device(r.device);
     for (auto& d : board_.devices) add_device(d);
     install_core_hooks();
+    attached_ = true;
+    for (auto& d : devices_) d->attach(*this);
     reset(ResetKind::PowerOn);
 }
 
@@ -158,7 +160,8 @@ void Machine::add_device(std::shared_ptr<Device> d) {
     d->id = static_cast<int>(devices_.size());
     if (auto* rom = dynamic_cast<Rom*>(d.get())) rom->machine = this;
     if (auto* stub = dynamic_cast<StubDevice*>(d.get())) stub->machine = this;
-    devices_.push_back(std::move(d));
+    devices_.push_back(d);
+    if (attached_) d->attach(*this);
 }
 
 void Machine::set_chip_select(int cs, std::shared_ptr<Device> d) {
@@ -721,6 +724,7 @@ void Machine::load(const Snapshot& s) {
     events_.resize(r.get<std::uint64_t>());
     for (Event& e : events_) r.get(e);
     for (auto& d : devices_) d->load(r);
+    for (auto& d : devices_) d->after_load(*this);
     if (SfrHook* h = hook(reg::SYSCON)) h->readonly_mask = einit_ ? 0x1FFF : 0;
     irq_dirty_ = true;
     stop_pending_ = Stop::None;

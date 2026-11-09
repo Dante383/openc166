@@ -110,6 +110,12 @@ public:
     virtual void load(StateReader&) {}
     // A scheduled event of this device has come due.
     virtual void event(Machine&, std::uint32_t tag) { (void)tag; }
+    // Called once when the device joins a machine, after the core's SFR
+    // hooks exist: on-chip peripherals install their SFR hooks here.
+    virtual void attach(Machine&) {}
+    // Called after a snapshot is loaded, for state that lives outside
+    // snapshots (input logged from the host) to be scheduled again.
+    virtual void after_load(Machine&) {}
 
     int id = -1;  // set by Machine::add_device
 };
@@ -380,6 +386,13 @@ public:
     // ---- Devices
     void add_device(std::shared_ptr<Device> d);
     const std::vector<std::shared_ptr<Device>>& devices() const { return devices_; }
+    // The first device of type T, or nullptr.
+    template <class T>
+    T* find_device() const {
+        for (const auto& d : devices_)
+            if (auto* p = dynamic_cast<T*>(d.get())) return p;
+        return nullptr;
+    }
     // Puts 'd' on chip select 'cs' (0..4), replacing what was there.
     void set_chip_select(int cs, std::shared_ptr<Device> d);
 
@@ -413,6 +426,7 @@ private:
 
     Board board_;
     std::vector<std::shared_ptr<Device>> devices_;
+    bool attached_ = false;  // devices added from now on are attached at once
     std::vector<std::uint8_t> iram_;  // 0F000H..0FFFFH (only iram_start..0FDFFH is RAM)
     std::array<std::uint16_t, 256> sfr_{};   // 0FE00H..0FFFFH
     std::array<std::uint16_t, 256> esfr_{};  // 0F000H..0F1FFH
