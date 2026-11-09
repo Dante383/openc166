@@ -14,7 +14,7 @@ constexpr Addr S0TBUF = 0xFEB0, S0RBUF = 0xFEB2, S0BG = 0xFEB4, S0CON = 0xFFB0, 
 constexpr std::uint16_t kStp = 1u << 3, kRen = 1u << 4, kFen = 1u << 6, kOen = 1u << 7, kFe = 1u << 9,
                         kOe = 1u << 10, kBrs = 1u << 13, kLb = 1u << 14, kRun = 1u << 15;
 
-enum : std::uint32_t { kTxDone = 1, kRxDone = 2, kInput = 3 };
+enum : std::uint32_t { kTxDone = 1, kRxDone = 2, kInput = 3, kLowDone = 4 };
 
 void set_ir(Machine& m, Addr ic) { m.request_interrupt(ic); }
 
@@ -32,9 +32,14 @@ constexpr std::uint16_t kAdst = 1u << 7, kAdbsy = 1u << 8;
 
 // ---- ASC0 ------------------------------------------------------------------
 
+std::uint64_t Asc0::bit_cycles(const Machine& m) const {
+    const std::uint16_t con = m.sfr_get(S0CON);
+    return 16u * (2u + ((con & kBrs) ? 1u : 0u)) * (static_cast<std::uint64_t>(m.sfr_get(S0BG) & 0x1FFF) + 1u);
+}
+
 std::uint64_t Asc0::frame_cycles(const Machine& m) const {
     const std::uint16_t con = m.sfr_get(S0CON);
-    const std::uint64_t bit = 16u * (2u + ((con & kBrs) ? 1u : 0u)) * (static_cast<std::uint64_t>(m.sfr_get(S0BG) & 0x1FFF) + 1u);
+    const std::uint64_t bit = bit_cycles(m);
     const int mode = con & 7;
     const int data = (mode == 1 || mode == 3) ? 8 : 9;  // 7 bits + parity counts as 8
     return bit * static_cast<std::uint64_t>(1 + data + ((con & kStp) ? 2 : 1));
@@ -64,6 +69,7 @@ void Asc0::attach(Machine& m) {
 void Asc0::reset(bool power_on) {
     tx_busy_ = tbuf_full_ = rx_busy_ = false;
     rx_fifo_.clear();
+    low_pending_.clear();
     if (power_on) {
         // A new timeline: nothing logged from before applies.
         log_.clear();
@@ -101,19 +107,46 @@ void Asc0::schedule_input(Machine& m, std::size_t index) {
     m.schedule(*this, at > now ? at - now : 0, kInput | static_cast<std::uint32_t>(index << 4));
 }
 
-void Asc0::receive(Machine& m, std::uint8_t byte, bool framing_error) {
-    // Input recorded for times after now belongs to a timeline that the
-    // user has left by going back: it is dropped.
+std::uint64_t Asc0::drop_future(Machine& m) {
+    // Input recorded for times after now belongs to a timeline the user has
+    // left by going back (or by loading an older snapshot): drop it, with
+    // the arrivals already scheduled for it.
     const std::uint64_t now = m.cycles();
-    while (!log_.empty() && log_.back().cycle > now) log_.pop_back();
+    bool dropped = false;
+    while (!log_.empty() && log_.back().cycle > now) {
+        m.cancel(*this, kInput | static_cast<std::uint32_t>((log_.size() - 1) << 4));
+        log_.pop_back();
+        dropped = true;
+    }
     if (inputs_seen_ > log_.size()) inputs_seen_ = log_.size();
-    log_.push_back({now, byte, framing_error});
+    // From here the output differs from what was reported before.
+    if (dropped || last_out_cycle_ > now) last_out_cycle_ = now;
+    return now;
+}
+
+void Asc0::receive(Machine& m, std::uint8_t byte, bool framing_error) {
+    const std::uint64_t now = drop_future(m);
+    log_.push_back({now, byte, framing_error, 0});
+    schedule_input(m, log_.size() - 1);
+    inputs_seen_ = log_.size();
+}
+
+void Asc0::receive_low(Machine& m, std::uint64_t low_cycles) {
+    const std::uint64_t now = drop_future(m);
+    log_.push_back({now, 0, false, std::max<std::uint64_t>(low_cycles, 1)});
     schedule_input(m, log_.size() - 1);
     inputs_seen_ = log_.size();
 }
 
 std::vector<std::uint8_t> Asc0::take_output() {
-    std::vector<std::uint8_t> v(out_.begin() + static_cast<std::ptrdiff_t>(out_taken_), out_.end());
+    std::vector<std::uint8_t> v;
+    for (const auto& [b, baud] : take_output_with_baud()) v.push_back(b);
+    return v;
+}
+
+std::vector<std::pair<std::uint8_t, std::uint32_t>> Asc0::take_output_with_baud() {
+    std::vector<std::pair<std::uint8_t, std::uint32_t>> v(out_.begin() + static_cast<std::ptrdiff_t>(out_taken_),
+                                                          out_.end());
     out_taken_ = out_.size();
     return v;
 }
@@ -125,7 +158,8 @@ void Asc0::event(Machine& m, std::uint32_t tag) {
         tx_busy_ = false;
         const std::uint64_t now = m.cycles();
         if (!any_out_ || now > last_out_cycle_) {
-            out_.push_back(shift_);
+            const std::uint64_t bit = bit_cycles(m);
+            out_.push_back({shift_, static_cast<std::uint32_t>((m.board().clock_hz + bit / 2) / bit)});
             last_out_cycle_ = now;
             any_out_ = true;
         }
@@ -139,10 +173,38 @@ void Asc0::event(Machine& m, std::uint32_t tag) {
     }
     case kInput: {
         const std::size_t i = tag >> 4;
-        if (i < log_.size()) {
-            rx_fifo_.push_back(static_cast<std::uint16_t>(log_[i].byte | (log_[i].framing_error ? 0x100 : 0)));
+        if (i >= log_.size()) break;
+        const Input& in = log_[i];
+        if (in.low_cycles == 0) {
+            rx_fifo_.push_back(static_cast<std::uint16_t>(in.byte | (in.framing_error ? 0x100 : 0)));
             start_rx(m);
+            break;
         }
+        // The start bit and the data bits that fell in the low phase read
+        // as 0, the rest as 1 (LSB first). If the line was still low at the
+        // stop bit, it is a framing error. The frame has already ended.
+        const std::uint64_t bits = (in.low_cycles + bit_cycles(m) / 2) / bit_cycles(m);
+        const int mode = con & 7;
+        const std::uint64_t data = (mode == 1 || mode == 3) ? 8 : 9;
+        std::uint16_t v = 0;
+        if (bits <= 1) v = 0xFF;
+        else if (bits - 1 < 8) v = static_cast<std::uint16_t>((0xFFu << (bits - 1)) & 0xFF);
+        if (bits >= data + 2) v |= 0x100;  // the stop bit was low too
+        // The UART completes the frame when it samples the stop bit, one
+        // frame after the falling edge: that may still be ahead.
+        const std::uint64_t frame = frame_cycles(m);
+        low_pending_.push_back(v);
+        m.schedule(*this, frame > in.low_cycles ? frame - in.low_cycles : 0, kLowDone);
+        break;
+    }
+    case kLowDone: {
+        if (low_pending_.empty()) break;
+        const std::uint16_t v = low_pending_.front();
+        low_pending_.pop_front();
+        if (rx_busy_)
+            rx_fifo_.push_back(v);
+        else
+            deliver(m, v);
         break;
     }
     case kRxDone: {
@@ -150,29 +212,33 @@ void Asc0::event(Machine& m, std::uint32_t tag) {
         if (rx_fifo_.empty()) break;
         const std::uint16_t in = rx_fifo_.front();
         rx_fifo_.pop_front();
-        if ((con & kRun) && (con & kRen)) {
-            std::uint16_t c = con;
-            bool error = false;
-            if (m.sfr_get(S0RIC) & 0x80) {
-                if (con & kOen) {
-                    c |= kOe;
-                    error = true;
-                }
-            } else {
-                m.sfr_set(S0RBUF, in & 0xFF);
-                set_ir(m, S0RIC);
-            }
-            if ((in & 0x100) && (con & kFen)) {
-                c |= kFe;
-                error = true;
-            }
-            if (c != con) m.sfr_set(S0CON, c);
-            if (error) set_ir(m, S0EIC);
-        }
+        deliver(m, in);
         start_rx(m);
         break;
     }
     }
+}
+
+void Asc0::deliver(Machine& m, std::uint16_t in) {
+    const std::uint16_t con = m.sfr_get(S0CON);
+    if (!(con & kRun) || !(con & kRen)) return;
+    std::uint16_t c = con;
+    bool error = false;
+    if (m.sfr_get(S0RIC) & 0x80) {
+        if (con & kOen) {
+            c |= kOe;
+            error = true;
+        }
+    } else {
+        m.sfr_set(S0RBUF, in & 0xFF);
+        set_ir(m, S0RIC);
+    }
+    if ((in & 0x100) && (con & kFen)) {
+        c |= kFe;
+        error = true;
+    }
+    if (c != con) m.sfr_set(S0CON, c);
+    if (error) set_ir(m, S0EIC);
 }
 
 void Asc0::save(StateWriter& w) const {
@@ -183,6 +249,8 @@ void Asc0::save(StateWriter& w) const {
     w.put(rx_busy_);
     w.put<std::uint64_t>(rx_fifo_.size());
     for (auto v : rx_fifo_) w.put(v);
+    w.put<std::uint64_t>(low_pending_.size());
+    for (auto v : low_pending_) w.put(v);
     w.put(inputs_seen_);
 }
 
@@ -194,10 +262,22 @@ void Asc0::load(StateReader& r) {
     r.get(rx_busy_);
     rx_fifo_.resize(r.get<std::uint64_t>());
     for (auto& v : rx_fifo_) r.get(v);
+    low_pending_.resize(r.get<std::uint64_t>());
+    for (auto& v : low_pending_) r.get(v);
     r.get(inputs_seen_);
 }
 
-void Asc0::after_load(Machine& m) {
+void Asc0::after_load(Machine& m, bool replay) {
+    if (!replay) {
+        // A new timeline: forget what the host sent after the snapshot.
+        while (log_.size() > inputs_seen_) log_.pop_back();
+        while (!log_.empty() && log_.back().cycle > m.cycles()) log_.pop_back();
+        inputs_seen_ = log_.size();
+        // Output from now on is new, even where it repeats old output.
+        last_out_cycle_ = m.cycles();
+        any_out_ = false;
+        return;
+    }
     // Input the host sent after the snapshot was taken.
     for (std::size_t i = static_cast<std::size_t>(inputs_seen_); i < log_.size(); ++i) schedule_input(m, i);
     inputs_seen_ = log_.size();

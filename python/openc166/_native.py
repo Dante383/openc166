@@ -231,6 +231,13 @@ _declare("oc166_sim_set_option", _int, _p, _str, _int)
 _declare("oc166_sim_unmodelled_count", _size, _p)
 _declare("oc166_sim_unmodelled", _int, _p, _size, ctypes.POINTER(Unmodelled))
 _declare("oc166_sim_clear_unmodelled", None, _p)
+_declare("oc166_sim_run_until_cycle", _int, _p, _u64, ctypes.POINTER(Stop))
+_declare("oc166_sim_serial_send", _int, _p, _u8p, _size, _int)
+_declare("oc166_sim_serial_receive", _size, _p, _u8p, _size)
+_declare("oc166_sim_serial_receive_baud", _size, _p, _u8p, ctypes.POINTER(_u32), _size)
+_declare("oc166_sim_serial_line_low", _int, _p, _u64)
+_declare("oc166_sim_serial_frame_cycles", _u64, _p)
+_declare("oc166_sim_set_adc", _int, _p, _int, _u16)
 _declare("oc166_sim_set_chip_select", _int, _p, _int, _str, READ_FN, WRITE_FN, ctypes.c_void_p)
 
 if lib.oc166_api_version() != API_VERSION:

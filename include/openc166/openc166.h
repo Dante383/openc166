@@ -428,6 +428,30 @@ OC166_API int oc166_sim_add_watchpoint(oc166_sim *s, uint32_t address, uint32_t 
                                        oc166_condition cond, void *user);
 OC166_API int oc166_sim_remove_watchpoint(oc166_sim *s, int id);
 
+/* Runs until the clock has advanced to 'cycle' (absolute). */
+OC166_API int oc166_sim_run_until_cycle(oc166_sim *s, uint64_t cycle, oc166_stop *out);
+
+/* ASC0, the serial port: bytes from the host arrive on RXD0 now, one frame
+ * apart ('flags' 1: with a framing error, as a break looks). Returns 0, or
+ * -1 if the board has no ASC0. */
+OC166_API int oc166_sim_serial_send(oc166_sim *s, const uint8_t *data, size_t size, int flags);
+/* The line was held low for 'cycles' and has just gone high: a break, or
+ * the low phase of a K-line fast init. ASC0 frames it at its current baud
+ * rate (25 ms is 0E0H at 250 baud, 00H with a framing error at 10400). */
+OC166_API int oc166_sim_serial_line_low(oc166_sim *s, uint64_t cycles);
+/* Copies up to 'size' bytes the CPU has sent since the last call to 'out'
+ * and returns how many. */
+OC166_API size_t oc166_sim_serial_receive(oc166_sim *s, uint8_t *out, size_t size);
+/* Like oc166_sim_serial_receive(), and 'baud' (may be NULL) receives the
+ * baud rate each byte was sent at, so a bridge can drop bytes a tester at
+ * another rate could not have received. */
+OC166_API size_t oc166_sim_serial_receive_baud(oc166_sim *s, uint8_t *out, uint32_t *baud, size_t size);
+/* Cycles one frame takes at ASC0's current settings, or 0. */
+OC166_API uint64_t oc166_sim_serial_frame_cycles(const oc166_sim *s);
+
+/* The 10-bit value A/D channel 'channel' converts to. Returns 0, or -1. */
+OC166_API int oc166_sim_set_adc(oc166_sim *s, int channel, uint16_t value);
+
 /* Snapshots. */
 typedef struct oc166_snapshot oc166_snapshot;
 OC166_API oc166_snapshot *oc166_sim_save(const oc166_sim *s);
@@ -440,7 +464,8 @@ OC166_API uint64_t oc166_snapshot_instructions(const oc166_snapshot *snap);
 OC166_API void oc166_sim_request_interrupt(oc166_sim *s, uint32_t ic);
 OC166_API void oc166_sim_nmi(oc166_sim *s);
 
-/* Options: "stop_on_unmodelled", "stop_on_undefined", "watchdog_frozen".
+/* Options: "stop_on_unmodelled", "stop_on_undefined", "watchdog_frozen",
+ * "serial_echo" (ASC0 hears what it sends, as on a K-line).
  * Returns 0, or -1 for an unknown name. */
 OC166_API int oc166_sim_set_option(oc166_sim *s, const char *name, int value);
 

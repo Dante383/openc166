@@ -25,15 +25,26 @@ public:
     void reset(bool power_on) override;
     void save(StateWriter& w) const override;
     void load(StateReader& r) override;
-    void after_load(Machine& m) override;
+    void after_load(Machine& m, bool replay) override;
     void event(Machine& m, std::uint32_t tag) override;
 
     // A byte arrives on RXD0 now (it is received one frame later).
     // 'framing_error' sends a frame without a stop bit, as a break or the
     // low phase of a K-line fast init looks to the UART.
     void receive(Machine& m, std::uint8_t byte, bool framing_error = false);
+    // The line was held low for 'low_cycles' and has just gone high again
+    // (a break, or the low phase of a K-line fast init). The UART frames
+    // what it saw at its current baud rate: 25 ms low is 0E0H at 250 baud,
+    // or 00H with a framing error at 10400 baud. Like a real UART it has
+    // the byte when it samples the stop bit, one frame after the falling
+    // edge.
+    void receive_low(Machine& m, std::uint64_t low_cycles);
     // Bytes the CPU has sent since the last call.
     std::vector<std::uint8_t> take_output();
+    // The same, each with the baud rate it was sent at (rounded), so a
+    // bridge can drop bytes the tester could not have received: the 5WY19
+    // boot block times its response delay by sending a byte at 250 kbaud.
+    std::vector<std::pair<std::uint8_t, std::uint32_t>> take_output_with_baud();
     // Cycles one frame takes at the current settings.
     std::uint64_t frame_cycles(const Machine& m) const;
     // The CPU hears what it sends, as on a K-line (half duplex).
@@ -44,10 +55,14 @@ private:
         std::uint64_t cycle;
         std::uint8_t byte;
         bool framing_error;
+        std::uint64_t low_cycles;  // a low pulse instead of a byte
     };
+    std::uint64_t bit_cycles(const Machine& m) const;
+    void deliver(Machine& m, std::uint16_t in);
     void start_tx(Machine& m);
     void start_rx(Machine& m);
     void schedule_input(Machine& m, std::size_t index);
+    std::uint64_t drop_future(Machine& m);
 
     // Snapshot state.
     bool tx_busy_ = false;
@@ -56,11 +71,12 @@ private:
     std::uint8_t shift_ = 0;
     bool rx_busy_ = false;
     std::deque<std::uint16_t> rx_fifo_;  // byte | 0x100 for a framing error
+    std::deque<std::uint16_t> low_pending_;  // low pulses waiting for their stop bit
     std::uint64_t inputs_seen_ = 0;      // log entries scheduled before the snapshot
 
     // Outside snapshots: what the host sent and what it was given.
     std::vector<Input> log_;
-    std::vector<std::uint8_t> out_;
+    std::vector<std::pair<std::uint8_t, std::uint32_t>> out_;
     std::size_t out_taken_ = 0;
     std::uint64_t last_out_cycle_ = 0;
     bool any_out_ = false;

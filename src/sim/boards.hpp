@@ -66,7 +66,7 @@ private:
 Board c167cs_board();
 
 // The Siemens 5WY19 engine ECU (docs/debugger-design.md, section 4):
-// C167CS-LM at 25 MHz, a 512 KB AM29F400BB flash on CS0 that appears at
+// C167CS-LM at 24 MHz, a 512 KB AM29F400BB flash on CS0 that appears at
 // both 0 and 80000H, external RAM on CS2 (wherever the firmware puts its
 // window) and the 74HC574 output latch in the CS3 window. The
 // flash is a read-only image until the flash model exists.

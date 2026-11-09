@@ -114,8 +114,10 @@ public:
     // hooks exist: on-chip peripherals install their SFR hooks here.
     virtual void attach(Machine&) {}
     // Called after a snapshot is loaded, for state that lives outside
-    // snapshots (input logged from the host) to be scheduled again.
-    virtual void after_load(Machine&) {}
+    // snapshots: input logged from the host is scheduled again when
+    // 'replay' is set (reverse execution), and dropped when not (a new
+    // timeline from an older state).
+    virtual void after_load(Machine&, bool replay) { (void)replay; }
 
     int id = -1;  // set by Machine::add_device
 };
@@ -381,7 +383,9 @@ public:
 
     // ---- Snapshots
     Snapshot save() const;
-    void load(const Snapshot& s);
+    // 'replay': host input logged after the snapshot happens again, as when
+    // the debugger re-runs history; otherwise it is dropped.
+    void load(const Snapshot& s, bool replay = true);
 
     // ---- Devices
     void add_device(std::shared_ptr<Device> d);

@@ -704,7 +704,7 @@ Snapshot Machine::save() const {
     return s;
 }
 
-void Machine::load(const Snapshot& s) {
+void Machine::load(const Snapshot& s, bool replay) {
     StateReader r(s.data, s.shared);
     r.get(ip_);
     r.get(cycles_);
@@ -724,7 +724,7 @@ void Machine::load(const Snapshot& s) {
     events_.resize(r.get<std::uint64_t>());
     for (Event& e : events_) r.get(e);
     for (auto& d : devices_) d->load(r);
-    for (auto& d : devices_) d->after_load(*this);
+    for (auto& d : devices_) d->after_load(*this, replay);
     if (SfrHook* h = hook(reg::SYSCON)) h->readonly_mask = einit_ ? 0x1FFF : 0;
     irq_dirty_ = true;
     stop_pending_ = Stop::None;

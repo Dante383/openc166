@@ -471,6 +471,14 @@ class Simulator:
         watchpoint this finds who last wrote an address."""
         return self._stop(_lib.oc166_sim_reverse_continue)
 
+    def run_for(self, seconds: float) -> Stop:
+        """Runs for 'seconds' of simulated time (or until a stop)."""
+        target = self.cycles + int(seconds * _lib.oc166_sim_clock_hz(self._h))
+        return self._stop(_lib.oc166_sim_run_until_cycle, target)
+
+    def run_until_cycle(self, cycle: int) -> Stop:
+        return self._stop(_lib.oc166_sim_run_until_cycle, cycle)
+
     def goto(self, instructions: int) -> None:
         """To the state after 'instructions' instructions."""
         if _lib.oc166_sim_goto(self._h, instructions) != 0:
@@ -694,6 +702,66 @@ class Simulator:
         if a is None:
             raise KeyError(ic)
         _lib.oc166_sim_request_interrupt(self._h, a)
+
+    def serial_send(self, data: bytes, framing_error: bool = False) -> None:
+        """Bytes from the host arrive on ASC0 (RXD0) now, one frame apart.
+        They are logged, so reverse execution replays them."""
+        buf = (ctypes.c_uint8 * max(len(data), 1)).from_buffer_copy(bytes(data) or b"\0")
+        if _lib.oc166_sim_serial_send(self._h, buf, len(data), 1 if framing_error else 0) != 0:
+            raise SimulatorError("this board has no ASC0")
+
+    def serial_break(self, seconds: float) -> None:
+        """RXD0 was low for 'seconds' and has just gone high again: a break,
+        or the low phase of a K-line fast init (0.025). ASC0 frames it at
+        its current baud rate."""
+        cycles = int(seconds * _lib.oc166_sim_clock_hz(self._h))
+        if _lib.oc166_sim_serial_line_low(self._h, cycles) != 0:
+            raise SimulatorError("this board has no ASC0")
+
+    def fast_init(self, payload: bytes) -> None:
+        """An ISO 14230 fast init as a tester does it: 25 ms low, 25 ms high,
+        then 'payload' (usually StartCommunication)."""
+        self.run_for(0.025)
+        self.serial_break(0.025)
+        self.run_for(0.025)
+        self.serial_send(payload)
+
+    def serial_receive(self, baud: Optional[int] = None) -> bytes:
+        """What the CPU sent on ASC0 since the last call. With 'baud', only
+        the bytes sent within 3 % of that rate: what a tester listening at
+        'baud' receives."""
+        return bytes(b for b, rate in self.serial_receive_baud() if baud is None or abs(rate - baud) <= baud * 0.03)
+
+    def serial_receive_baud(self) -> List[Tuple[int, int]]:
+        """What the CPU sent on ASC0 since the last call, as (byte, baud)."""
+        out: List[Tuple[int, int]] = []
+        buf = (ctypes.c_uint8 * 256)()
+        rates = (ctypes.c_uint32 * 256)()
+        while True:
+            n = _lib.oc166_sim_serial_receive_baud(self._h, buf, rates, 256)
+            out += [(buf[i], rates[i]) for i in range(n)]
+            if n < 256:
+                return out
+
+    @property
+    def serial_frame_time(self) -> float:
+        """Seconds one ASC0 frame takes at its current settings."""
+        return _lib.oc166_sim_serial_frame_cycles(self._h) / _lib.oc166_sim_clock_hz(self._h)
+
+    @property
+    def serial_echo(self) -> bool:
+        return getattr(self, "_echo", False)
+
+    @serial_echo.setter
+    def serial_echo(self, v: bool) -> None:
+        """ASC0 hears what it sends, as on a K-line."""
+        self._echo = v
+        self._option("serial_echo", v)
+
+    def set_adc(self, channel: int, value: int) -> None:
+        """The 10-bit value A/D channel 'channel' converts to."""
+        if _lib.oc166_sim_set_adc(self._h, channel, value & 0x3FF) != 0:
+            raise SimulatorError("this board has no ADC channel {}".format(channel))
 
     def nmi(self) -> None:
         _lib.oc166_sim_nmi(self._h)

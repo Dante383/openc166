@@ -142,3 +142,24 @@ TEST_CASE("ADC: single conversion and scan") {
     CHECK(m->gpr(7) == 0x0100);
     CHECK((m->sfr_get(0xFFA0) & 0x0180) == 0);  // ADST and ADBSY clear
 }
+
+TEST_CASE("ASC0: a low pulse is framed at the current baud rate") {
+    // 25 ms low. At 250 baud (25 MHz, S0BG = 3124) that is the start bit and
+    // five data bits: 0E0H. At 10416 baud it covers the whole frame: 00H
+    // with a framing error.
+    auto m = load("MOV S0BG, #3124\nMOV S0CON, #8051H\nL: JMPR cc_UC, L\n");
+    auto* asc = m->find_device<Asc0>();
+    m->run(10);
+    asc->receive_low(*m, 625000);
+    m->run(10);
+    CHECK((m->sfr_get(0xFF6E) & 0x80) == 0);  // the stop bit is 15 ms ahead
+    m->run(100000);
+    CHECK(m->sfr_get(0xFEB2) == 0xE0);
+    CHECK((m->sfr_get(0xFFB0) & 0x0200) == 0);
+    m->sfr_set(0xFF6E, 0);
+    m->sfr_set(0xFEB4, 74);
+    asc->receive_low(*m, 625000);
+    m->run(10);
+    CHECK(m->sfr_get(0xFEB2) == 0x00);
+    CHECK((m->sfr_get(0xFFB0) & 0x0200) != 0);
+}

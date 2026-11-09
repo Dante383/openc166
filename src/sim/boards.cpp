@@ -37,7 +37,10 @@ Board c167cs_board() {
 Board siemens_5wy19(std::vector<std::uint8_t> flash) {
     Board b = c167cs_board();
     b.name = "Siemens 5WY19";
-    b.clock_hz = 25'000'000;
+    // 24 MHz: the boot block computes ASC0 reload values from 24000000
+    // (016E3600H at 089A7CH), and its 1 ms tick is 187 counts of T1 at
+    // fCPU / 128. An 8 MHz crystal times the PLL factor 3.
+    b.clock_hz = 24'000'000;
     flash.resize(0x80000, 0xFF);
     // Only address lines A0..A18 reach the flash, so it mirrors every 512 KB.
     b.chip_selects[0] = std::make_shared<Rom>("flash", std::move(flash), 0x7FFFF);

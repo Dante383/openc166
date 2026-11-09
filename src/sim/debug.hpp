@@ -67,6 +67,8 @@ public:
     // Runs until a breakpoint, watchpoint or other stop, or until
     // 'max_instructions' have run (0: no limit; reason None).
     StopInfo cont(std::uint64_t max_instructions = 0);
+    // Runs until the clock reaches 'cycle' (or a stop comes first).
+    StopInfo run_until_cycle(std::uint64_t cycle);
     // One instruction; an EXT or ATOMIC sequence runs as one unit, and
     // interrupt entries before it are included.
     StopInfo step();

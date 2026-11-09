@@ -27,6 +27,37 @@ class Stock5wy19Test(unittest.TestCase):
         self.assertEqual(s.sfr["SYSCON"], 0xE30E)
         self.assertTrue(s.einit_done)
 
+    def test_boot_block_answers_kwp2000(self):
+        # With the application signature at 9FFF0H erased, the boot block
+        # runs its download loop and talks KWP2000 on the K-line.
+        with open(IMAGE, "rb") as f:
+            data = bytearray(f.read())
+        data[0x1FFF0:0x1FFF4] = b"\xff" * 4
+        s = sim.Simulator(bytes(data), board="5wy19")
+        s.serial_echo = True
+        s.set_adc(1, 0x2A0)
+        s.run_for(0.1)
+        s.serial_receive()
+
+        def request(pdu, wait=0.4):
+            frame = bytes([0x80 + len(pdu), 0x11, 0xF1]) + pdu
+            frame += bytes([sum(frame) & 0xFF])
+            s.serial_send(frame)
+            s.run_for(wait)
+            reply = s.serial_receive(baud=10400)  # what a tester at 10400 baud hears
+            self.assertEqual(sum(reply[:-1]) & 0xFF, reply[-1], "checksum")
+            return reply[3:-1] if reply[0] != 0x80 else reply[4:-1]
+
+        s.run_for(0.025)
+        s.serial_break(0.025)
+        s.run_for(0.025)
+        self.assertEqual(request(b"\x81")[0], 0xC1)
+        self.assertEqual(request(b"\x10\x85"), b"\x50\x85")
+        ident = request(b"\x1a\x80")
+        self.assertEqual(ident[:2], b"\x5a\x80")
+        self.assertIn(b"G7DCMQ1A", ident)
+        self.assertEqual(request(b"\x3e\x01")[0], 0x7E)
+
     def test_disassembly_round_trip(self):
         with open(IMAGE, "rb") as f:
             data = f.read()

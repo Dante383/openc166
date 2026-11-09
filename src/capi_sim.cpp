@@ -6,9 +6,11 @@
 #include "disasm.hpp"
 #include "sim/boards.hpp"
 #include "sim/debug.hpp"
+#include "sim/peripherals.hpp"
 
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <new>
 #include <string>
@@ -17,6 +19,7 @@ struct oc166_sim {
     std::unique_ptr<oc166::sim::Machine> machine;
     std::unique_ptr<oc166::sim::Debugger> debugger;
     std::string text;  // for oc166_sim_describe()
+    std::deque<std::pair<std::uint8_t, std::uint32_t>> serial_out;  // ASC0 output not yet handed over, with its baud rate
 };
 
 struct oc166_snapshot {
@@ -283,6 +286,67 @@ int oc166_sim_add_watchpoint(oc166_sim* s, uint32_t address, uint32_t size, int 
 }
 int oc166_sim_remove_watchpoint(oc166_sim* s, int id) { return s && s->debugger->remove_watchpoint(id) ? 0 : -1; }
 
+int oc166_sim_run_until_cycle(oc166_sim* s, uint64_t cycle, oc166_stop* out) {
+    return guarded([&] { return s ? fill_stop(s->debugger->run_until_cycle(cycle), out) : -1; });
+}
+
+int oc166_sim_serial_send(oc166_sim* s, const uint8_t* data, size_t size, int flags) {
+    return guarded([&] {
+        if (!s || (!data && size)) return -1;
+        auto* asc = s->machine->find_device<Asc0>();
+        if (!asc) return -1;
+        for (size_t i = 0; i < size; ++i) asc->receive(*s->machine, data[i], (flags & 1) != 0);
+        return 0;
+    });
+}
+
+int oc166_sim_serial_line_low(oc166_sim* s, uint64_t cycles) {
+    return guarded([&] {
+        if (!s) return -1;
+        auto* asc = s->machine->find_device<Asc0>();
+        if (!asc) return -1;
+        asc->receive_low(*s->machine, cycles);
+        return 0;
+    });
+}
+
+size_t oc166_sim_serial_receive_baud(oc166_sim* s, uint8_t* out, uint32_t* baud, size_t size) {
+    try {
+        if (!s || !out) return 0;
+        if (auto* asc = s->machine->find_device<Asc0>())
+            for (auto b : asc->take_output_with_baud()) s->serial_out.push_back(b);
+        size_t n = 0;
+        for (; n < size && !s->serial_out.empty(); ++n) {
+            out[n] = s->serial_out.front().first;
+            if (baud) baud[n] = s->serial_out.front().second;
+            s->serial_out.pop_front();
+        }
+        return n;
+    } catch (...) {
+        return 0;
+    }
+}
+
+size_t oc166_sim_serial_receive(oc166_sim* s, uint8_t* out, size_t size) {
+    return oc166_sim_serial_receive_baud(s, out, nullptr, size);
+}
+
+uint64_t oc166_sim_serial_frame_cycles(const oc166_sim* s) {
+    if (!s) return 0;
+    auto* asc = s->machine->find_device<Asc0>();
+    return asc ? asc->frame_cycles(*s->machine) : 0;
+}
+
+int oc166_sim_set_adc(oc166_sim* s, int channel, uint16_t value) {
+    return guarded([&] {
+        if (!s || channel < 0 || channel > 15) return -1;
+        auto* adc = s->machine->find_device<Adc>();
+        if (!adc) return -1;
+        adc->set_input(channel, value);
+        return 0;
+    });
+}
+
 oc166_snapshot* oc166_sim_save(const oc166_sim* s) {
     try {
         if (!s) return nullptr;
@@ -296,7 +360,7 @@ oc166_snapshot* oc166_sim_save(const oc166_sim* s) {
 int oc166_sim_load(oc166_sim* s, const oc166_snapshot* snap) {
     return guarded([&] {
         if (!s || !snap) return -1;
-        s->machine->load(snap->snap);
+        s->machine->load(snap->snap, false);
         s->debugger->clear_history();
         return 0;
     });
@@ -320,6 +384,11 @@ int oc166_sim_set_option(oc166_sim* s, const char* name, int value) {
         s->machine->stop_on_undefined = value != 0;
     else if (n == "watchdog_frozen")
         s->machine->watchdog_frozen = value != 0;
+    else if (n == "serial_echo") {
+        auto* asc = s->machine->find_device<Asc0>();
+        if (!asc) return -1;
+        asc->echo = value != 0;
+    }
     else
         return -1;
     return 0;

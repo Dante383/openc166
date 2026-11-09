@@ -186,6 +186,25 @@ StopInfo Debugger::cont(std::uint64_t max_instructions) {
     return {};
 }
 
+StopInfo Debugger::run_until_cycle(std::uint64_t cycle) {
+    hit_ = {};
+    bool first = true;
+    while (m_.cycles() < cycle) {
+        const Stop s = raw_step(true, first);
+        first = false;
+        if (s == Stop::Idle) {
+            // Nothing will happen before the next input: let time pass.
+            return {};
+        }
+        if (s != Stop::None) {
+            StopInfo r = hit_;
+            r.reason = s;
+            return r;
+        }
+    }
+    return {};
+}
+
 StopInfo Debugger::step_over(std::uint64_t max_instructions) {
     auto insn = m_.decode_at(m_.pc());
     if (!insn || !is_call(*insn)) return step();
