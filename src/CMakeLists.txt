@@ -40,6 +40,8 @@ add_library(openc166_core STATIC
     assembler.cpp
     bundled.cpp
     debuginfo.cpp
+    disasm.cpp
+    disasm_module.cpp
     encode.cpp
     expr.cpp
     lexer.cpp
