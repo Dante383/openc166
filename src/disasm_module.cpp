@@ -4,6 +4,8 @@
 #include "assembler.hpp"
 #include "disasm.hpp"
 
+#include <algorithm>
+#include <cstdio>
 #include <map>
 #include <set>
 #include <string>

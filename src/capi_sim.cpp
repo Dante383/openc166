@@ -8,6 +8,7 @@
 #include "sim/debug.hpp"
 #include "sim/peripherals.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <deque>

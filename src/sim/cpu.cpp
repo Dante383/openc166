@@ -10,6 +10,7 @@
 
 #include "isa/isa.hpp"
 
+#include <algorithm>
 #include <string_view>
 #include <unordered_map>
 

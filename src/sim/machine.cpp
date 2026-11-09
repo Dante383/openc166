@@ -29,9 +29,8 @@ std::string sfr_label(Addr a) {
 }
 
 // TFR bits.
-constexpr std::uint16_t kNmi = 1u << 15, kStkof = 1u << 14, kStkuf = 1u << 13, kUndopc = 1u << 7,
-                        kPrtflt = 1u << 3, kIllopa = 1u << 2, kIllina = 1u << 1, kIllbus = 1u << 0;
-constexpr std::uint16_t kClassB = kUndopc | kPrtflt | kIllopa | kIllina | kIllbus;
+// (The class B trap bits are raised in cpu.cpp.)
+constexpr std::uint16_t kNmi = 1u << 15, kStkof = 1u << 14, kStkuf = 1u << 13;
 
 // WDTCON flags.
 constexpr std::uint16_t kWdtin = 1u << 0, kWdtr = 1u << 1, kSwr = 1u << 2, kShwr = 1u << 3, kLhwr = 1u << 4;

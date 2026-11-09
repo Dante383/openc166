@@ -4,6 +4,7 @@
 #include "bundled.hpp"
 #include "isa/isa.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdio>
