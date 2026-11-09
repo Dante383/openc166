@@ -38,6 +38,10 @@ Board siemens_5wy19(std::vector<std::uint8_t> flash) {
     flash.resize(0x80000, 0xFF);
     // Only address lines A0..A18 reach the flash, so it mirrors every 512 KB.
     b.chip_selects[0] = std::make_shared<Rom>("flash", std::move(flash), 0x7FFFF);
+    // The startup code points ADDRSEL2 at a 64 KB window at 90000H and runs
+    // a data bus and march test there; it reports an error unless RAM
+    // answers. The size of the chip is not known: 64 KB fills the window.
+    b.chip_selects[2] = std::make_shared<Ram>("ram", 0x10000, 0xFFFF);
     b.chip_selects[3] = std::make_shared<Latch>("latch");
     return b;
 }
