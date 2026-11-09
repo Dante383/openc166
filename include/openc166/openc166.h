@@ -217,6 +217,15 @@ OC166_API const char *oc166_result_last_error(const oc166_result *r);
  * same text as "openc166 -l". Returns NULL if out of memory. */
 OC166_API const char *oc166_result_listing(oc166_result *r);
 
+/* ---- Debug information ------------------------------------------------- */
+
+/* Debug information as JSON text (UTF-8): files, sections, symbols, and for
+ * every line that emitted bytes its address, size, source file and line,
+ * the $INCLUDE lines that led to it and, for code from a macro, the line of
+ * the macro body. docs/debug-info.md describes the format. Returns NULL if
+ * out of memory. */
+OC166_API const char *oc166_result_debug_info(oc166_result *r);
+
 /* ---- Symbols ----------------------------------------------------------- */
 
 typedef struct oc166_symbol {

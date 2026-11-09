@@ -320,6 +320,27 @@ class Result:
             self._listing = _text(text)
         return self._listing
 
+    def debug_info(self) -> dict:
+        """Debug information for the simulator and debugger, as parsed JSON.
+
+        Holds the files, sections and symbols, and for each line that
+        emitted bytes its address, size, file and line, the $INCLUDE lines
+        that led to it and, for code from a macro, the line of the macro
+        body. docs/debug-info.md describes the format. debug_info_json()
+        gives the text.
+        """
+        import json
+
+        return json.loads(self.debug_info_json())
+
+    def debug_info_json(self) -> str:
+        """The debug information as JSON text; see debug_info()."""
+        with self._lock:
+            text = _lib.oc166_result_debug_info(self._handle)
+        if text is None:
+            raise MemoryError("cannot format the debug information")
+        return text.decode("utf-8")
+
     def image(self, base: Optional[int] = None, fill: int = 0xFF) -> Image:
         """Lays all code and data out as one image.
 

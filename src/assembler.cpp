@@ -775,6 +775,10 @@ struct Macro {
     std::vector<std::string> params;  // upper case
     std::vector<std::string> locals;  // upper case
     std::vector<std::string> body;
+    // Where each body line was written: file name and line, for debug
+    // information. A body written inside another expansion records the
+    // line of the outermost call.
+    std::vector<std::pair<std::string, int>> where;
 };
 enum class BlockKind : std::uint8_t { Macro, Rept, Irp, Irpc };
 // A MACRO, REPT, IRP or IRPC block whose lines are being collected up to
@@ -846,6 +850,7 @@ private:
         int file_line = 0;
         int include_level = 0;
         std::size_t conds = 0;  // IF blocks open when the expansion started; EXITM closes the others
+        std::size_t body_line = 0;  // index in macro->body of the line last returned
         bool next_line(std::string& out);
     };
     // A file or an expansion being read. For a file: index into files_, the
@@ -881,6 +886,8 @@ private:
     std::unordered_map<std::string, std::shared_ptr<const Macro>> macros_;  // by key() of the name
     unsigned locals_ = 0;  // LOCAL names made so far: ??0000, ??0001, ...
     int macro_level_ = 0;  // expansion depth of the current line
+    std::string macro_file_;  // for a line of an expansion: where its body line was written
+    int macro_line_ = 0;
     bool gen_ = false;  // $GEN: list the lines of expansions
     bool macro_ = true;  // standard macros allowed ($NOMACRO turns them off)
     bool mpl_ = true;  // MPL macro processing: '%' is its metacharacter ($NOMPL and $NOMACRO turn it off)
@@ -1402,6 +1409,10 @@ void Assembler::run_lines() {
             file_line_ = e.file_line;
             level_ = e.include_level;
             macro_level_ = e.level;
+            if (e.body_line < e.macro->where.size()) {
+                macro_file_ = e.macro->where[e.body_line].first;
+                macro_line_ = e.macro->where[e.body_line].second;
+            }
             joined_.clear();
             if (!trim(carry).empty() && !trim(line).empty()) joined_ = files_[carry_file]->name;
             text = expand_tabs(std::move(carry) + line, tabs_);
@@ -1487,6 +1498,7 @@ bool Assembler::Expansion::next_line(std::string& out) {
         ++round;
         next = 0;
     }
+    body_line = next;
     out = std::move(lines[next++]);
     return true;
 }
@@ -1592,6 +1604,10 @@ void Assembler::process_line(std::string_view text) {
     lst.file_line = file_line_;
     lst.level = level_;
     lst.macro_level = macro_level_;
+    if (macro_level_ > 0) {
+        lst.macro_file = macro_file_;
+        lst.macro_line = macro_line_;
+    }
     lst.source = m166_source_.empty() ? std::string(text) : m166_source_;
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
@@ -2564,6 +2580,8 @@ void Assembler::collect(std::string_view text, Reporter& rep) {
         ++b.depth;
     }
     b.macro->body.emplace_back(text);
+    b.macro->where.emplace_back(files_[file_]->name, macro_level_ > 0 ? macro_line_ : file_line_);
+    if (macro_level_ > 0) b.macro->where.back().first = macro_file_;
 }
 
 // The ENDM of a block: defines the macro, or expands the REPT, IRP or IRPC

@@ -26,6 +26,7 @@ struct oc166_result {
     oc166::AssemblyResult res;
     std::vector<std::string> diagnostic_text;  // format_diagnostic() of each diagnostic
     std::optional<std::string> listing;
+    std::optional<std::string> debug_info;
     oc166::FlatImage image;
     std::string intel_hex;
     std::string srec;
@@ -308,6 +309,16 @@ const char* oc166_result_listing(oc166_result* r) {
     try {
         if (!r->listing) r->listing = oc166::format_listing(r->res);
         return r->listing->c_str();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+const char* oc166_result_debug_info(oc166_result* r) {
+    if (!r) return nullptr;
+    try {
+        if (!r->debug_info) r->debug_info = oc166::format_debug_info(r->res);
+        return r->debug_info->c_str();
     } catch (...) {
         return nullptr;
     }

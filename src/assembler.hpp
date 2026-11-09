@@ -73,6 +73,10 @@ struct ListingLine {
     int file_line = 0;  // line number within 'file'
     int level = 0;      // $INCLUDE nesting depth; 0 for the main source
     int macro_level = 0;  // nesting depth of macro, REPT, IRP and IRPC expansions; 0 outside them
+    // For a line of an expansion (macro_level > 0): the file and line where
+    // its body line was written. 'file' and 'file_line' give the call site.
+    std::string macro_file;
+    int macro_line = 0;
     bool skipped = false;  // in a false IF block: not assembled, listed without a line number
     // Left out of the printed listing: by $NOCOND (assembly is off after
     // it), or a line of a macro expansion under $NOGEN (the default).
@@ -188,5 +192,12 @@ std::string format_diagnostic(const Diagnostic& d);
 
 // Human-readable listing with addresses, code bytes and diagnostics.
 std::string format_listing(const AssemblyResult& result);
+
+// Debug information as JSON, for the simulator and debugger
+// (docs/debug-info.md describes the format): the files, sections and
+// symbols, and for every line that emitted bytes its address, size, file
+// and line, the chain of $INCLUDE lines that led to it and, for a line of a
+// macro, REPT, IRP or IRPC expansion, the line of the body it came from.
+std::string format_debug_info(const AssemblyResult& result);
 
 }  // namespace oc166

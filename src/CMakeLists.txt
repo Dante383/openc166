@@ -39,6 +39,7 @@ add_library(openc166_core STATIC
     isa/isa.cpp
     assembler.cpp
     bundled.cpp
+    debuginfo.cpp
     encode.cpp
     expr.cpp
     lexer.cpp
@@ -46,7 +47,8 @@ add_library(openc166_core STATIC
     mpl.cpp
     operand.cpp
     output.cpp
-    predef.cpp)
+    predef.cpp
+    sim/machine.cpp)
 add_library(openc166::core ALIAS openc166_core)
 
 target_include_directories(openc166_core

@@ -30,6 +30,8 @@ options:
                       default follows the output extension: .hex .h86 .ihx give hex,
                       .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
   -l, --listing FILE  write a listing
+  -g, --debug-info FILE
+                      write debug information (JSON) for the simulator and debugger
       --cpu CPU       c166 (default) or c167; $MOD167 in the source also selects c167
       --dialect D     keil (default): Keil A166 sources; tasking: TASKING a166
                       sources, run through openc166's m166 preprocessor (C167 only)
@@ -115,7 +117,7 @@ std::string replace_extension(const std::string& path, const std::string& ext) {
 int run(int argc, char** argv) {
     oc166::AssembleOptions opt;
     std::vector<std::string> inputs;
-    std::string output, listing;
+    std::string output, listing, debug_info;
     std::optional<std::int64_t> base;
     std::uint8_t fill = 0xFF;
     std::optional<Format> format;
@@ -141,6 +143,8 @@ int run(int argc, char** argv) {
             output = value();
         } else if (is("-l", "--listing")) {
             listing = value();
+        } else if (is("-g", "--debug-info")) {
+            debug_info = value();
         } else if (is("-f", "--format")) {
             std::string v = lower(value());
             if (v == "bin" || v == "binary")
@@ -228,6 +232,10 @@ int run(int argc, char** argv) {
     if (!listing.empty()) {
         std::string text = oc166::format_listing(result);
         write_file(listing, text.data(), text.size());
+    }
+    if (!debug_info.empty() && result.ok()) {
+        std::string text = oc166::format_debug_info(result);
+        write_file(debug_info, text.data(), text.size());
     }
     if (!result.ok()) {
         std::cerr << result.error_count() << " error(s), " << result.warning_count()
