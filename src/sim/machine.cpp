@@ -545,26 +545,22 @@ void Machine::run_events() {
 
 // ---- Stack, traps and interrupts ------------------------------------------
 
+// The circular stack that SYSCON.STKSZ selects is not modelled: SP moves
+// freely and STKOV/STKUN raise their traps. (The stock 5WY19 firmware sets
+// STKSZ to 111b, no wrap-around.)
 void Machine::push(std::uint16_t v) {
-    std::uint16_t sp = sfr_get(reg::SP);
-    const unsigned stksz = sfr_get(reg::SYSCON) >> 13;
-    static constexpr std::uint16_t kWindow[8] = {0x1FF, 0xFF, 0x7F, 0x3F, 0x7FF, 0xFFFF, 0xFFFF, 0xFFFF};
-    const std::uint16_t m = kWindow[stksz];
-    sp = static_cast<std::uint16_t>((sp & ~m) | ((sp - 2) & m));
+    const std::uint16_t sp = static_cast<std::uint16_t>(sfr_get(reg::SP) - 2);
     sfr_set(reg::SP, sp);
     write16(sp, v);
     if (!in_trap_entry_ && sp < sfr_get(reg::STKOV)) pending_traps_ |= kStkof;
 }
 
 std::uint16_t Machine::pop() {
-    std::uint16_t sp = sfr_get(reg::SP);
+    const std::uint16_t sp = sfr_get(reg::SP);
     const std::uint16_t v = read16(sp);
-    const unsigned stksz = sfr_get(reg::SYSCON) >> 13;
-    static constexpr std::uint16_t kWindow[8] = {0x1FF, 0xFF, 0x7F, 0x3F, 0x7FF, 0xFFFF, 0xFFFF, 0xFFFF};
-    const std::uint16_t m = kWindow[stksz];
-    sp = static_cast<std::uint16_t>((sp & ~m) | ((sp + 2) & m));
-    sfr_set(reg::SP, sp);
-    if (sp > sfr_get(reg::STKUN)) pending_traps_ |= kStkuf;
+    const std::uint16_t next = static_cast<std::uint16_t>(sp + 2);
+    sfr_set(reg::SP, next);
+    if (next > sfr_get(reg::STKUN)) pending_traps_ |= kStkuf;
     return v;
 }
 
