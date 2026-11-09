@@ -85,13 +85,15 @@ snapshots, so reverse execution does not replay them.
 
 ### Findings on the 5WY19
 
-- The startup code moves the CS2 window to 90000H (`ADDRSEL2 = 0904H`, 64
-  KB) and runs a data bus and march test over 91000H..93FFFH. Without RAM
-  there it sets bit 14 of its error word; with RAM, every test passes. So
-  the board very likely has external RAM, which the OpenGK parts list does
-  not show, and 90000H..9FFFFH is RAM at run time, not flash (the Ghidra
-  project maps it as flash "Calibration"). The chip size is unknown; the
-  model fills the window.
+- External RAM on CS2. The startup code moves the CS2 window to 90000H
+  for a moment (`ADDRSEL2 = 0904H`, 64 KB), runs a data bus and march test
+  over 91000H..93FFFH, and moves it back to 4 KB at 0FFF000H. Without RAM
+  there the test sets bit 14 of its error word; with RAM, every test passes.
+  So the board very likely has an external RAM chip, which the OpenGK parts
+  list does not show. The application later maps CS2 at 50000H for a
+  while (`ADDRSEL2 = 0504H`). In normal running 90000H..9FFFFH is flash
+  (the calibration), as the Ghidra project maps it. The chip size is
+  unknown; the model has 64 KB.
 - `ADDRSEL1 = 1008H` (1 MB at 100000H) and `ADDRSEL4 = 0FFE0H` (4 KB at
   0FFE000H) are programmed but no access to them has been seen yet.
 
