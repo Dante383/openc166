@@ -302,6 +302,170 @@ OC166_API const char *oc166_result_section_group(const oc166_result *r, size_t i
 OC166_API int oc166_result_section_bits(const oc166_result *r, size_t index, int *first_bit,
                                         int64_t *bit_count);
 
+/* ---- Disassembler ------------------------------------------------------ */
+
+/* Flags for oc166_disassemble(). */
+#define OC166_DIS_C166 1        /* C166 core: no EXT and ATOMIC instructions */
+#define OC166_DIS_NO_NAMES 2    /* numbers instead of SFR and bit names */
+#define OC166_DIS_REASSEMBLE 4  /* text that assembles back to the same bytes */
+#define OC166_DIS_ESFR 8        /* inside an EXTR sequence: short addresses are ESFRs */
+
+/* Disassembles the instruction at 'bytes' ('size' bytes readable), which
+ * lies at 'address'. Writes the text, NUL-terminated, to 'text' (up to
+ * 'text_size' bytes) and returns the instruction's length (2 or 4), or 0 if
+ * the bytes are not an instruction. If 'target' is not NULL it receives the
+ * branch target, or -1 if there is none. */
+OC166_API int oc166_disassemble(const uint8_t *bytes, size_t size, uint32_t address, int flags, char *text,
+                                size_t text_size, int64_t *target);
+
+/* A memory image as openc166 source that assembles back to exactly the same
+ * bytes ($SEGMENTED, one CODE section per 64 KB segment, DB for bytes that
+ * are not instructions). Returns a string to release with oc166_free(), or
+ * NULL if out of memory. '*fallbacks', if not NULL, receives the number of
+ * instructions written as DB because their text would not reassemble. */
+OC166_API char *oc166_disassemble_module(const uint8_t *bytes, size_t size, uint32_t base, int flags,
+                                         size_t *fallbacks);
+
+/* C167 register and bit names (REG167.INC and the core registers). Returns
+ * the SFR or ESFR address of 'name' (any case), or -1. */
+OC166_API int64_t oc166_sfr_address(const char *name);
+/* The word address of a named bit such as "IEN" or "Z", with its bit number
+ * in '*bit', or -1. */
+OC166_API int64_t oc166_bit_address(const char *name, int *bit);
+/* The name of the SFR or ESFR at 'address', or "" if it has none. */
+OC166_API const char *oc166_sfr_name(uint32_t address);
+
+/* Releases a string returned by oc166_disassemble_module(). */
+OC166_API void oc166_free(void *p);
+
+/* ---- Simulator --------------------------------------------------------- */
+
+typedef struct oc166_sim oc166_sim;
+
+/* A machine for 'board' ("5wy19", "c167cs", "c167" or "c166") with 'image'
+ * as its flash or ROM (from address 0), with a debugger attached. Returns
+ * NULL for an unknown board or if out of memory. */
+OC166_API oc166_sim *oc166_sim_new(const char *board, const uint8_t *image, size_t size);
+OC166_API void oc166_sim_free(oc166_sim *s);
+
+/* Resets the machine: 0 power-on, 1 software (SRST), 2 watchdog, 3 hardware. */
+OC166_API void oc166_sim_reset(oc166_sim *s, int kind);
+
+/* Why execution stopped. */
+typedef struct oc166_stop {
+    /* "none", "breakpoint", "watchpoint", "unmodelled", "powerdown", "idle",
+     * "halted" or "undefined". */
+    const char *reason;
+    int id;                   /* breakpoint or watchpoint */
+    int history_start;        /* reverse execution reached the oldest state */
+    int access;               /* watchpoint: 1 read, 2 write; else 0 */
+    uint32_t access_address;
+    int access_size;
+    uint16_t access_value;
+    uint16_t access_old;      /* for writes: the value before */
+} oc166_stop;
+
+/* Run control. Each returns 0 and fills '*out' (may be NULL), or -1.
+ * 'max_instructions' 0 means no limit. */
+OC166_API int oc166_sim_step(oc166_sim *s, oc166_stop *out);
+OC166_API int oc166_sim_continue(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
+OC166_API int oc166_sim_step_over(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
+OC166_API int oc166_sim_step_out(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
+OC166_API int oc166_sim_reverse_step(oc166_sim *s, oc166_stop *out);
+OC166_API int oc166_sim_reverse_continue(oc166_sim *s, oc166_stop *out);
+/* Goes to the state after 'instructions' instructions. Returns 0, or -1 if
+ * that lies before the recorded history. */
+OC166_API int oc166_sim_goto(oc166_sim *s, uint64_t instructions);
+/* Asks a running oc166_sim_continue() (on another thread, or from a
+ * callback) to stop; it returns with reason "halted". */
+OC166_API void oc166_sim_request_stop(oc166_sim *s);
+/* Snapshot spacing for reverse execution, and how many to keep. */
+OC166_API void oc166_sim_set_history(oc166_sim *s, uint64_t interval, size_t limit);
+/* Forgets the recorded history (call after changing state by hand). */
+OC166_API void oc166_sim_clear_history(oc166_sim *s);
+OC166_API uint64_t oc166_sim_history_start(const oc166_sim *s);
+
+/* State. */
+OC166_API uint32_t oc166_sim_pc(const oc166_sim *s);  /* CSP:IP */
+OC166_API void oc166_sim_set_pc(oc166_sim *s, uint32_t pc);
+OC166_API uint64_t oc166_sim_instructions(const oc166_sim *s);
+OC166_API uint64_t oc166_sim_cycles(const oc166_sim *s);
+OC166_API uint32_t oc166_sim_clock_hz(const oc166_sim *s);
+OC166_API uint16_t oc166_sim_gpr(const oc166_sim *s, int n);
+OC166_API void oc166_sim_set_gpr(oc166_sim *s, int n, uint16_t v);
+/* SFR or ESFR word as stored, without side effects. */
+OC166_API uint16_t oc166_sim_sfr(const oc166_sim *s, uint32_t address);
+OC166_API void oc166_sim_set_sfr(oc166_sim *s, uint32_t address, uint16_t v);
+/* EXT/ATOMIC state: instructions left, 1 if short addresses are ESFRs, the
+ * kind (0 none, 1 page, 2 segment) and its page or segment. Any pointer
+ * may be NULL. */
+OC166_API void oc166_sim_ext(const oc166_sim *s, int *left, int *esfr, int *kind, uint32_t *value);
+/* 1 after EINIT, 1 while in IDLE. */
+OC166_API int oc166_sim_einit_done(const oc166_sim *s);
+OC166_API int oc166_sim_idle(const oc166_sim *s);
+
+/* Memory, without side effects (the debugger's view). */
+OC166_API void oc166_sim_read(oc166_sim *s, uint32_t address, uint8_t *out, size_t size);
+OC166_API void oc166_sim_write(oc166_sim *s, uint32_t address, const uint8_t *data, size_t size);
+/* The physical address of the 16-bit data address 'a' (DPPs, or an active
+ * EXTP/EXTS). */
+OC166_API uint32_t oc166_sim_data_address(const oc166_sim *s, uint16_t a);
+/* What answers at 'address' ("IRAM", "SFR", "CS0:flash", ...). The string
+ * stays valid until the next call. */
+OC166_API const char *oc166_sim_describe(oc166_sim *s, uint32_t address);
+/* Disassembles at 'address' as the CPU would now (EXTR state). Like
+ * oc166_disassemble(); 'flags' takes OC166_DIS_NO_NAMES. */
+OC166_API int oc166_sim_disassemble(oc166_sim *s, uint32_t address, int flags, char *text, size_t text_size,
+                                    int64_t *target);
+
+/* Breakpoints and watchpoints. A condition callback, if not NULL, decides
+ * whether to stop (non-zero: stop). Return an id > 0, or -1. */
+typedef int (*oc166_condition)(void *user);
+OC166_API int oc166_sim_add_breakpoint(oc166_sim *s, uint32_t address, oc166_condition cond, void *user);
+OC166_API int oc166_sim_remove_breakpoint(oc166_sim *s, int id);
+/* 'kinds': 1 read, 2 write, 4 value change (bits in 'mask' only). */
+OC166_API int oc166_sim_add_watchpoint(oc166_sim *s, uint32_t address, uint32_t size, int kinds, uint16_t mask,
+                                       oc166_condition cond, void *user);
+OC166_API int oc166_sim_remove_watchpoint(oc166_sim *s, int id);
+
+/* Snapshots. */
+typedef struct oc166_snapshot oc166_snapshot;
+OC166_API oc166_snapshot *oc166_sim_save(const oc166_sim *s);
+OC166_API int oc166_sim_load(oc166_sim *s, const oc166_snapshot *snap);
+OC166_API void oc166_snapshot_free(oc166_snapshot *snap);
+OC166_API uint64_t oc166_snapshot_instructions(const oc166_snapshot *snap);
+
+/* Interrupts: sets the request flag of the source whose control register
+ * is at 'ic'; oc166_sim_nmi() requests the NMI trap. */
+OC166_API void oc166_sim_request_interrupt(oc166_sim *s, uint32_t ic);
+OC166_API void oc166_sim_nmi(oc166_sim *s);
+
+/* Options: "stop_on_unmodelled", "stop_on_undefined", "watchdog_frozen".
+ * Returns 0, or -1 for an unknown name. */
+OC166_API int oc166_sim_set_option(oc166_sim *s, const char *name, int value);
+
+/* Accesses to registers and addresses that nothing models, each reported
+ * once. */
+typedef struct oc166_unmodelled {
+    uint64_t instruction;
+    uint32_t pc;
+    uint32_t address;
+    int write;
+    uint16_t value;
+    const char *what;
+} oc166_unmodelled;
+OC166_API size_t oc166_sim_unmodelled_count(const oc166_sim *s);
+OC166_API int oc166_sim_unmodelled(const oc166_sim *s, size_t index, oc166_unmodelled *out);
+OC166_API void oc166_sim_clear_unmodelled(oc166_sim *s);
+
+/* A device on chip select 'cs' (0..4) driven by callbacks: read returns
+ * the byte at a physical address, write receives one. The device keeps no
+ * state of its own in snapshots. Returns 0, or -1. */
+typedef uint8_t (*oc166_read_fn)(void *user, uint32_t address);
+typedef void (*oc166_write_fn)(void *user, uint32_t address, uint8_t value);
+OC166_API int oc166_sim_set_chip_select(oc166_sim *s, int cs, const char *name, oc166_read_fn read,
+                                        oc166_write_fn write, void *user);
+
 #ifdef __cplusplus
 }
 #endif

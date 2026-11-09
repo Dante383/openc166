@@ -67,6 +67,35 @@ class Section(ctypes.Structure):
     ]
 
 
+class Stop(ctypes.Structure):
+    _fields_ = [
+        ("reason", ctypes.c_char_p),
+        ("id", ctypes.c_int),
+        ("history_start", ctypes.c_int),
+        ("access", ctypes.c_int),
+        ("access_address", ctypes.c_uint32),
+        ("access_size", ctypes.c_int),
+        ("access_value", ctypes.c_uint16),
+        ("access_old", ctypes.c_uint16),
+    ]
+
+
+class Unmodelled(ctypes.Structure):
+    _fields_ = [
+        ("instruction", ctypes.c_uint64),
+        ("pc", ctypes.c_uint32),
+        ("address", ctypes.c_uint32),
+        ("write", ctypes.c_int),
+        ("value", ctypes.c_uint16),
+        ("what", ctypes.c_char_p),
+    ]
+
+
+CONDITION = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)
+READ_FN = ctypes.CFUNCTYPE(ctypes.c_uint8, ctypes.c_void_p, ctypes.c_uint32)
+WRITE_FN = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint8)
+
+
 def _library_paths():
     override = os.environ.get("OPENC166_LIBRARY")
     if override:
@@ -147,6 +176,62 @@ _declare("oc166_result_section_group", _str, _p, _size)
 _declare(
     "oc166_result_section_bits", _int, _p, _size, ctypes.POINTER(_int), ctypes.POINTER(ctypes.c_int64)
 )
+
+# Disassembler and simulator.
+_u8p = ctypes.POINTER(ctypes.c_uint8)
+_u32, _u64, _u16, _i64 = ctypes.c_uint32, ctypes.c_uint64, ctypes.c_uint16, ctypes.c_int64
+_declare("oc166_disassemble", _int, _u8p, _size, _u32, _int, ctypes.c_char_p, _size, ctypes.POINTER(_i64))
+_declare("oc166_disassemble_module", ctypes.c_void_p, _u8p, _size, _u32, _int, ctypes.POINTER(_size))
+_declare("oc166_free", None, ctypes.c_void_p)
+_declare("oc166_sfr_address", _i64, _str)
+_declare("oc166_bit_address", _i64, _str, ctypes.POINTER(_int))
+_declare("oc166_sfr_name", _str, _u32)
+_declare("oc166_sim_new", _p, _str, _u8p, _size)
+_declare("oc166_sim_free", None, _p)
+_declare("oc166_sim_reset", None, _p, _int)
+for _name in ("oc166_sim_step", "oc166_sim_reverse_step", "oc166_sim_reverse_continue"):
+    _declare(_name, _int, _p, ctypes.POINTER(Stop))
+for _name in ("oc166_sim_continue", "oc166_sim_step_over", "oc166_sim_step_out"):
+    _declare(_name, _int, _p, _u64, ctypes.POINTER(Stop))
+_declare("oc166_sim_goto", _int, _p, _u64)
+_declare("oc166_sim_request_stop", None, _p)
+_declare("oc166_sim_set_history", None, _p, _u64, _size)
+_declare("oc166_sim_clear_history", None, _p)
+_declare("oc166_sim_history_start", _u64, _p)
+_declare("oc166_sim_pc", _u32, _p)
+_declare("oc166_sim_set_pc", None, _p, _u32)
+_declare("oc166_sim_instructions", _u64, _p)
+_declare("oc166_sim_cycles", _u64, _p)
+_declare("oc166_sim_clock_hz", _u32, _p)
+_declare("oc166_sim_gpr", _u16, _p, _int)
+_declare("oc166_sim_set_gpr", None, _p, _int, _u16)
+_declare("oc166_sim_sfr", _u16, _p, _u32)
+_declare("oc166_sim_set_sfr", None, _p, _u32, _u16)
+_declare(
+    "oc166_sim_ext", None, _p, ctypes.POINTER(_int), ctypes.POINTER(_int), ctypes.POINTER(_int), ctypes.POINTER(_u32)
+)
+_declare("oc166_sim_einit_done", _int, _p)
+_declare("oc166_sim_idle", _int, _p)
+_declare("oc166_sim_read", None, _p, _u32, _u8p, _size)
+_declare("oc166_sim_write", None, _p, _u32, _u8p, _size)
+_declare("oc166_sim_data_address", _u32, _p, _u16)
+_declare("oc166_sim_describe", _str, _p, _u32)
+_declare("oc166_sim_disassemble", _int, _p, _u32, _int, ctypes.c_char_p, _size, ctypes.POINTER(_i64))
+_declare("oc166_sim_add_breakpoint", _int, _p, _u32, CONDITION, ctypes.c_void_p)
+_declare("oc166_sim_remove_breakpoint", _int, _p, _int)
+_declare("oc166_sim_add_watchpoint", _int, _p, _u32, _u32, _int, _u16, CONDITION, ctypes.c_void_p)
+_declare("oc166_sim_remove_watchpoint", _int, _p, _int)
+_declare("oc166_sim_save", _p, _p)
+_declare("oc166_sim_load", _int, _p, _p)
+_declare("oc166_snapshot_free", None, _p)
+_declare("oc166_snapshot_instructions", _u64, _p)
+_declare("oc166_sim_request_interrupt", None, _p, _u32)
+_declare("oc166_sim_nmi", None, _p)
+_declare("oc166_sim_set_option", _int, _p, _str, _int)
+_declare("oc166_sim_unmodelled_count", _size, _p)
+_declare("oc166_sim_unmodelled", _int, _p, _size, ctypes.POINTER(Unmodelled))
+_declare("oc166_sim_clear_unmodelled", None, _p)
+_declare("oc166_sim_set_chip_select", _int, _p, _int, _str, READ_FN, WRITE_FN, ctypes.c_void_p)
 
 if lib.oc166_api_version() != API_VERSION:
     raise ImportError(

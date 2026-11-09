@@ -71,7 +71,7 @@ set_target_properties(openc166_core PROPERTIES
 # libopenc166.so, libopenc166.dylib or openc166.dll. It exports only the
 # oc166_* functions. The Python package loads it with ctypes.
 if(OPENC166_BUILD_SHARED)
-    add_library(openc166_shared SHARED capi.cpp)
+    add_library(openc166_shared SHARED capi.cpp capi_sim.cpp)
     add_library(openc166::shared ALIAS openc166_shared)
     set_target_properties(openc166_shared PROPERTIES
         OUTPUT_NAME openc166

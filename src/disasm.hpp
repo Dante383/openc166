@@ -9,6 +9,8 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace oc166::dis {
@@ -80,6 +82,11 @@ struct Names {
 // SFR and bit names of the C167 (the core registers and REG167.INC, plus
 // the C167CS registers that file lacks).
 const Names& c167_names();
+
+// Address of a C167 SFR or ESFR by name (any case), from the same tables.
+std::optional<std::uint32_t> c167_sfr_address(std::string_view name);
+// A named bit (such as IEN or Z): its word address and bit number.
+std::optional<std::pair<std::uint32_t, int>> c167_bit(std::string_view name);
 
 struct FormatOptions {
     // Text that openc166 assembles back to exactly the same bytes (in a

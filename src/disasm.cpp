@@ -264,6 +264,28 @@ const Names& c167_names() {
     return names;
 }
 
+namespace {
+std::string upper_name(std::string_view n) {
+    std::string u(n);
+    for (auto& c : u) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    return u;
+}
+}  // namespace
+
+std::optional<std::uint32_t> c167_sfr_address(std::string_view name) {
+    const std::string u = upper_name(name);
+    for (const auto& [a, n] : c167_tables().sfrs)
+        if (upper_name(n) == u) return a;
+    return std::nullopt;
+}
+
+std::optional<std::pair<std::uint32_t, int>> c167_bit(std::string_view name) {
+    const std::string u = upper_name(name);
+    for (const auto& [k, n] : c167_tables().bits)
+        if (upper_name(n) == u) return k;
+    return std::nullopt;
+}
+
 std::string hex(std::uint32_t v) {
     if (v < 10) return std::to_string(v);
     char buf[16];
@@ -372,8 +394,17 @@ std::string format(const Insn& insn, std::uint32_t address, const ExtState& ext,
         case Cls::Seg: t = (op.cls == Cls::Seg ? "" : "#") + hex(v); break;
         case Cls::Irang2: t = "#" + std::to_string(op.value); break;
         case Cls::Cc: t = kCc[v & 15]; break;
-        case Cls::Rel:
-        case Cls::Caddr: t = code_text(*branch_target(insn, address)); break;
+        case Cls::Rel: t = code_text(*branch_target(insn, address)); break;
+        case Cls::Caddr:
+            // After a segment (JMPS, CALLS) the offset alone; else the full
+            // target in the current segment.
+            if (i > 0 && insn.ops[0].cls == Cls::Seg) {
+                std::string n = names.code && !options.reassemble ? names.code(*branch_target(insn, address)) : "";
+                t = n.empty() ? hex(v) : n;
+            } else {
+                t = code_text(*branch_target(insn, address));
+            }
+            break;
         }
         if (i) ops += ", ";
         ops += t;

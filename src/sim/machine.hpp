@@ -380,6 +380,8 @@ public:
     // ---- Devices
     void add_device(std::shared_ptr<Device> d);
     const std::vector<std::shared_ptr<Device>>& devices() const { return devices_; }
+    // Puts 'd' on chip select 'cs' (0..4), replacing what was there.
+    void set_chip_select(int cs, std::shared_ptr<Device> d);
 
     // Decoded instruction at a physical address (cached).
     std::optional<dis::Insn> decode_at(Addr a);

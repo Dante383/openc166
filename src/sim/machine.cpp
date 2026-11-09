@@ -154,6 +154,13 @@ void Machine::add_device(std::shared_ptr<Device> d) {
     devices_.push_back(std::move(d));
 }
 
+void Machine::set_chip_select(int cs, std::shared_ptr<Device> d) {
+    if (cs < 0 || cs > 4) throw std::invalid_argument("chip select must be 0..4");
+    add_device(d);
+    board_.chip_selects[static_cast<std::size_t>(cs)] = std::move(d);
+    std::fill(decode_cache_.begin(), decode_cache_.end(), CachedInsn{});
+}
+
 void Machine::reset(ResetKind kind) {
     const std::uint16_t old_wdtcon = sfr_get(reg::WDTCON);
     // Registers to their reset values; RAM keeps its contents.
