@@ -58,6 +58,19 @@ class Stock5wy19Test(unittest.TestCase):
         self.assertIn(b"G7DCMQ1A", ident)
         self.assertEqual(request(b"\x3e\x01")[0], 0x7E)
 
+        # SecurityAccess is held off for about 10 s after power-on. The
+        # Siemens level (0FDH) compares with a key stored in flash; at that
+        # level ReadMemoryByAddress may read the flash.
+        for _ in range(40):
+            seed = request(b"\x27\xfd")
+            if seed[:2] != b"\x7f\x27":
+                break
+            request(b"\x3e\x01")
+        self.assertEqual(seed[:2], b"\x67\xfd")
+        key = bytes(data[0x3F60:0x3F64])
+        self.assertEqual(request(b"\x27\xfe" + key), b"\x67\xfe\x34")
+        self.assertEqual(request(b"\x23\x09\x00\x40\x04"), b"\x63ca66")
+
     def test_disassembly_round_trip(self):
         with open(IMAGE, "rb") as f:
             data = f.read()

@@ -863,6 +863,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     r.add_argument("--freeze-watchdog", action="store_true")
     r.add_argument("--trace", type=int, default=0, help="print the last N instructions")
 
+    sv = sub.add_parser("serve", help="serve the ECU's serial port (ASC0) over TCP for host tools")
+    sv.add_argument("image")
+    sv.add_argument("--board", default="5wy19", choices=Simulator.BOARDS)
+    sv.add_argument("--port", type=int, default=5555)
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--raw", action="store_true", help="plain TCP (socket://) instead of RFC 2217")
+    sv.add_argument("--serial", action="store_true",
+                    help="a plain serial line, not a K-line: no bus echo and no fast-init handling")
+    sv.add_argument("--adc", action="append", default=[], metavar="CH=VALUE",
+                    help="A/D channel input, e.g. 1=0x2A0 (default 200H on every channel)")
+    sv.add_argument("--boot-mode", action="store_true",
+                    help="5WY19: erase the application signature at 9FFF0H so the boot block runs")
+    sv.add_argument("--symbols", help="Ghidra export (JSON or CSV)")
+    sv.add_argument("-v", "--verbose", action="store_true")
+
     a = p.parse_args(argv)
     syms = Symbols()
     if getattr(a, "symbols", None):
@@ -885,6 +900,30 @@ def main(argv: Optional[List[str]] = None) -> int:
             if name:
                 print("{}:".format(name))
             print("{:06X}  {:<12} {}".format(ins.address, ins.data.hex().upper(), ins.text))
+        return 0
+
+    if a.cmd == "serve":
+        import logging
+
+        from .bridge import SerialBridge
+
+        logging.basicConfig(level=logging.DEBUG if a.verbose else logging.INFO, format="%(message)s")
+        if a.boot_mode:
+            data = bytearray(data)
+            data[0x1FFF0:0x1FFF4] = b"\xff" * 4
+            data = bytes(data)
+        s = Simulator(data, a.board, syms)
+        for item in a.adc:
+            ch, _, value = item.partition("=")
+            s.set_adc(int(ch), _int(value))
+        bridge = SerialBridge(s, port=a.port, host=a.host, rfc2217=not a.raw, kline=not a.serial)
+        bridge.listen()
+        print("serving ASC0 of {} at {}".format(a.board, bridge.url), flush=True)
+        try:
+            bridge.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        print("stats: {}".format(bridge.stats))
         return 0
 
     s = Simulator(data, a.board, syms)
