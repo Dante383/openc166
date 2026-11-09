@@ -231,6 +231,32 @@ The package needs Python 3.9 or newer. It also installs the `openc166`
 command. It loads the library through `ctypes`, so one wheel works with
 every Python version.
 
+## Simulator and debugger
+
+openc166 also simulates the C167 and debugs firmware on it: source- and
+disassembly-level stepping, breakpoints and data watchpoints (on SFRs and
+single bits too), and reverse execution. It runs the stock Siemens 5WY19
+firmware through all of its reset self-tests.
+
+```python
+from openc166 import sim
+
+s = sim.Simulator.from_file("firmware.bin", board="5wy19")
+s.break_at(0x882D0)
+s.cont()
+s.watch(0xE79E, "write")
+s.reverse_continue()        # who last wrote 0E79EH?
+```
+
+`python -m openc166.dap` is a Debug Adapter Protocol server for VS Code
+([editors/vscode](editors/vscode/README.md)) and Neovim. `openc166-sim
+disasm` disassembles an image (or turns it into source that reassembles
+byte for byte), `openc166-sim run` runs firmware headless and lists the
+registers it touched that are not modelled yet, and `openc166 -g` writes
+debug information ([format](docs/debug-info.md)). See
+[docs/simulator.md](docs/simulator.md) for what is modelled and what is
+next.
+
 ## C API
 
 [include/openc166/openc166.h](https://github.com/Dante383/openc166/blob/main/include/openc166/openc166.h) declares a plain C
