@@ -158,6 +158,11 @@ struct Source {
 // starts at options.origin.
 AssemblyResult assemble(const std::vector<Source>& sources, const AssembleOptions& options = {});
 
+// The emitted bytes as runs of consecutive addresses, sorted by address.
+// Chunks that touch or overlap are joined; where they overlap the later
+// one wins, as in flat_image().
+std::vector<Chunk> memory_runs(const AssemblyResult& result);
+
 // One contiguous memory image.
 struct FlatImage {
     std::int64_t base = 0;
@@ -186,6 +191,13 @@ std::string format_intel_hex(const AssemblyResult& result, int record_size = 16)
 // LF. Throws std::invalid_argument if an address does not fit or the record
 // size is out of range (1..252 for S1, 1..251 for S2, 1..250 for S3).
 std::string format_srec(const AssemblyResult& result, int record_size = 16, int address_size = 0);
+
+// The program as an ELF executable for the C166 (EM_C166) with DWARF 4
+// debug information: one loadable segment per run of bytes, sections named
+// after the assembler's sections, the labels in .symtab and as DWARF
+// labels, and a line table (code from macros maps to the line of the macro
+// body). Throws std::invalid_argument if an address does not fit.
+std::vector<std::uint8_t> format_elf(const AssemblyResult& result);
 
 // "file:line:column: error A62: message"
 std::string format_diagnostic(const Diagnostic& d);

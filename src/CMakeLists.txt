@@ -40,6 +40,7 @@ add_library(openc166_core STATIC
     assembler.cpp
     bundled.cpp
     debuginfo.cpp
+    elf.cpp
     disasm.cpp
     disasm_module.cpp
     encode.cpp
@@ -62,6 +63,8 @@ target_include_directories(openc166_core
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${OPENC166_GENERATED_DIR})
 target_compile_features(openc166_core PUBLIC cxx_std_20)
+# Named as the producer in debug information.
+target_compile_definitions(openc166_core PRIVATE OPENC166_VERSION_STRING="${PROJECT_VERSION}")
 target_link_libraries(openc166_core PRIVATE openc166_options)
 set_target_properties(openc166_core PROPERTIES
     POSITION_INDEPENDENT_CODE ON

@@ -320,6 +320,21 @@ class Result:
             self._listing = _text(text)
         return self._listing
 
+    def elf(self) -> bytes:
+        """The program as an ELF file for the C166 (EM_C166) with DWARF 4
+        debug information: loadable segments, sections named after the
+        assembler sections, the labels as symbols, and a line table. Ghidra,
+        readelf and objdump read it. Raises AssemblyError if the source has
+        errors."""
+        if not self.ok:
+            raise AssemblyError(self)
+        size = ctypes.c_size_t()
+        with self._lock:
+            p = _lib.oc166_result_elf(self._handle, ctypes.byref(size))
+            if not p:
+                raise ValueError(_text(_lib.oc166_result_last_error(self._handle)))
+            return ctypes.string_at(p, size.value)
+
     def debug_info(self) -> dict:
         """Debug information for the simulator and debugger, as parsed JSON.
 

@@ -26,9 +26,10 @@ are combined.
 
 options:
   -o, --output FILE   output file (default: the first SOURCE with the extension of the format)
-  -f, --format FMT    bin (raw binary), hex (Intel HEX) or srec (S-records); the
-                      default follows the output extension: .hex .h86 .ihx give hex,
-                      .srec .s19 .s28 .s37 .mot .sx give srec, anything else bin
+  -f, --format FMT    bin (raw binary), hex (Intel HEX), srec (S-records) or elf (ELF
+                      with DWARF debug information); the default follows the output
+                      extension: .hex .h86 .ihx give hex, .srec .s19 .s28 .s37 .mot .sx
+                      give srec, .elf .axf give elf, anything else bin
   -l, --listing FILE  write a listing
   -g, --debug-info FILE
                       write debug information (JSON) for the simulator and debugger
@@ -92,7 +93,7 @@ void write_file(const std::string& path, const char* data, std::size_t size) {
         throw std::runtime_error("cannot write '" + path + "'");
 }
 
-enum class Format { Bin, Hex, Srec };
+enum class Format { Bin, Hex, Srec, Elf };
 
 std::string lower(std::string_view s) {
     std::string v(s);
@@ -153,8 +154,10 @@ int run(int argc, char** argv) {
                 format = Format::Hex;
             else if (v == "srec" || v == "s19" || v == "mot")
                 format = Format::Srec;
+            else if (v == "elf")
+                format = Format::Elf;
             else
-                throw UsageError("unknown format '" + v + "' (use bin, hex or srec)");
+                throw UsageError("unknown format '" + v + "' (use bin, hex, srec or elf)");
         } else if (is("", "--record-size")) {
             std::int64_t n = parse_number(value(), "record size");
             if (n < 1 || n > 255) throw UsageError("record size must be 1..255");
@@ -213,6 +216,8 @@ int run(int argc, char** argv) {
             format = Format::Hex;
         else if (ext == ".srec" || ext == ".s19" || ext == ".s28" || ext == ".s37" || ext == ".mot" || ext == ".sx")
             format = Format::Srec;
+        else if (ext == ".elf" || ext == ".axf")
+            format = Format::Elf;
         else
             format = Format::Bin;
     }
@@ -221,7 +226,10 @@ int run(int argc, char** argv) {
         srec_address_size = ext == ".s19" ? 2 : ext == ".s28" ? 3 : ext == ".s37" ? 4 : 0;
     }
     if (output.empty())
-        output = replace_extension(inputs.front(), *format == Format::Hex ? ".hex" : *format == Format::Srec ? ".srec" : ".bin");
+        output = replace_extension(inputs.front(), *format == Format::Hex    ? ".hex"
+                                                   : *format == Format::Srec ? ".srec"
+                                                   : *format == Format::Elf  ? ".elf"
+                                                                             : ".bin");
 
     std::vector<oc166::Source> sources;
     for (const auto& input : inputs) sources.push_back({input, read_file(input)});
@@ -242,7 +250,10 @@ int run(int argc, char** argv) {
                   << " warning(s); no output written\n";
         return 1;
     }
-    if (*format == Format::Bin) {
+    if (*format == Format::Elf) {
+        std::vector<std::uint8_t> elf = oc166::format_elf(result);
+        write_file(output, reinterpret_cast<const char*>(elf.data()), elf.size());
+    } else if (*format == Format::Bin) {
         oc166::FlatImage image = oc166::flat_image(result, base, fill);
         write_file(output, reinterpret_cast<const char*>(image.bytes.data()), image.bytes.size());
     } else {

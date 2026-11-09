@@ -207,8 +207,8 @@ OC166_API const char *oc166_result_intel_hex(oc166_result *r, int record_size);
  * The text stays valid until the next oc166_result_srec() call on 'r'. */
 OC166_API const char *oc166_result_srec(oc166_result *r, int record_size, int address_size);
 
-/* Message of the last failed oc166_result_image(), oc166_result_intel_hex()
- * or oc166_result_srec() call, or "". */
+/* Message of the last failed oc166_result_image(), oc166_result_intel_hex(),
+ * oc166_result_srec() or oc166_result_elf() call, or "". */
 OC166_API const char *oc166_result_last_error(const oc166_result *r);
 
 /* ---- Listing ----------------------------------------------------------- */
@@ -216,6 +216,15 @@ OC166_API const char *oc166_result_last_error(const oc166_result *r);
 /* The listing: addresses, code bytes, source lines and diagnostics, the
  * same text as "openc166 -l". Returns NULL if out of memory. */
 OC166_API const char *oc166_result_listing(oc166_result *r);
+
+/* ---- ELF --------------------------------------------------------------- */
+
+/* The program as an ELF executable for the C166 (EM_C166) with DWARF 4
+ * debug information: a loadable segment per run of bytes, sections named
+ * after the assembler sections, the labels in .symtab and in .debug_info,
+ * and a .debug_line table. Returns a pointer to 'size' bytes, valid until
+ * the next call on 'r', or NULL; then oc166_result_last_error() says why. */
+OC166_API const uint8_t *oc166_result_elf(oc166_result *r, size_t *size);
 
 /* ---- Debug information ------------------------------------------------- */
 

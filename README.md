@@ -253,7 +253,9 @@ s.reverse_continue()        # who last wrote 0E79EH?
 disasm` disassembles an image (or turns it into source that reassembles
 byte for byte), `openc166-sim run` runs firmware headless and lists the
 registers it touched that are not modelled yet, and `openc166 -g` writes
-debug information ([format](docs/debug-info.md)). See
+debug information ([format](docs/debug-info.md)). `openc166 -o prog.elf`
+writes an ELF file with DWARF line and symbol information for Ghidra,
+readelf, objdump and other tools. See
 [docs/simulator.md](docs/simulator.md) for what is modelled and what is
 next.
 

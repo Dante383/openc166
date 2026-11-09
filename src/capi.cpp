@@ -27,6 +27,7 @@ struct oc166_result {
     std::vector<std::string> diagnostic_text;  // format_diagnostic() of each diagnostic
     std::optional<std::string> listing;
     std::optional<std::string> debug_info;
+    std::vector<std::uint8_t> elf;
     oc166::FlatImage image;
     std::string intel_hex;
     std::string srec;
@@ -312,6 +313,23 @@ const char* oc166_result_listing(oc166_result* r) {
     } catch (...) {
         return nullptr;
     }
+}
+
+const uint8_t* oc166_result_elf(oc166_result* r, size_t* size) {
+    if (!r) return nullptr;
+    try {
+        r->last_error.clear();
+        r->elf = oc166::format_elf(r->res);
+        if (size) *size = r->elf.size();
+        return r->elf.data();
+    } catch (const std::exception& e) {
+        try {
+            r->last_error = e.what();
+        } catch (...) {
+        }
+    } catch (...) {
+    }
+    return nullptr;
 }
 
 const char* oc166_result_debug_info(oc166_result* r) {

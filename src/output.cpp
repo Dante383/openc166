@@ -10,11 +10,6 @@
 
 namespace oc166 {
 
-namespace {
-
-// The chunks as sorted runs of consecutive bytes. Chunks that touch or
-// overlap are joined; where they overlap the later chunk wins, as in
-// flat_image().
 std::vector<Chunk> memory_runs(const AssemblyResult& result) {
     std::vector<Chunk> runs;
     std::vector<const Chunk*> sorted;
@@ -43,6 +38,9 @@ std::vector<Chunk> memory_runs(const AssemblyResult& result) {
     }
     return runs;
 }
+
+namespace {
+
 
 // Builds one record: the bytes are written as hex digits after 'start', and
 // their checksum is appended.

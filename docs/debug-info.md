@@ -60,3 +60,47 @@ order:
 
 Lines in false IF blocks, and lines that emit no bytes, are left out. Bits
 of BIT sections are not lines.
+
+## ELF with DWARF
+
+`openc166 -o prog.elf prog.a66` (or `-f elf`, `oc166_result_elf()`,
+`Result.elf()`) writes the program as an ELF executable for the C166, with
+the same information in the standard formats:
+
+- ELF32, little endian, `ET_EXEC`, machine `EM_C166` (116; readelf calls it
+  "Infineon Technologies xc16x"), entry 0.
+- One `PT_LOAD` segment per run of consecutive bytes, read/execute for
+  code and constants, read/write for data. Sections are named after the
+  assembler's sections; bytes outside any section go into `.abs_XXXXXX`.
+- `.symtab`: a `STT_FILE` per module and every label, `GLOBAL` if PUBLIC
+  or GLOBAL, as `STT_OBJECT` with a size for BYTE, WORD and DWORD labels.
+  EQU and SET values, bits and registers are not ELF symbols (the JSON
+  debug information has them).
+- DWARF 4: a compile unit per module (`DW_LANG_Mips_Assembler`, the
+  closest DWARF has to "assembler") with a `DW_TAG_label` for each label,
+  `.debug_line`, `.debug_aranges` and `.debug_ranges`. In the line table,
+  code from a macro, REPT, IRP or IRPC maps to the line of the body, as a
+  compiler maps inlined code; the call site is in the JSON debug
+  information. Include files are files of the table under their names as
+  the assembler opened them.
+
+readelf, objdump (`--dwarf=decodedline`) and even a gdb without C166
+support (`info line *0xE002`, `list LABEL`) read it.
+
+### Ghidra
+
+Ghidra's ELF loader picks the language from the processor module's
+`.opinion` file. The C166 module (`c166-ghidra-module`) has none yet, so
+choose the language by hand when importing, or add to its
+`data/languages/c166.opinion`:
+
+```xml
+<opinions>
+    <constraint loader="Executable and Linking Format (ELF)" compilerSpecID="tasking">
+        <constraint primary="116" processor="Infineon C167CR" size="16" variant="C167CR" />
+    </constraint>
+</opinions>
+```
+
+The import then has the memory blocks, the labels and, with the DWARF
+analyzer, the source lines.
