@@ -63,10 +63,10 @@ also works.
 | 1 | Debug information | Done. Every byte of the examples maps to a line (python test). |
 | 2 | Disassembler | Done. The whole 512 KB stock dump reassembles byte for byte; one data word at 20010H decodes as a `JMPR` that wraps inside its segment, which A166 cannot spell, and stays `DB`. |
 | 3 | CPU core, bus, snapshots | Done except the hardware oracle (below). The stock reset path passes all its self-tests: error word 0000H. |
-| 4 | Bootloader boots | Done, see "K-line and gkflasher" below. ASC0, CAPCOM T0/T1/T7/T8 and the ADC are modelled; gkbus talks KWP2000 to the stock boot block through `openc166-sim serve`. gkflasher's automatic identification is refused by the boot block at gkflasher's security level, as it would be on a real ECU in boot mode. |
+| 4 | Bootloader boots | Done, see "K-line and gkflasher" below. ASC0, CAPCOM and the ADC are modelled; gkflasher identifies the simulated ECU through `openc166-sim serve` (with the application; in boot mode the boot block refuses its memory read at gkflasher's security level, as a real ECU in boot mode would). |
 | 5 | Debug core and DAP | Done: breakpoints, watchpoints, stepping, reverse execution, DAP, Ghidra symbols. Keil-syntax conditions are not done (conditions are Python). |
 | 6 | Flash model and CAN | Not started; the flash is a read-only image and the CAN controllers are logged storage. |
-| 7 | Application runs | Mostly done. With the CAPCOM unit and the SSC stub the stock application runs its scheduler, services the watchdog and answers KWP2000 on the K-line; gkflasher's identification code finds "SIMK43 2.0 4mbit" through `openc166-sim serve`. GPT1/GPT2, PWM, CAN and the ports are still logged storage. |
+| 7 | Application runs | Mostly done. With the CAPCOM unit and the SSC stub the stock application runs its scheduler, services the watchdog and answers KWP2000 on the K-line; `gkflasher --id` identifies it through `openc166-sim serve`. GPT1/GPT2, PWM, CAN and the ports are still logged storage. |
 | 8 | Hardware snapshot | Not started. |
 
 ## K-line and gkflasher
@@ -74,14 +74,17 @@ also works.
 `openc166-sim serve` runs the ECU and serves ASC0 at `rfc2217://localhost:5555`
 (pyserial's network serial port; `--raw` gives a plain `socket://` stream
 instead). gkbus takes that URL as a serial K-line port, unchanged, and so
-does a gkflasher built on it. (Tested with gkbus's `SerialKLineDevice` and
-gkflasher's own security-access and identification code; not with the
-gkflasher command line, whose checkout here predates the gkbus device API.)
+does gkflasher:
 
 ```
-openc166-sim serve ca663057.bin --board 5wy19 --boot-mode --adc 1=0x2A0
-gkflasher -p kline -i rfc2217://localhost:5555 ...
+openc166-sim serve ca663057.bin --board 5wy19 --adc 1=0x2A0 --port 5556
+python3 gkflasher.py -p kline -i rfc2217://127.0.0.1:5556 --id
 ```
+
+With the stock application this prints "Found! SIMK43 2.0 4mbit", the
+calibration `ca663057` / `G7DCMQ1A`, the identification block (boot block
+`KR77025242`, program `KR77025161`) and "Immo seems to be disabled".
+(gkflasher reads `gkflasher.yml` from its working directory.)
 
 The bridge acts as a K-line interface: the tester's bytes come back to it
 as the bus echo, the ECU hears its own transmission, and a break from the
