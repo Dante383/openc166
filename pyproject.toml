@@ -25,6 +25,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.scripts]
+openc166-sim = "openc166.sim:main"
+openc166-dap = "openc166.dap:main"
+
 [project.urls]
 Homepage = "https://github.com/Dante383/openc166"
 Issues = "https://github.com/Dante383/openc166/issues"

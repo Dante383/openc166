@@ -761,3 +761,106 @@ class Simulator:
 
     def __repr__(self) -> str:
         return "<openc166.sim.Simulator board={} pc={:06X} instructions={}>".format(self.board, self.pc, self.instructions)
+
+
+# ---- Command line -------------------------------------------------------------
+
+
+def _int(text: str) -> int:
+    return _addr(text) if not text.isdigit() else int(text)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """openc166-sim: disassemble images and run firmware headless."""
+    import argparse
+
+    p = argparse.ArgumentParser(prog="openc166-sim", description=main.__doc__)
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    d = sub.add_parser("disasm", help="disassemble a binary image")
+    d.add_argument("image")
+    d.add_argument("--base", type=_int, default=0, help="address of the first byte (default 0)")
+    d.add_argument("--start", type=_int, help="first address to show (default: base)")
+    d.add_argument("--count", type=int, default=64, help="instructions to show")
+    d.add_argument("--source", action="store_true",
+                   help="write the whole image as source that reassembles to the same bytes")
+    d.add_argument("--symbols", help="Ghidra export (JSON or CSV) for names")
+
+    r = sub.add_parser("run", help="run firmware and report what it touched that is not modelled")
+    r.add_argument("image")
+    r.add_argument("--board", default="c167", choices=Simulator.BOARDS)
+    r.add_argument("--instructions", type=_int, default=1_000_000)
+    r.add_argument("--break", dest="breaks", action="append", default=[], help="stop at an address or symbol")
+    r.add_argument("--symbols", help="Ghidra export (JSON or CSV)")
+    r.add_argument("--freeze-watchdog", action="store_true")
+    r.add_argument("--trace", type=int, default=0, help="print the last N instructions")
+
+    a = p.parse_args(argv)
+    syms = Symbols()
+    if getattr(a, "symbols", None):
+        syms.load_ghidra(a.symbols)
+    with open(a.image, "rb") as f:
+        data = f.read()
+
+    if a.cmd == "disasm":
+        if a.source:
+            text, fallbacks = disassemble_module(data, a.base)
+            sys_stdout_write(text)
+            if fallbacks:
+                print("; {} instruction(s) kept as DB: no A166 spelling gives their bytes".format(fallbacks),
+                      file=__import__("sys").stderr)
+            return 0
+        start = a.base if a.start is None else a.start
+        off = start - a.base
+        for ins in disassemble(data[off:], start, count=a.count):
+            name = syms.name_at(ins.address)
+            if name:
+                print("{}:".format(name))
+            print("{:06X}  {:<12} {}".format(ins.address, ins.data.hex().upper(), ins.text))
+        return 0
+
+    s = Simulator(data, a.board, syms)
+    s.watchdog_frozen = a.freeze_watchdog
+    for b in a.breaks:
+        s.break_at(b)
+    trace: List[Tuple[int, str]] = []
+    if a.trace:
+        import collections
+
+        trace = collections.deque(maxlen=a.trace)  # type: ignore[assignment]
+        while s.instructions < a.instructions:
+            ins = s.disassemble(None, 1)[0]
+            trace.append((ins.address, ins.text))
+            stop = s.step()
+            if stop.reason != "none":
+                break
+        else:
+            stop = Stop("none")
+    else:
+        stop = s.cont(a.instructions)
+    for addr, text in trace:
+        print("{:06X}  {}".format(addr, text))
+    print("stopped: {} at {} after {} instructions ({:.3f} ms)".format(
+        stop.reason, s.where(), s.instructions, s.time * 1e3))
+    um = s.unmodelled
+    print("{} unmodelled access(es):".format(len(um)))
+    groups: Dict[str, List[Unmodelled]] = {}
+    for u in um:
+        key = u.what if u.what.startswith(("SFR", "ESFR")) else u.what.split(" ")[0]
+        groups.setdefault(key, []).append(u)
+    for key, us in sorted(groups.items(), key=lambda kv: kv[1][0].instruction):
+        u = us[0]
+        print("  {:<30} first {} at {:06X} (instruction {}){}".format(
+            key, "write" if u.write else "read", u.pc, u.instruction,
+            "" if len(us) == 1 else ", {} addresses".format(len(us))))
+    return 0
+
+
+def sys_stdout_write(text: str) -> None:
+    import sys
+
+    sys.stdout.write(text)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

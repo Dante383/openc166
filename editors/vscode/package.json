@@ -1,0 +1,59 @@
+{
+  "name": "openc166-debug",
+  "displayName": "openc166 C166/C167 simulator debugger",
+  "description": "Debug C166/C167 firmware in the openc166 simulator: source and disassembly stepping, reverse execution, data breakpoints.",
+  "version": "0.1.0",
+  "publisher": "openc166",
+  "license": "MIT",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Debuggers"],
+  "main": "./extension.js",
+  "activationEvents": ["onDebugResolve:openc166"],
+  "contributes": {
+    "breakpoints": [{ "language": "a66" }, { "language": "asm" }, { "language": "plaintext" }],
+    "languages": [{ "id": "a66", "extensions": [".a66", ".inc", ".src"], "aliases": ["C166 assembly"] }],
+    "configuration": {
+      "title": "openc166",
+      "properties": {
+        "openc166.python": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python interpreter that has the openc166 package installed."
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "openc166",
+        "label": "openc166 simulator",
+        "languages": ["a66"],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "image": { "type": "string", "description": "Binary loaded as flash or ROM from address 0." },
+              "program": { "type": "string", "description": "Or: an openc166 source to assemble and run, with source-level debugging." },
+              "board": { "type": "string", "enum": ["5wy19", "c167cs", "c167", "c166"], "default": "c167" },
+              "debugInfo": { "type": "string", "description": "openc166 debug information (openc166 -g)." },
+              "debugInfoOffset": { "type": "number", "default": 0, "description": "Added to the debug information's addresses." },
+              "ghidraSymbols": { "type": "string", "description": "Symbols exported with tools/ghidra/ExportOpenc166Symbols.py." },
+              "includeDirs": { "type": "array", "items": { "type": "string" } },
+              "stopOnEntry": { "type": "boolean", "default": true },
+              "watchdogFrozen": { "type": "boolean", "default": false },
+              "stopOnUnmodelled": { "type": "boolean", "default": false }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "openc166",
+            "request": "launch",
+            "name": "Simulate firmware",
+            "image": "${workspaceFolder}/firmware.bin",
+            "board": "5wy19",
+            "stopOnEntry": true
+          }
+        ]
+      }
+    ]
+  }
+}

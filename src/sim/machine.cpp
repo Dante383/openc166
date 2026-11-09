@@ -21,6 +21,13 @@ std::string hexaddr(Addr a) {
 
 constexpr std::size_t kDecodeCache = 1 << 16;
 
+// "SFR S0TBUF (0FEB0H)" or "ESFR 0F0C0H" for the unmodelled-access log.
+std::string sfr_label(Addr a) {
+    std::string name = dis::c167_names().sfr(a, false);
+    const std::string kind = a >= 0xFE00 ? "SFR " : "ESFR ";
+    return name.empty() ? kind + hexaddr(a) : kind + name + " (" + hexaddr(a) + ")";
+}
+
 // TFR bits.
 constexpr std::uint16_t kNmi = 1u << 15, kStkof = 1u << 14, kStkuf = 1u << 13, kUndopc = 1u << 7,
                         kPrtflt = 1u << 3, kIllopa = 1u << 2, kIllina = 1u << 1, kIllbus = 1u << 0;
@@ -249,7 +256,7 @@ std::uint16_t Machine::sfr_read(Addr a) {
     const std::uint16_t stored = sfr_get(a);
     SfrHook* h = hook(a);
     if (!h) {
-        report_unmodelled(a, false, stored, std::string(a >= 0xFE00 ? "SFR " : "ESFR ") + hexaddr(a));
+        report_unmodelled(a, false, stored, sfr_label(a));
         return stored;
     }
     return h->read ? h->read(*this, a, stored) : stored;
@@ -266,7 +273,7 @@ void Machine::sfr_write(Addr a, std::uint16_t v, std::uint16_t mask) {
     *p = value;
     if (ic_index_[a >= 0xFE00 ? 256 + (a - 0xFE00) / 2 : (a - 0xF000) / 2] >= 0) irq_dirty_ = true;
     if (!h) {
-        report_unmodelled(a, true, v, std::string(a >= 0xFE00 ? "SFR " : "ESFR ") + hexaddr(a));
+        report_unmodelled(a, true, v, sfr_label(a));
         return;
     }
     if (h->write) h->write(*this, a, old, value);
