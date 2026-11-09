@@ -184,7 +184,7 @@ class SimulatorTest(unittest.TestCase):
         s.pc = 0  # rerun from the start with a peripheral access patched in
         s.write(0x0000, bytes.fromhex("f2f4b0fe"))  # MOV R4, S0TBUF
         s.step()
-        self.assertEqual([u.what for u in s.unmodelled], ["SFR 00FEB0H"])
+        self.assertEqual([u.what for u in s.unmodelled], ["SFR S0TBUF (00FEB0H)"])
 
     def test_disassemble_at_pc(self):
         s = self.s
