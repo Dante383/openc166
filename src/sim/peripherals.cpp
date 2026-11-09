@@ -537,11 +537,81 @@ void Adc::load(StateReader& r) {
     r.get(inputs_);
 }
 
+// ---- SSC -------------------------------------------------------------------
+
+namespace {
+constexpr Addr SSCCON = 0xFFB2, SSCTB = 0xF0B0, SSCRB = 0xF0B2, SSCBR = 0xF0B4, SSCTIC = 0xFF72, SSCRIC = 0xFF74;
+constexpr Addr P6 = 0xFFCC;
+constexpr std::uint16_t kSscEn = 1u << 15, kSscMs = 1u << 14, kSscBsy = 1u << 12;
+}  // namespace
+
+void Ssc::attach(Machine& m) {
+    SfrHook con;
+    m.set_hook(SSCCON, con);
+    m.set_hook(SSCBR, SfrHook{});
+    SfrHook tb;
+    tb.write = [this](Machine& mm, Addr, std::uint16_t, std::uint16_t v) {
+        tb_ = v;
+        tb_full_ = true;
+        if (!busy_) start(mm);
+    };
+    m.set_hook(SSCTB, tb);
+    SfrHook rb;
+    rb.readonly_mask = 0xFFFF;
+    m.set_hook(SSCRB, rb);
+}
+
+void Ssc::reset(bool) {
+    busy_ = tb_full_ = false;
+}
+
+void Ssc::start(Machine& m) {
+    const std::uint16_t con = m.sfr_get(SSCCON);
+    if (!(con & kSscEn) || !(con & kSscMs) || !tb_full_) return;
+    shift_ = tb_;
+    tb_full_ = false;
+    busy_ = true;
+    m.sfr_set(SSCCON, static_cast<std::uint16_t>(con | kSscBsy));
+    set_ir(m, SSCTIC);
+    const std::uint64_t bits = (con & 0xF) + 1u;
+    const std::uint64_t bit = 2u * (static_cast<std::uint64_t>(m.sfr_get(SSCBR)) + 1u);
+    m.schedule(*this, bits * bit, 0);
+}
+
+void Ssc::event(Machine& m, std::uint32_t) {
+    busy_ = false;
+    const std::uint16_t con = m.sfr_get(SSCCON);
+    const std::uint16_t mask = static_cast<std::uint16_t>((1u << ((con & 0xF) + 1u)) - 1u);
+    const std::uint16_t in = reply ? reply(static_cast<std::uint16_t>(shift_ & mask), m.sfr_get(P6)) : 0;
+    ++transfers_;
+    m.sfr_set(SSCRB, static_cast<std::uint16_t>(in & mask));
+    m.sfr_set(SSCCON, static_cast<std::uint16_t>(con & ~kSscBsy));
+    set_ir(m, SSCRIC);
+    if (tb_full_) start(m);
+}
+
+void Ssc::save(StateWriter& w) const {
+    w.put(busy_);
+    w.put(tb_full_);
+    w.put(tb_);
+    w.put(shift_);
+    w.put(transfers_);
+}
+
+void Ssc::load(StateReader& r) {
+    r.get(busy_);
+    r.get(tb_full_);
+    r.get(tb_);
+    r.get(shift_);
+    r.get(transfers_);
+}
+
 void add_c167_peripherals(Board& b) {
     auto asc = std::make_shared<Asc0>();
     b.devices.push_back(asc);
     b.devices.push_back(std::make_shared<Capcom>());
     b.devices.push_back(std::make_shared<Adc>());
+    b.devices.push_back(std::make_shared<Ssc>());
 }
 
 }  // namespace oc166::sim

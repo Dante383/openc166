@@ -452,6 +452,17 @@ OC166_API uint64_t oc166_sim_serial_frame_cycles(const oc166_sim *s);
 /* The 10-bit value A/D channel 'channel' converts to. Returns 0, or -1. */
 OC166_API int oc166_sim_set_adc(oc166_sim *s, int channel, uint16_t value);
 
+/* CAPCOM: an edge on the input of channel 'ch' (0..31; 'rising' 1 or 0),
+ * for the capture modes. Returns 0, or -1. */
+OC166_API int oc166_sim_capcom_edge(oc166_sim *s, int ch, int rising);
+/* The level of channel 'ch's compare output, or -1. */
+OC166_API int oc166_sim_capcom_output(const oc166_sim *s, int ch);
+
+/* SSC: the word the device on the other end answers when 'sent' is shifted
+ * out, given port P6 (chip selects). Without a handler it answers 0. */
+typedef uint16_t (*oc166_ssc_fn)(void *user, uint16_t sent, uint16_t p6);
+OC166_API int oc166_sim_set_ssc_handler(oc166_sim *s, oc166_ssc_fn fn, void *user);
+
 /* Snapshots. */
 typedef struct oc166_snapshot oc166_snapshot;
 OC166_API oc166_snapshot *oc166_sim_save(const oc166_sim *s);

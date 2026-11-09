@@ -347,6 +347,35 @@ int oc166_sim_set_adc(oc166_sim* s, int channel, uint16_t value) {
     });
 }
 
+int oc166_sim_capcom_edge(oc166_sim* s, int ch, int rising) {
+    return guarded([&] {
+        if (!s || ch < 0 || ch > 31) return -1;
+        auto* cc = s->machine->find_device<Capcom>();
+        if (!cc) return -1;
+        cc->input_edge(*s->machine, ch, rising != 0);
+        return 0;
+    });
+}
+
+int oc166_sim_capcom_output(const oc166_sim* s, int ch) {
+    if (!s || ch < 0 || ch > 31) return -1;
+    auto* cc = s->machine->find_device<Capcom>();
+    return cc ? (cc->output(ch) ? 1 : 0) : -1;
+}
+
+int oc166_sim_set_ssc_handler(oc166_sim* s, oc166_ssc_fn fn, void* user) {
+    return guarded([&] {
+        if (!s) return -1;
+        auto* ssc = s->machine->find_device<Ssc>();
+        if (!ssc) return -1;
+        if (fn)
+            ssc->reply = [fn, user](std::uint16_t sent, std::uint16_t p6) { return fn(user, sent, p6); };
+        else
+            ssc->reply = nullptr;
+        return 0;
+    });
+}
+
 oc166_snapshot* oc166_sim_save(const oc166_sim* s) {
     try {
         if (!s) return nullptr;

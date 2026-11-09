@@ -66,7 +66,7 @@ also works.
 | 4 | Bootloader boots | Done, see "K-line and gkflasher" below. ASC0, CAPCOM T0/T1/T7/T8 and the ADC are modelled; gkbus talks KWP2000 to the stock boot block through `openc166-sim serve`. gkflasher's automatic identification is refused by the boot block at gkflasher's security level, as it would be on a real ECU in boot mode. |
 | 5 | Debug core and DAP | Done: breakpoints, watchpoints, stepping, reverse execution, DAP, Ghidra symbols. Keil-syntax conditions are not done (conditions are Python). |
 | 6 | Flash model and CAN | Not started; the flash is a read-only image and the CAN controllers are logged storage. |
-| 7 | Application runs | Not started. The application waits for CAPCOM timer T1 at 0A3EFAH. |
+| 7 | Application runs | Mostly done. With the CAPCOM unit and the SSC stub the stock application runs its scheduler, services the watchdog and answers KWP2000 on the K-line; gkflasher's identification code finds "SIMK43 2.0 4mbit" through `openc166-sim serve`. GPT1/GPT2, PWM, CAN and the ports are still logged storage. |
 | 8 | Hardware snapshot | Not started. |
 
 ## K-line and gkflasher
@@ -121,6 +121,24 @@ What the stock boot block does on the K-line, as the simulator shows it:
   (reading 4 bytes at 90040H, expecting `ca66`) therefore fails in boot
   mode and it offers its manual ECU list. At level 0FDH the same read
   returns `ca663057`.
+
+### The application
+
+With the application signature intact, the reset path calls the
+application, which:
+
+- runs its task scheduler from CAPCOM channel CC26 in compare mode 1 on
+  T8 (fCPU / 128): the CC26 vector (0E8H) jumps to 0AB7B0H, which sets the
+  main loop's flag (0FD64H.4) every fifth call;
+- enables compare interrupts on CC4, CC11, CC19, CC21, CC26 and capture
+  inputs on CC10, CC13, CC30 (crank and cam, presumably: nothing drives
+  them yet), T1 and T8 overflows, ADC, SSC, PWM and CAN2 (XP1);
+- talks to its driver chips on the SSC, about 600 words a second, with
+  the chip select on P6.7;
+- answers on the K-line like the boot block (its ReadEcuIdentification
+  block lacks the VIN part), and at SecurityAccess level 01H, with
+  gkflasher's key, lets ReadMemoryByAddress read 90040H: `ca663057`, which
+  gkflasher's table takes for "SIMK43 2.0 4mbit".
 
 ## Boards
 
@@ -188,13 +206,20 @@ snapshots, so reverse execution does not replay them.
   the host is a byte stream or a low pulse of a given length (a break),
   which the UART frames at its current baud rate when it samples the stop
   bit. Parity is not checked.
-- **CAPCOM timers** T0, T1, T7, T8 in timer mode (`T01CON`, `T78CON`), with
-  reload and overflow interrupts. Counter mode holds the timer. The
-  capture/compare registers CC0..CC31 are not modelled yet.
+- **CAPCOM**: timers T0, T1, T7, T8 in timer mode (`T01CON`, `T78CON`),
+  with reload and overflow interrupts (counter mode holds the timer), and
+  the channels CC0..CC31 (`CCM0`..`CCM7`). Compare modes 0..3 interrupt
+  at exact match times (mode 1 toggles the channel output, mode 3 sets it
+  and the overflow clears it; modes 2 and 3 match once per period).
+  Capture modes latch the timer on an input edge from a script
+  (`capcom_edge`). Double-register compare mode is not modelled.
+- **SSC** as SPI master: transfers timed from `SSCBR`, `SSCTIR` and
+  `SSCRIR`, the reply from a script (`on_ssc(reply)`, given the word sent
+  and port P6 for the chip selects) or 0000H.
 - **A/D converter**: single, continuous and scan conversions of 10-bit
   values set from scripts (`set_adc`), 250 cycles each.
-- Not yet: GPT1/GPT2, SSC, PWM, CAN (logged storage), ports (logged
-  storage), the flash command set.
+- Not yet: GPT1/GPT2, PWM, CAN (logged storage), ports (logged storage),
+  the flash command set.
 
 Host input to ASC0 is logged with its arrival cycle, so reverse execution
 replays it exactly. Loading a snapshot by hand, or sending new input after

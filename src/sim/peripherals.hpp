@@ -7,6 +7,7 @@
 #include "sim/machine.hpp"
 
 #include <array>
+#include <functional>
 #include <deque>
 #include <vector>
 
@@ -160,6 +161,36 @@ private:
     std::array<std::uint16_t, 16> inputs_;
     int channel_ = 0;
     bool busy_ = false;
+};
+
+// The synchronous serial channel SSC as SPI master: writing SSCTB moves the
+// word to the shift register (SSCTIR), and after (width) bit times at
+// fCPU / (2 * (SSCBR + 1)) the reply from the device on the other end goes
+// to SSCRB (SSCRIR). 'reply' gives that word, from what was sent and the
+// port P6 value (the 5WY19 selects its driver chips with P6.7); without it
+// the reply is 0000H, the "no fault" of the design's stub. Slave mode and
+// the error flags are not modelled.
+class Ssc final : public Device {
+public:
+    std::string name() const override { return "SSC"; }
+    std::uint8_t read8(Addr) override { return 0xFF; }
+    void write8(Addr, std::uint8_t) override {}
+    void attach(Machine& m) override;
+    void reset(bool power_on) override;
+    void save(StateWriter& w) const override;
+    void load(StateReader& r) override;
+    void event(Machine& m, std::uint32_t tag) override;
+
+    std::function<std::uint16_t(std::uint16_t sent, std::uint16_t p6)> reply;
+    std::uint64_t transfers() const { return transfers_; }
+
+private:
+    void start(Machine& m);
+    bool busy_ = false;
+    bool tb_full_ = false;
+    std::uint16_t tb_ = 0;
+    std::uint16_t shift_ = 0;
+    std::uint64_t transfers_ = 0;
 };
 
 // The peripherals above, added to a board with the C167's addresses.

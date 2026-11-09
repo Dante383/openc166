@@ -94,6 +94,7 @@ class Unmodelled(ctypes.Structure):
 CONDITION = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)
 READ_FN = ctypes.CFUNCTYPE(ctypes.c_uint8, ctypes.c_void_p, ctypes.c_uint32)
 WRITE_FN = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint8)
+SSC_FN = ctypes.CFUNCTYPE(ctypes.c_uint16, ctypes.c_void_p, ctypes.c_uint16, ctypes.c_uint16)
 
 
 def _library_paths():
@@ -238,6 +239,9 @@ _declare("oc166_sim_serial_receive_baud", _size, _p, _u8p, ctypes.POINTER(_u32),
 _declare("oc166_sim_serial_line_low", _int, _p, _u64)
 _declare("oc166_sim_serial_frame_cycles", _u64, _p)
 _declare("oc166_sim_set_adc", _int, _p, _int, _u16)
+_declare("oc166_sim_capcom_edge", _int, _p, _int, _int)
+_declare("oc166_sim_capcom_output", _int, _p, _int)
+_declare("oc166_sim_set_ssc_handler", _int, _p, SSC_FN, ctypes.c_void_p)
 _declare("oc166_sim_set_chip_select", _int, _p, _int, _str, READ_FN, WRITE_FN, ctypes.c_void_p)
 
 if lib.oc166_api_version() != API_VERSION:

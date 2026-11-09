@@ -241,3 +241,18 @@ TEST_CASE("CAPCOM: capture latches the timer on an input edge") {
     CHECK(m->sfr_get(0xFE94) == cc->value(*m, 1));
     CHECK((m->sfr_get(0xFF8C) & 0x80) != 0);  // CC10IR
 }
+
+TEST_CASE("SSC: master transfers with a scripted device") {
+    auto m = idle_machine();
+    auto* ssc = m->find_device<Ssc>();
+    ssc->reply = [](std::uint16_t sent, std::uint16_t) { return static_cast<std::uint16_t>(~sent); };
+    m->write16(0xF0B4, 4);         // SSCBR: a bit every 10 cycles
+    m->write16(0xFFB2, 0xC007);    // SSCCON: enabled, master, 8 bits
+    m->write16(0xF0B0, 0x005A);
+    CHECK((m->sfr_get(0xFF72) & 0x80) != 0);  // SSCTIR at once
+    CHECK((m->sfr_get(0xFF74) & 0x80) == 0);
+    m->run(30);  // 80 cycles
+    CHECK((m->sfr_get(0xFF74) & 0x80) != 0);  // SSCRIR
+    CHECK(m->sfr_get(0xF0B2) == 0x00A5);
+    CHECK(ssc->transfers() == 1);
+}

@@ -71,6 +71,36 @@ class Stock5wy19Test(unittest.TestCase):
         self.assertEqual(request(b"\x27\xfe" + key), b"\x67\xfe\x34")
         self.assertEqual(request(b"\x23\x09\x00\x40\x04"), b"\x63ca66")
 
+    def test_application_answers_kwp2000(self):
+        # The application's scheduler runs from CAPCOM (CC26 on T8); with it
+        # the application services the watchdog and answers on the K-line.
+        with open(IMAGE, "rb") as f:
+            data = f.read()
+        s = sim.Simulator(data, board="5wy19")
+        s.serial_echo = True
+        s.set_adc(1, 0x2A0)
+        s.run_for(0.6)
+        self.assertTrue(s.capcom_output(26) in (True, False))
+        s.serial_receive()
+
+        def request(pdu):
+            frame = bytes([0x80 + len(pdu), 0x11, 0xF1]) + pdu
+            frame += bytes([sum(frame) & 0xFF])
+            s.serial_send(frame)
+            s.run_for(0.4)
+            reply = s.serial_receive(baud=10400)
+            self.assertTrue(reply, "no answer to " + pdu.hex())
+            return reply[3:-1] if reply[0] != 0x80 else reply[4:-1]
+
+        s.run_for(0.025)
+        s.serial_break(0.025)
+        s.run_for(0.025)
+        self.assertEqual(request(b"\x81")[0], 0xC1)
+        self.assertEqual(request(b"\x10\x85"), b"\x50\x85")
+        ident = request(b"\x1a\x80")
+        self.assertIn(b"G7DCMQ1A", ident)
+        self.assertEqual(s.sfr["WDTCON"] & 0x02, 0, "the watchdog reset the CPU")
+
     def test_disassembly_round_trip(self):
         with open(IMAGE, "rb") as f:
             data = f.read()

@@ -763,6 +763,31 @@ class Simulator:
         if _lib.oc166_sim_set_adc(self._h, channel, value & 0x3FF) != 0:
             raise SimulatorError("this board has no ADC channel {}".format(channel))
 
+    def capcom_edge(self, channel: int, rising: bool) -> None:
+        """An edge on CAPCOM channel 'channel's input (crank, cam, ...): in a
+        capture mode it latches the timer into CCx."""
+        if _lib.oc166_sim_capcom_edge(self._h, channel, 1 if rising else 0) != 0:
+            raise SimulatorError("no CAPCOM channel {}".format(channel))
+
+    def capcom_output(self, channel: int) -> bool:
+        """The level of a CAPCOM channel's compare output."""
+        v = _lib.oc166_sim_capcom_output(self._h, channel)
+        if v < 0:
+            raise SimulatorError("no CAPCOM channel {}".format(channel))
+        return bool(v)
+
+    def on_ssc(self, reply: Optional[Callable[[int, int], int]]) -> None:
+        """The device on the SSC (SPI): reply(sent, p6) returns the word it
+        answers, given what the CPU shifted out and port P6 (chip selects).
+        None answers 0000H. The handler is not part of snapshots."""
+        if reply is None:
+            cb = _native.SSC_FN()
+        else:
+            cb = _native.SSC_FN(lambda _u, sent, p6: reply(sent, p6) & 0xFFFF)
+        if _lib.oc166_sim_set_ssc_handler(self._h, cb, None) != 0:
+            raise SimulatorError("this board has no SSC")
+        self._ssc = cb
+
     def nmi(self) -> None:
         _lib.oc166_sim_nmi(self._h)
 
