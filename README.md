@@ -249,7 +249,10 @@ s.reverse_continue()        # who last wrote 0E79EH?
 ```
 
 `python -m openc166.dap` is a Debug Adapter Protocol server for VS Code
-([editors/vscode](editors/vscode/README.md)) and Neovim. `openc166-sim
+([editors/vscode](editors/vscode/README.md)) and Neovim, and
+`python -m openc166.ghidra` is a back-end for Ghidra's Debugger
+([docs/ghidra.md](docs/ghidra.md)): debug stock firmware in your annotated
+Ghidra program. `openc166-sim
 disasm` disassembles an image (or turns it into source that reassembles
 byte for byte), `openc166-sim run` runs firmware headless and lists the
 registers it touched that are not modelled yet, and `openc166 -g` writes

@@ -46,6 +46,9 @@ openc166 -g payload.json payload.a66      # debug information for the debugger
 firmware touched that nothing models yet, grouped by register: that list
 is the modelling to-do (design §3.5).
 
+Ghidra: `python -m openc166.ghidra` is a back-end for Ghidra's Debugger;
+see [ghidra.md](ghidra.md).
+
 Editors: `python -m openc166.dap` is a Debug Adapter Protocol server;
 [editors/vscode](../editors/vscode/README.md) registers it with VS Code
 and shows a launch configuration. Step back and reverse continue work

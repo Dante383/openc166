@@ -28,6 +28,7 @@ classifiers = [
 [project.scripts]
 openc166-sim = "openc166.sim:main"
 openc166-dap = "openc166.dap:main"
+openc166-ghidra = "openc166.ghidra:main"
 
 [project.urls]
 Homepage = "https://github.com/Dante383/openc166"
