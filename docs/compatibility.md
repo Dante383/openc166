@@ -77,12 +77,12 @@ since OH166 starts a new record at each section.
   `TYPEDEC`, with Keil's error checks. See
   [Register banks and linker directives](#register-banks-and-linker-directives).
 - **Accepted and ignored:** listing and object-file controls such as
-  `$NOLIST`, `$TITLE(...)` and `$DEBUG`, which only matter to a printed
+  `$TITLE(...)`, `$EJECT` and `$DEBUG`, which only matter to a printed
   listing or a debugger.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
   `$SEGMENTED`/`$NONSEGMENTED`, `$TABS`, `$MACRO`/`$NOMACRO`,
-  `$MPL`/`$NOMPL`, `$GEN`/`$NOGEN`/`$GENONLY`, `$SAVE`/`$RESTORE`.
-  `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
+  `$MPL`/`$NOMPL`, `$GEN`/`$NOGEN`/`$GENONLY`, `$LIST`/`$NOLIST`,
+  `$SAVE`/`$RESTORE`. `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
   come before the first statement; see [Controls](#controls).
 
 ## Not supported yet
