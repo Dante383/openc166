@@ -111,6 +111,39 @@ TEST_CASE("$NOCOND leaves out the lines after which assembly is off") {
     CHECK(lst.find("12     IF 0") != std::string::npos);
 }
 
+TEST_CASE("$NOLIST leaves lines out of the listing until $LIST") {
+    auto r = body("$NOLIST\n"            // 3
+                  " NOP\n"               // 4
+                  " MOV R0, #NOSUCH\n"   // 5: an error is listed anyway
+                  "$LIST\n"              // 6
+                  " NOP\n"               // 7
+                  "$NOLI\n DB 7\n$LI\n"  // 8-10
+                  "$NOLIST LIST\n"       // 11: the last one counts
+                  " NOP\n"               // 12
+                  "$LIST NOLIST\n"       // 13
+                  " NOP\n"               // 14
+                  " IF 0\n$LIST\n ENDIF\n"  // 15-17: not read in a false block
+                  " NOP\n"               // 18
+                  "$LIST\n"              // 19
+                  "$SAVE\n$NOLIST\n NOP\n$RESTORE\n"  // 20-23
+                  " NOP\n");             // 24
+    for (int n : {3, 4, 5, 8, 9, 13, 14, 15, 17, 18, 21, 22}) CHECK(line(r, n)->hidden);
+    for (int n : {6, 7, 10, 11, 12, 19, 20, 23, 24}) CHECK_FALSE(line(r, n)->hidden);
+    // Hidden lines are still assembled.
+    CHECK(at(r, 4) == "CC00");
+    CHECK(at(r, 9) == "07");
+    std::string lst = oc166::format_listing(r);
+    CHECK(lst.find("$NOLIST\n") == std::string::npos);
+    CHECK(lst.find("DB 7") == std::string::npos);
+    CHECK(lst.find("MOV R0, #NOSUCH") != std::string::npos);
+    CHECK(lst.find("6    $LIST") != std::string::npos);
+
+    // $NOLIST before END hides END and the lines after it.
+    r = test::run(" NOP\n$NOLIST\n END\n junk\n");
+    CHECK(line(r, 3)->hidden);
+    CHECK(line(r, 4)->hidden);
+}
+
 TEST_CASE("nesting") {
     SUBCASE("statement IFs nest inside $IF blocks and close them in any order") {
         auto r = body("$IF (1)\n IF 0\n DB 1\n$ENDIF\n DB 2\n ENDIF\n");

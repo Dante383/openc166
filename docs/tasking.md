@@ -70,7 +70,7 @@ for `CASE`, `DEF` for `DEFINE`, ...).
 |---|---|
 | `CASE`, `NOCASE` | as in Keil: whether names are case sensitive |
 | `SEGMENTED`, `NONSEGMENTED` | as in Keil; see [Segmented mode](compatibility.md#segmented-mode-and-dpps) |
-| `INCLUDE(file)`, `GEN`, `NOGEN`, `SAVE`, `RESTORE`, `TABS` | as in Keil |
+| `INCLUDE(file)`, `GEN`, `NOGEN`, `LIST`, `NOLIST`, `SAVE`, `RESTORE`, `TABS` | as in Keil |
 | `STDNAMES(file)` | reads a register file: see [Register names](#register-names) |
 | `DEFINE(name[, text])` | defines an m166 macro; without text it is `1` |
 | `EXTEND` | the C167 instructions (always on) |

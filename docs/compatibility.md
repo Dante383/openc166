@@ -241,8 +241,8 @@ Primary controls that openc166 uses: `MOD167`/`M167`, `MOD166`/`M166`,
 
 General controls that openc166 uses: `INCLUDE`/`IC`, `SET`, `RESET`, `IF`,
 `ELSEIF`, `ELSE`, `ENDIF`, `COND`, `NOCOND`, `GEN`/`GE`, `NOGEN`/`NOGE`,
-`GENONLY`/`GO`, `SAVE`/`SA`, `RESTORE`/`RS`. Those it ignores: `LIST`,
-`NOLIST`, `TITLE`/`TT`, `EJECT`/`EJ`, `SYMLIST`, `NOSYMLIST`, `REGUSE`.
+`GENONLY`/`GO`, `SAVE`/`SA`, `RESTORE`/`RS`, `LIST`/`LI`, `NOLIST`/`NOLI`.
+Those it ignores: `TITLE`/`TT`, `EJECT`/`EJ`, `SYMLIST`, `NOSYMLIST`, `REGUSE`.
 
 These lists come from testing A166 V5.38. The manual calls `TITLE` and
 `NOCOND` primary, but A166 accepts them anywhere. An unknown control is
@@ -329,6 +329,12 @@ COUNT   EQU     4                ; ordinary symbols for IF
   after it are assembled, an `IF` statement when the lines before it are.
   `$NOCOND` leaves out every line after which assembly is off; `$COND`
   (the default) shows them again.
+- **`$NOLIST`.** Leaves the following lines out of the listing, the
+  `$NOLIST` line included, until a `$LIST` line, which is listed. Lines of
+  include files count too, and a `$NOLIST` in an include file still holds
+  after the file ends. A line with an error or warning is listed anyway,
+  with its message. The lines are assembled as usual: only the listing
+  changes.
 
 ## LIT
 
@@ -454,7 +460,7 @@ SKIP:
 - **Listing.** Expanded lines are numbered and carry `+1`, `+2`, ... after
   the number for the depth of expansion. Under `$NOGEN` (the default) and
   `$GENONLY` they are hidden; `$GEN` shows them. `$SAVE` and `$RESTORE`
-  keep and bring back the `GEN` setting, 10 levels deep (A14 beyond, and
+  keep and bring back the `LIST` and `GEN` settings, 10 levels deep (A14 beyond, and
   A13 for `$RESTORE` without `$SAVE`). A problem in an expanded line is
   reported at the line of the outermost call, or, for a `REPT`, `IRP` or
   `IRPC` written in the source, at its `ENDM` line.

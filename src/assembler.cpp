@@ -638,7 +638,7 @@ constexpr PrimaryChoice kPrimaryChoices[] = {
 };
 
 constexpr std::string_view kIgnoredControls[] = {
-    "LIST", "LI", "NOLIST", "NOLI", "TITLE", "TT", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "REGUSE",
+    "TITLE", "TT", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "REGUSE",
 };
 
 // TASKING a166 controls, by full name: abbreviations that differ from
@@ -669,8 +669,7 @@ constexpr std::string_view kTaskingIgnored[] = {
     "ABSOLUTE", "AB", "NOABSOLUTE", "NOAB", "ASMLINEINFO", "A", "NOASMLINEINFO", "NOA", "DATE", "DA",
     "DEBUG", "DB", "NODEBUG", "NODB", "EJECT", "EJ", "ERRORPRINT", "EP", "NOERRORPRINT", "NOEP",
     "EXPANDREGBANK", "XRB", "NOEXPANDREGBANK", "NOXRB", "EXTPEC16", "EP16", "NOEXTPEC16", "NOEP16", "FLOAT",
-    "FL", "GSO", "HEADER", "HD", "NOHEADER", "NOHD", "LINES", "LN", "NOLINES", "NOLN", "LIST", "LI",
-    "NOLIST", "NOLI", "LISTALL", "LA", "NOLISTALL", "NOLA", "LOCALS", "LC", "NOLOCALS", "NOLC", "MISRAC",
+    "FL", "GSO", "HEADER", "HD", "NOHEADER", "NOHD", "LINES", "LN", "NOLINES", "NOLN", "LISTALL", "LA", "NOLISTALL", "NOLA", "LOCALS", "LC", "NOLOCALS", "NOLC", "MISRAC",
     "MC", "MODEL", "MD", "OBJECT", "OJ", "NOOBJECT", "NOOJ", "OPTIMIZE", "PAGELENGTH", "PL", "PAGEWIDTH",
     "PW", "PAGING", "PA", "NOPAGING", "NOPA", "PEC", "PC", "NOPEC", "NOPC", "PRINT", "PR", "NOPRINT", "NOPR",
     "RETCHECK", "RC", "NORETCHECK", "NORC", "STRICTTASK", "ST", "NOSTRICTTASK", "NOST", "SYMB", "SM",
@@ -682,7 +681,7 @@ constexpr std::string_view kTaskingIgnored[] = {
 // TASKING controls that work as in Keil.
 constexpr std::string_view kTaskingShared[] = {
     "INCLUDE", "IC", "CASE", "NOCASE", "SEGMENTED", "SG", "NONSEGMENTED", "NOSG", "SAVE", "SA", "RESTORE",
-    "GEN", "GE", "NOGEN", "NOGE", "GENONLY", "GO", "TABS", "TA",
+    "GEN", "GE", "NOGEN", "NOGE", "GENONLY", "GO", "TABS", "TA", "LIST", "LI", "NOLIST", "NOLI",
 };
 
 enum class ProcKind : std::uint8_t { None, Near, Far, Interrupt };
@@ -889,13 +888,18 @@ private:
     std::string macro_file_;  // for a line of an expansion: where its body line was written
     int macro_line_ = 0;
     bool gen_ = false;  // $GEN: list the lines of expansions
+    bool list_ = true;  // $LIST: list the source lines ($NOLIST turns it off)
     bool macro_ = true;  // standard macros allowed ($NOMACRO turns them off)
     bool mpl_ = true;  // MPL macro processing: '%' is its metacharacter ($NOMPL and $NOMACRO turn it off)
     // MPL's output for the source and its include files, made in the first
     // pass; when MPL is on, the passes read these lines instead of the files.
     std::optional<std::vector<MplLine>> mpl_lines_;
     bool from_mpl_ = false;  // this pass reads mpl_lines_: MPL has read the include files
-    std::vector<bool> saved_gen_;  // gen_ of each $SAVE
+    // list_ and gen_ of each $SAVE
+    struct SavedListing {
+        bool list, gen;
+    };
+    std::vector<SavedListing> saved_gen_;
     bool fatal_ = false;  // stops the pass, like Keil's fatal errors
     bool primary_done_ = false;  // a statement was seen: primary controls are no longer allowed
     std::map<std::string_view, std::set<std::string_view>> primary_seen_;  // settings given for each group of primary controls
@@ -1334,6 +1338,7 @@ void Assembler::run_lines() {
     macros_.clear();
     locals_ = 0;
     gen_ = false;
+    list_ = true;
     macro_ = true;
     // TASKING has no MPL: '%' is the remainder operator.
     mpl_ = !tasking_ && initial_mpl(files_[0]->lines);
@@ -1611,6 +1616,7 @@ void Assembler::process_line(std::string_view text) {
     lst.source = m166_source_.empty() ? std::string(text) : m166_source_;
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
+        lst.hidden = !list_;
         pre_rep_ = Reporter{};
         if (final_) res_.listing.push_back(std::move(lst));
         return;
@@ -1630,10 +1636,12 @@ void Assembler::process_line(std::string_view text) {
     }
     // Like Keil, a $IF line is numbered in the listing when the lines after
     // it are assembled, an IF statement when the lines before it are.
-    // $NOCOND leaves out every line after which assembly is off.
+    // $NOCOND leaves out every line after which assembly is off, and
+    // $NOLIST every line after which it is in effect: the $NOLIST line
+    // itself, but not the $LIST line that ends it.
     const bool now_active = active();
     lst.skipped = m166_skipped_ || !(control_line ? now_active : was_active);
-    lst.hidden = (!now_active && !cond_listing_) || (macro_level_ > 0 && !gen_);
+    lst.hidden = !list_ || (!now_active && !cond_listing_) || (macro_level_ > 0 && !gen_);
     rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
@@ -2017,12 +2025,17 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             gen_ = true;
         } else if (name == "NOGEN" || name == "NOGE" || name == "GENONLY" || name == "GO") {
             gen_ = false;
+        } else if (name == "LIST" || name == "LI") {
+            list_ = true;
+        } else if (name == "NOLIST" || name == "NOLI") {
+            list_ = false;
         } else if (name == "SAVE" || name == "SA") {
             if (saved_gen_.size() >= kMaxSaveDepth) throw AsmError("A14", "SAVE stack overflow", column);
-            saved_gen_.push_back(gen_);
+            saved_gen_.push_back({list_, gen_});
         } else if (name == "RESTORE" || name == "RS") {
             if (saved_gen_.empty()) throw AsmError("A13", "SAVE stack underflow", column);
-            gen_ = saved_gen_.back();
+            list_ = saved_gen_.back().list;
+            gen_ = saved_gen_.back().gen;
             saved_gen_.pop_back();
         } else if (name == "MACRO") {
             macro_ = true;

@@ -78,8 +78,9 @@ struct ListingLine {
     std::string macro_file;
     int macro_line = 0;
     bool skipped = false;  // in a false IF block: not assembled, listed without a line number
-    // Left out of the printed listing: by $NOCOND (assembly is off after
-    // it), or a line of a macro expansion under $NOGEN (the default).
+    // Left out of the printed listing: by $NOLIST, by $NOCOND (assembly is
+    // off after it), or a line of a macro expansion under $NOGEN (the
+    // default). A hidden line with a diagnostic is still printed.
     bool hidden = false;
     bool has_address = false;
     // In a BIT section, the address counts bits: byte address * 8 + bit.
