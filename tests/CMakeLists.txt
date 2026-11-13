@@ -9,6 +9,7 @@ add_executable(openc166_tests
     unit/test_include.cpp
     unit/test_lit.cpp
     unit/test_cond.cpp
+    unit/test_listing.cpp
     unit/test_dpp.cpp
     unit/test_regbanks.cpp
     unit/test_output.cpp

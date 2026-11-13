@@ -76,13 +76,15 @@ since OH166 starts a new record at each section.
   banks are placed as L166 places them), `NAME`, `SSKDEF`, `PECDEF` and
   `TYPEDEC`, with Keil's error checks. See
   [Register banks and linker directives](#register-banks-and-linker-directives).
-- **Accepted and ignored:** listing and object-file controls such as
-  `$TITLE(...)`, `$EJECT` and `$DEBUG`, which only matter to a printed
-  listing or a debugger.
+- **Accepted and ignored:** object-file controls such as `$DEBUG` and
+  `$OBJECT`, and `$PRINT`/`$NOPRINT`: the command line says which files
+  are written.
 - **Controls:** `$MOD167`, `$MOD166`/`$NOMOD166`, `$CASE`/`$NOCASE`,
   `$SEGMENTED`/`$NONSEGMENTED`, `$TABS`, `$MACRO`/`$NOMACRO`,
   `$MPL`/`$NOMPL`, `$GEN`/`$NOGEN`/`$GENONLY`, `$LIST`/`$NOLIST`,
-  `$SAVE`/`$RESTORE`. `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
+  `$SAVE`/`$RESTORE`, and the [listing controls](#listing-controls)
+  `$TITLE`, `$EJECT`, `$PAGING`, `$PAGELENGTH`, `$PAGEWIDTH`,
+  `$SYMBOLS`, `$SYMLIST` and `$XREF`. `$MODV2` falls back to the C167 set, with warning OC2. Some controls must
   come before the first statement; see [Controls](#controls).
 
 ## Not supported yet
@@ -232,17 +234,18 @@ Keil has two kinds of `$` controls:
 Primary controls that openc166 uses: `MOD167`/`M167`, `MOD166`/`M166`,
 `NOMOD166`/`NOM166`, `MODV2`, `CASE`, `NOCASE`, `INCDIR`/`ID`,
 `SEGMENTED`/`SG`, `NONSEGMENTED`/`NOSG`, `TABS`/`TA`, `MACRO`, `NOMACRO`,
-`MPL`, `NOMPL`. Those it ignores: `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `SYMBOLS`/`SB`,
-`NOSYMBOLS`/`NOSB`, `XREF`/`XR`, `NOXREF`/`NOXR`, `DEBUG`/`DB`,
-`NODEBUG`/`NODB`, `PRINT`/`PR`, `NOPRINT`/`NOPR`, `OBJECT`/`OJ`,
-`NOOBJECT`/`NOOJ`, `ERRORPRINT`/`EP`, `NOERRORPRINT`/`NOEP`, `PAGING`,
-`NOPAGING`, `DATE`, `LINES`, `NOLINES`, `TYPE`, `NOTYPE`, `AMAKE`,
-`NOAMAKE`, `USEDEXTONLY`, `EXTMAC`, `EXPDECNUM`, `ABSOLUTE`, `NOABSOLUTE`.
+`MPL`, `NOMPL`, `PAGELENGTH`/`PL`, `PAGEWIDTH`/`PW`, `PAGING`, `NOPAGING`,
+`SYMBOLS`/`SB`, `NOSYMBOLS`/`NOSB`, `XREF`/`XR`, `NOXREF`/`NOXR`. Those it
+ignores: `DEBUG`/`DB`, `NODEBUG`/`NODB`, `PRINT`/`PR`, `NOPRINT`/`NOPR`,
+`OBJECT`/`OJ`, `NOOBJECT`/`NOOJ`, `ERRORPRINT`/`EP`, `NOERRORPRINT`/`NOEP`,
+`DATE` (its argument is checked), `LINES`, `NOLINES`, `TYPE`, `NOTYPE`,
+`AMAKE`, `NOAMAKE`, `USEDEXTONLY`, `EXTMAC`, `EXPDECNUM`, `ABSOLUTE`,
+`NOABSOLUTE`.
 
 General controls that openc166 uses: `INCLUDE`/`IC`, `SET`, `RESET`, `IF`,
 `ELSEIF`, `ELSE`, `ENDIF`, `COND`, `NOCOND`, `GEN`/`GE`, `NOGEN`/`NOGE`,
-`GENONLY`/`GO`, `SAVE`/`SA`, `RESTORE`/`RS`, `LIST`/`LI`, `NOLIST`/`NOLI`.
-Those it ignores: `TITLE`/`TT`, `EJECT`/`EJ`, `SYMLIST`, `NOSYMLIST`, `REGUSE`.
+`GENONLY`/`GO`, `SAVE`/`SA`, `RESTORE`/`RS`, `LIST`/`LI`, `NOLIST`/`NOLI`,
+`TITLE`/`TT`, `EJECT`/`EJ`, `SYMLIST`, `NOSYMLIST`. It ignores `REGUSE`.
 
 These lists come from testing A166 V5.38. The manual calls `TITLE` and
 `NOCOND` primary, but A166 accepts them anywhere. An unknown control is
@@ -275,6 +278,40 @@ otherwise ignored, even controls and conditionals. Problems found at the end
 (a missing `END`, A89; an unclosed `IF`, A12) are reported on the last line
 of the file; an unclosed `SECTION` or `PROC` (A106) on the `END` line (with
 no `END` at all, Keil reports only A89).
+
+### Listing controls
+
+The listing has openc166's own layout, not Keil's, but these controls mean
+what they mean in Keil:
+
+- **`$EJECT`** starts a new page after its line: a form feed, then a header
+  with the title and the page number. An `$EJECT` that `$NOLIST` hides
+  does not.
+- **`$TITLE(text)`** sets the title of the page headers. As in Keil, every
+  header shows the last title of the file. Without one the header names
+  the source file. The first page has no header.
+- **`$PAGING`**, **`$PAGELENGTH(n)`** (18 to 65535) break the listing into
+  pages of `n` rows, 60 unless given, header included. `$NOPAGING` leaves
+  only the `$EJECT` breaks.
+- **`$PAGEWIDTH(n)`** (72 to 132) wraps longer rows; the rest of a source
+  line continues in the source column.
+- **`$NOSYMBOLS`** leaves out the symbol table, unless `$XREF` is given.
+  Symbols defined between **`$NOSYMLIST`** and `$SYMLIST` are left out of
+  it.
+- **`$XREF`** adds to each symbol the line of its definition, marked `#`,
+  and the lines that use it in an expression.
+
+A number out of range is A19, a missing argument A22, and an argument on a
+control that takes none, as in `$EJECT(1)`, is A16, though as in Keil the
+control still counts. Only the printed listing changes: the symbols of the
+result, the debug information and the ELF file always have every symbol.
+The symbol and section tables are not paged or wrapped.
+
+Unlike Keil, openc166 does not break pages or wrap rows unless the source
+asks for it (in Keil, `$PAGING`, `$PAGELENGTH(60)` and `$PAGEWIDTH(120)`
+are the defaults), and it ignores `$DATE`: its headers have no date, so
+the same source always gives the same listing. In TASKING sources these
+controls are still ignored, except `LIST` and `NOLIST`.
 
 ## Conditional assembly
 
@@ -1129,6 +1166,7 @@ follow are unchanged. Other bad items are dropped.
 | `-(L1 - L0)`, `NOT (L1 - L0)`, `-(L1 - 1)` | wrong value, no warning | error A63 |
 | `number - label` (`10H - L1`) | wrong value | error A63 |
 | decimal fraction such as `#1.0` | accepted as 0 | error A70 |
+| page breaks and wrapped rows in the listing | on by default (`$PAGING`, 60 rows, 120 columns) | only with `$PAGING`, `$PAGELENGTH` or `$PAGEWIDTH`; `$EJECT` always works |
 | instruction at an odd address | accepted | error A134 |
 | instruction outside a `PROC` | error A45 | accepted |
 | instruction or data outside any `SECTION` | error A44 | placed at `--origin` |

@@ -1,0 +1,32 @@
+; Listing controls: they change only the listing, but Keil checks their
+; arguments.
+$PAGELENGTH(65535) PAGEWIDTH(132)
+$PAGELENGTH(17)         ; A19: 18 to 65535
+$PL(65536)              ; A19
+$PL                     ; A22
+$PL()                   ; A19
+$PL(20 30)              ; A22
+$PAGING
+$NOPAGING               ; A7
+$XREF
+$XREF(1)                ; A16
+$DATE(today)
+$DATE                   ; A22
+$TITLE(a title (with) parentheses)
+$TITLE()
+$TITLE                  ; A22
+S       SECTION CODE AT 0C000H
+P       PROC    NEAR
+        NOP
+$EJECT
+$EJECT(1)               ; A16
+$LIST(1)                ; A16
+$SYMLIST
+$SYMLIST(1)             ; A16
+$EJ TT(another)
+        NOP
+$PAGELENGTH(30)         ; A8: too late
+        RET
+P       ENDP
+S       ENDS
+        END

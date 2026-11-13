@@ -82,6 +82,7 @@ struct ListingLine {
     // off after it), or a line of a macro expansion under $NOGEN (the
     // default). A hidden line with a diagnostic is still printed.
     bool hidden = false;
+    bool eject = false;  // $EJECT: the listing starts a new page after this line
     bool has_address = false;
     // In a BIT section, the address counts bits: byte address * 8 + bit.
     bool bit_address = false;
@@ -104,6 +105,21 @@ struct Symbol {
     std::string text;  // replacement text of a LIT; type of an EXTERN (WORD, DATA4, ...)
     int module = 0;  // index into AssemblyResult::modules
     bool exported = false;  // named by PUBLIC or GLOBAL, so other modules can use it
+    bool listed = true;  // false if defined under $NOSYMLIST: left out of the printed symbol table
+    // $XREF: the listing lines that use the symbol, in order. Empty without $XREF.
+    std::vector<int> refs;
+};
+
+// What a module's listing controls ask of the printed listing.
+struct ListingOptions {
+    bool symbols = true;  // $NOSYMBOLS: no symbol table
+    bool xref = false;    // $XREF: the symbol table shows where each symbol is defined and used
+    // Lines on a page, the page header included; 0 for no page breaks other
+    // than $EJECT (the default, unlike Keil; $PAGING or $PAGELENGTH turn
+    // them on).
+    int page_length = 0;
+    int page_width = 0;  // $PAGEWIDTH: longer lines are wrapped; 0 for no limit
+    std::string title;   // the last $TITLE, shown in the page headers
 };
 
 // Where a section went.
@@ -134,6 +150,7 @@ struct AssemblyResult {
     // that L166 would combine count as one section.
     std::vector<SectionInfo> sections;
     std::vector<std::string> modules;  // file name of each source
+    std::vector<ListingOptions> listing_options;  // of each module
     isa::Cpu cpu = isa::Cpu::C166;
     int passes = 0;
 

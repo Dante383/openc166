@@ -638,7 +638,14 @@ constexpr PrimaryChoice kPrimaryChoices[] = {
 };
 
 constexpr std::string_view kIgnoredControls[] = {
-    "TITLE", "TT", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "REGUSE",
+    "REGUSE",
+};
+
+// Listing controls that take no argument: one in parentheses is A16, though
+// the control still counts.
+constexpr std::string_view kBareListingControls[] = {
+    "LIST", "LI", "NOLIST", "NOLI", "EJECT", "EJ", "SYMLIST", "NOSYMLIST", "SYMBOLS", "SB", "NOSYMBOLS",
+    "NOSB", "XREF", "XR", "NOXREF", "NOXR", "PAGING", "NOPAGING",
 };
 
 // TASKING a166 controls, by full name: abbreviations that differ from
@@ -825,6 +832,7 @@ private:
     struct Entry {
         Symbol sym;
         int pass = 0;  // pass of the latest definition
+        std::vector<int> refs;  // $XREF: lines of the final pass that use the symbol
     };
 
     struct SourceFile {
@@ -904,6 +912,13 @@ private:
     bool primary_done_ = false;  // a statement was seen: primary controls are no longer allowed
     std::map<std::string_view, std::set<std::string_view>> primary_seen_;  // settings given for each group of primary controls
     int tabs_ = 8;  // $TABS: tab stops for expand_tabs()
+    // Listing controls. Keil breaks pages by default; openc166 only when
+    // $PAGING or $PAGELENGTH asks for it.
+    bool symlist_ = true;  // $SYMLIST: symbols defined now go in the symbol table
+    bool eject_ = false;   // $EJECT on the current line
+    std::optional<bool> paging_;
+    std::optional<int> page_length_;
+    ListingOptions listing_options_;
     std::size_t file_ = 0;  // files_ index of the current line
     int level_ = 0;  // include nesting depth of the current line
     std::string joined_;  // include file whose last line was joined to the current line
@@ -990,6 +1005,8 @@ private:
     bool control_condition(std::string_view text, std::size_t after, int column, Reporter& rep);
     void set_flags(std::string_view text, std::size_t from, std::size_t to, bool set);
     void set_tabs(std::optional<std::string_view> arg, bool closed, int column);
+    void control_number(std::string_view name, std::optional<std::string_view> arg, bool closed, int column, int low,
+                        int high, bool quotes, int& number);
     bool contradicts(std::string_view name);
     void include(std::string_view name, int column);
     void add_incdirs(std::string_view dirs);
@@ -1090,6 +1107,8 @@ std::optional<Value> Assembler::lookup(std::string_view name) {
         forward_ref_ = true;
         ++forward_count_;
     }
+    if (final_ && listing_options_.xref && (it->second.refs.empty() || it->second.refs.back() != line_no_))
+        it->second.refs.push_back(line_no_);
     return it->second.sym.value;
 }
 
@@ -1117,7 +1136,12 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
         throw AsmError("A25", "symbol redefinition", name.column);
     }
     if (kind != SymbolKind::Set && (inserted || !same_value(e.sym.value, v))) changed_ = true;
-    e.sym = Symbol{std::string(name.text), kind, v, line_no_, {}};
+    e.sym = Symbol{};
+    e.sym.name = std::string(name.text);
+    e.sym.kind = kind;
+    e.sym.value = v;
+    e.sym.line = line_no_;
+    e.sym.listed = symlist_;
     e.pass = pass_;
 }
 
@@ -1344,6 +1368,11 @@ void Assembler::run_lines() {
     mpl_ = !tasking_ && initial_mpl(files_[0]->lines);
     primary_seen_.clear();
     tabs_ = 8;
+    symlist_ = true;
+    eject_ = false;
+    paging_.reset();
+    page_length_.reset();
+    listing_options_ = ListingOptions{};
     saved_gen_.clear();
     m166_.reset();
     pre_rep_ = Reporter{};
@@ -1642,6 +1671,8 @@ void Assembler::process_line(std::string_view text) {
     const bool now_active = active();
     lst.skipped = m166_skipped_ || !(control_line ? now_active : was_active);
     lst.hidden = !list_ || (!now_active && !cond_listing_) || (macro_level_ > 0 && !gen_);
+    // Like Keil, no new page for an $EJECT that $NOLIST hides.
+    lst.eject = std::exchange(eject_, false) && list_;
     rep_ = nullptr;
     if (!final_) return;
     for (auto& d : rep.items()) {
@@ -2025,6 +2056,40 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             gen_ = true;
         } else if (name == "NOGEN" || name == "NOGE" || name == "GENONLY" || name == "GO") {
             gen_ = false;
+        } else if (name == "EJECT" || name == "EJ") {
+            eject_ = true;
+        } else if (name == "TITLE" || name == "TT") {
+            if (!list[k].paren) throw AsmError("A22", "')' expected: $TITLE takes a text in parentheses", column);
+            listing_options_.title = std::string(arg(list[k]));
+        } else if (name == "SYMLIST") {
+            symlist_ = true;
+        } else if (name == "NOSYMLIST") {
+            symlist_ = false;
+        } else if (name == "SYMBOLS" || name == "SB") {
+            listing_options_.symbols = true;
+        } else if (name == "NOSYMBOLS" || name == "NOSB") {
+            listing_options_.symbols = false;
+        } else if (name == "XREF" || name == "XR") {
+            listing_options_.xref = true;
+        } else if (name == "NOXREF" || name == "NOXR") {
+            listing_options_.xref = false;
+        } else if (name == "PAGING") {
+            paging_ = true;
+        } else if (name == "NOPAGING") {
+            paging_ = false;
+        } else if (name == "PAGELENGTH" || name == "PL") {
+            int length = 0;
+            control_number(name, list[k].paren ? std::optional(arg(list[k])) : std::nullopt, !list[k].unclosed,
+                           column, 18, 65535, false, length);
+            page_length_ = length;
+        } else if (name == "PAGEWIDTH" || name == "PW") {
+            int width = 0;
+            control_number(name, list[k].paren ? std::optional(arg(list[k])) : std::nullopt, !list[k].unclosed,
+                           column, 72, 132, false, width);
+            listing_options_.page_width = width;
+        } else if (name == "DATE") {
+            // Keil V5.38 takes the text but still prints today's date.
+            if (!list[k].paren) throw AsmError("A22", "')' expected: $DATE takes a text in parentheses", column);
         } else if (name == "LIST" || name == "LI") {
             list_ = true;
         } else if (name == "NOLIST" || name == "NOLI") {
@@ -2057,6 +2122,10 @@ void Assembler::controls(std::string_view text, std::size_t from, Reporter& rep)
             throw AsmError("A7", "respecified primary control, line ignored: $" + name +
                                      " contradicts an earlier primary control",
                            column);
+        // Keil uses a listing control that has an argument it should not
+        // have, and then reports it.
+        if (!tasking_ && list[k].paren && contains(kBareListingControls, name))
+            throw AsmError("A16", "unknown control or bad argument(s): $" + name + " takes no argument", column);
     }
     if (cond) cond_control(cond->name, text, cond->arg, cond->column, true, rep);
 }
@@ -2121,6 +2190,7 @@ void Assembler::command_control(const std::string& text) {
         rep.error(e.code(), e.message(), e.column());
     }
     rep_ = nullptr;
+    eject_ = false;
     // Files from earlier controls are read first.
     if (include_) stack_.insert(stack_.end() - commanded_, Frame{*include_, 0, 1, nullptr}), ++commanded_;
     include_.reset();
@@ -2155,14 +2225,24 @@ bool Assembler::contradicts(std::string_view name) {
 // space; when only the ')' is missing, the number is still used.
 void Assembler::set_tabs(std::optional<std::string_view> arg, bool closed, int column) {
     tabs_ = 1;
-    if (!arg) throw AsmError("A22", "')' expected: $TABS takes a number in parentheses", column);
+    control_number("TABS", arg, closed, column, 1, 16, true, tabs_);
+}
+
+// The number of a control such as $TABS(4) or $PAGELENGTH(60): decimal, or
+// hexadecimal with an H. Outside low..high is A19; a missing parenthesis or
+// text after the number is A22, but then, like Keil, the number is still
+// used. 'quotes': a ' inside the number is skipped, as Keil does for $TABS.
+void Assembler::control_number(std::string_view name, std::optional<std::string_view> arg, bool closed, int column,
+                               int low, int high, bool quotes, int& result) {
+    if (!arg)
+        throw AsmError("A22", "')' expected: $" + std::string(name) + " takes a number in parentheses", column);
     std::size_t i = arg->find_first_not_of(" \t");
     std::string digits;
     for (; i < arg->size(); ++i) {
         const char c = (*arg)[i];
         if (std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_')
             digits += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-        else if (c != '\'')
+        else if (c != '\'' || !quotes)
             break;
     }
     int base = 10;
@@ -2170,16 +2250,18 @@ void Assembler::set_tabs(std::optional<std::string_view> arg, bool closed, int c
         base = 16;
         digits.pop_back();
     }
-    int width = 0;
+    int number = 0;
     bool good = !digits.empty();
     for (char c : digits) {
         const int d = std::isdigit(static_cast<unsigned char>(c)) ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : 99;
         good = good && d < base;
-        width = std::min(width * base + d, 1000);
+        number = std::min(number * base + d, 1000000);
     }
-    if (!good || width < 1 || width > 16)
-        throw AsmError("A19", "numeric value out of range: $TABS takes 1 to 16", column);
-    tabs_ = width;
+    if (!good || number < low || number > high)
+        throw AsmError("A19", "numeric value out of range: $" + std::string(name) + " takes " + std::to_string(low) +
+                                  " to " + std::to_string(high),
+                       column);
+    result = number;
     if (!closed || (i < arg->size() && arg->find_first_not_of(" \t", i) != std::string_view::npos))
         throw AsmError("A22", "')' expected", column);
 }
@@ -4238,10 +4320,14 @@ AssemblyResult Program::run(const std::vector<Source>& sources) {
         }
         for (auto& c : r.chunks) out.chunks.push_back(std::move(c));
         if (m.cpu_ == isa::Cpu::C167) out.cpu = isa::Cpu::C167;
+        ListingOptions o = m.listing_options_;
+        o.page_length = m.paging_ == false ? 0 : m.page_length_ ? *m.page_length_ : m.paging_ ? 60 : 0;
+        out.listing_options.push_back(std::move(o));
         std::set<std::string> exported;
         for (const auto& [k, def] : m.exported()) exported.insert(k);
         for (const auto& [k, e] : m.symbols_) {
             out.symbols.push_back(e.sym);
+            out.symbols.back().refs = e.refs;
             out.symbols.back().module = static_cast<int>(i);
             out.symbols.back().exported = exported.count(k) > 0;
         }
@@ -4728,19 +4814,60 @@ std::string format_listing(const AssemblyResult& result) {
     std::vector<bool> shown_diag(result.diagnostics.size());
     const bool multi = result.modules.size() > 1;
     std::string main_file = result.listing.empty() ? std::string() : result.listing.front().file;
-    static constexpr const char* kHeader = "LOC       OBJ                  LINE    SOURCE\n\n";
-    std::string out = multi ? "" : kHeader;
+    static constexpr const char* kHeader = "LOC       OBJ                  LINE    SOURCE";
+    static constexpr std::size_t kSourceColumn = 39;
+    std::string out;
+    // Rows go through put(), which wraps them to the module's $PAGEWIDTH
+    // and starts a new page, with a header, after $PAGELENGTH rows or an
+    // $EJECT.
+    static const ListingOptions kNoOptions;
+    const ListingOptions* options = result.listing_options.empty() ? &kNoOptions : &result.listing_options.front();
+    int page = 1, rows = 0;
+    bool eject = false;
+    std::function<void(std::string_view, std::size_t)> put = [&](std::string_view row, std::size_t indent) {
+        const std::size_t width = options->page_width > 0 ? static_cast<std::size_t>(options->page_width) : SIZE_MAX;
+        if (eject || (options->page_length > 0 && rows >= options->page_length)) {
+            eject = false;
+            rows = 0;
+            std::string head = "openc166  " + (options->title.empty() ? main_file : options->title);
+            const std::string number = "PAGE " + std::to_string(++page);
+            const std::size_t line = std::min<std::size_t>(width, 120);
+            if (head.size() + 2 + number.size() > line) head.resize(line - std::min(line, 2 + number.size()));
+            head.resize(line - number.size(), ' ');
+            out += "\f" + head + number + "\n\n";
+            rows = 2;
+        }
+        if (row.size() <= width) {
+            out += row;
+            out += '\n';
+            ++rows;
+            return;
+        }
+        out += row.substr(0, width);
+        out += '\n';
+        ++rows;
+        indent = std::min(indent, width - 1);
+        for (std::size_t at = width; at < row.size(); at += width - indent) {
+            const std::string rest = std::string(indent, ' ') + std::string(row.substr(at, width - indent));
+            // By value: a page break inside put() must not see a dead view.
+            put(rest, indent);
+        }
+    };
+    if (!multi) {
+        put(kHeader, 0);
+        put("", 0);
+    }
     auto print = [&](std::size_t i) {
         const Diagnostic& d = result.diagnostics[i];
         shown_diag[i] = true;
-        out += "*** ";
-        out += d.severity == Severity::Error ? "ERROR " : "WARNING ";
-        out += d.code + ": " + d.message;
+        std::string row = "*** ";
+        row += d.severity == Severity::Error ? "ERROR " : "WARNING ";
+        row += d.code + ": " + d.message;
         if (d.line && d.file != main_file)
-            out += " (" + d.file + ", line " + std::to_string(d.line) + ")";
+            row += " (" + d.file + ", line " + std::to_string(d.line) + ")";
         else if (!d.line && multi && !d.file.empty())
-            out += " (" + d.file + ")";
-        out += "\n";
+            row += " (" + d.file + ")";
+        put(row, 4);
     };
     // In a BIT section, the location counter counts bits; Keil shows it as
     // word address.bit (0..15).
@@ -4754,7 +4881,13 @@ std::string format_listing(const AssemblyResult& result) {
         if (multi && l.module != module) {
             module = l.module;
             if (static_cast<std::size_t>(module) < result.modules.size()) main_file = result.modules[module];
-            out += std::string(out.empty() ? "" : "\n") + "MODULE " + main_file + "\n\n" + kHeader;
+            if (static_cast<std::size_t>(module) < result.listing_options.size())
+                options = &result.listing_options[module];
+            if (!out.empty()) put("", 0);
+            put("MODULE " + main_file, 0);
+            put("", 0);
+            put(kHeader, 0);
+            put("", 0);
         }
         if (l.hidden && l.diagnostics.empty()) continue;
         std::string loc = l.has_address ? address_text(l, 0) : l.value ? "=" + value_text(*l.value) : "";
@@ -4770,29 +4903,43 @@ std::string format_listing(const AssemblyResult& result) {
         char head[64];
         std::snprintf(head, sizeof head, "%-9s %-16s %-2s%6s%-2s  ", loc.c_str(), obj.c_str(), level.c_str(),
                       number.c_str(), macro.c_str());
-        out += head + l.source + "\n";
+        put(head + l.source, kSourceColumn);
         // Long DB/DW lines continue on extra rows.
         while (shown < l.bytes.size()) {
             std::string more;
             std::size_t row = shown;
             for (; shown < l.bytes.size() && shown < row + 8; ++shown) more += hex(l.bytes[shown], 2);
-            std::snprintf(head, sizeof head, "%-9s %-18s\n", address_text(l, static_cast<std::int64_t>(row)).c_str(),
+            std::snprintf(head, sizeof head, "%-9s %-18s", address_text(l, static_cast<std::int64_t>(row)).c_str(),
                           more.c_str());
-            out += head;
+            put(head, 0);
         }
         for (auto i : l.diagnostics) print(i);
+        if (l.eject) eject = true;
     }
     if (multi) {
         main_file.clear();
         bool any = false;
         for (std::size_t i = 0; i < result.diagnostics.size(); ++i) any = any || !shown_diag[i];
-        if (any) out += "\n";
+        if (any) put("", 0);
     }
     for (std::size_t i = 0; i < result.diagnostics.size(); ++i)
         if (!shown_diag[i]) print(i);
 
-    out += "\nSYMBOLS\n\n";
+    // The tables are not paged or wrapped. $NOSYMBOLS leaves a module's
+    // symbols out, unless it has $XREF, as in Keil.
+    auto module_options = [&](int m) -> const ListingOptions& {
+        return static_cast<std::size_t>(m) < result.listing_options.size() ? result.listing_options[m] : kNoOptions;
+    };
+    auto in_table = [&](const Symbol& s) {
+        const ListingOptions& o = module_options(s.module);
+        return s.listed && (o.symbols || o.xref);
+    };
+    const bool any_symbols = result.listing_options.empty() ||
+                             std::any_of(result.listing_options.begin(), result.listing_options.end(),
+                                         [](const ListingOptions& o) { return o.symbols || o.xref; });
+    if (any_symbols) out += "\nSYMBOLS\n\n";
     for (const auto& s : result.symbols) {
+        if (!in_table(s)) continue;
         static constexpr const char* kKinds[] = {"LABEL", "EQU", "SET", "BIT", "LIT", "EXTERN"};
         std::string value;
         switch (s.value.type) {
@@ -4811,9 +4958,16 @@ std::string format_listing(const AssemblyResult& result) {
         if (s.exported) value += " PUBLIC";
         if (multi && static_cast<std::size_t>(s.module) < result.modules.size())
             value += "  (" + result.modules[s.module] + ")";
-        char row[160];
-        std::snprintf(row, sizeof row, "%-32s %-6s %s\n", s.name.c_str(), kKinds[static_cast<int>(s.kind)], value.c_str());
-        out += row;
+        // $XREF: the line of the definition, marked #, and the lines that
+        // use the symbol.
+        if (module_options(s.module).xref) {
+            value += "  " + std::to_string(s.line) + "#";
+            for (int r : s.refs)
+                if (r != s.line) value += " " + std::to_string(r);
+        }
+        char row[64];
+        std::snprintf(row, sizeof row, "%-32s %-6s ", s.name.c_str(), kKinds[static_cast<int>(s.kind)]);
+        out += row + value + "\n";
     }
     if (!result.sections.empty()) {
         out += "\nSECTIONS\n\n";
