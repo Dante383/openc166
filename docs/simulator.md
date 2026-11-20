@@ -68,7 +68,7 @@ also works.
 | 3 | CPU core, bus, snapshots | Done except the hardware oracle (below). The stock reset path passes all its self-tests: error word 0000H. |
 | 4 | Bootloader boots | Done, see "K-line and gkflasher" below. ASC0, CAPCOM and the ADC are modelled; gkflasher identifies the simulated ECU through `openc166-sim serve` (with the application; in boot mode the boot block refuses its memory read at gkflasher's security level, as a real ECU in boot mode would). |
 | 5 | Debug core and DAP | Done: breakpoints, watchpoints, stepping, reverse execution, DAP, Ghidra symbols. Keil-syntax conditions are not done (conditions are Python). |
-| 6 | Flash model and CAN | Not started; the flash is a read-only image and the CAN controllers are logged storage. |
+| 6 | Flash model and CAN | Flash done: the 5WY19's Am29F400BB answers the AMD command set (program, erase, autoselect, status polling) on the virtual clock. CAN not started: the controllers are logged storage. |
 | 7 | Application runs | Mostly done. With the CAPCOM unit and the SSC stub the stock application runs its scheduler, services the watchdog and answers KWP2000 on the K-line; `gkflasher --id` identifies it through `openc166-sim serve`. GPT1/GPT2, PWM, CAN and the ports are still logged storage. |
 | 8 | Hardware snapshot | Not started. |
 
@@ -148,19 +148,22 @@ application, which:
 
 ## Boards
 
-`board=` takes:
+A board file in JSON says which chip, which devices on which chip
+selects, the reset configuration and the default inputs;
+[boards.md](boards.md) describes the format. `board=` and `--board` take a
+built-in board or the path of a file:
 
 - `5wy19`: C167CS-LM at 24 MHz (the firmware's baud-rate code divides
-  24000000; the design doc said 25); flash on CS0 seen at 0 and 80000H; RAM in
-  the CS2 window; the 74HC574 latch in the CS3 window at 0A000H; XRAM1
-  (0E000H, 2 KB) and XRAM2 (0C000H, 6 KB) and CAN1/CAN2 (0EF00H/0EE00H,
-  logged storage) through XPERCON.
-- `c167cs`: the same CPU with the image as ROM on CS0.
-- `c167`, `c166`: a plain core with the image as ROM on CS0 (2 KB IRAM).
+  24000000; the design doc said 25); an Am29F400BB flash on CS0, seen at 0
+  and 80000H, with its command set; RAM in the CS2 window; the 74HC574
+  latch in the CS3 window at 0A000H; XRAM1 (0E000H, 2 KB) and XRAM2
+  (0C000H, 6 KB) and CAN1/CAN2 (0EF00H/0EE00H, logged storage) through
+  XPERCON.
+- `c167cs`, `c167cr`, `c167`, `c166`: the bare chip with the image as ROM
+  on CS0.
 
-Board definitions are C++ (`src/sim/boards.cpp`). Devices written in
-Python go on a chip select with `Simulator.attach()`; they are not part of
-snapshots, so reverse execution does not replay them.
+Devices written in Python go on a chip select with `Simulator.attach()`;
+they are not part of snapshots, so reverse execution does not replay them.
 
 ### Findings on the 5WY19
 
@@ -224,8 +227,9 @@ snapshots, so reverse execution does not replay them.
   and port P6 for the chip selects) or 0000H.
 - **A/D converter**: single, continuous and scan conversions of 10-bit
   values set from scripts (`set_adc`), 250 cycles each.
-- Not yet: GPT1/GPT2, PWM, CAN (logged storage), ports (logged storage),
-  the flash command set.
+- **Flash** on a chip select: the AMD command set, see
+  [boards.md](boards.md#flash).
+- Not yet: GPT1/GPT2, PWM, CAN (logged storage), ports (logged storage).
 
 Host input to ASC0 is logged with its arrival cycle, so reverse execution
 replays it exactly. Loading a snapshot by hand, or sending new input after

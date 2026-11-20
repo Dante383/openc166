@@ -31,7 +31,7 @@ Open the firmware program in the Debugger tool. In the launch menu choose
 | Option | Meaning |
 |---|---|
 | Image | the flash or ROM image: by default the program's own file |
-| Board | `5wy19`, `c167cs`, `c167` or `c166` |
+| Board | a built-in board (`5wy19`, `c167cs`, `c167cr`, `c167`, `c166`) or the path of a [board file](boards.md) |
 | Symbols | optional: an export from `tools/ghidra/ExportOpenc166Symbols.py`, for frame names |
 | A/D inputs | `CH=VALUE` pairs; the 5WY19 resets itself unless channel 1 reads above 0C4H |
 | Boot mode | 5WY19: erase the application signature so the boot block runs |

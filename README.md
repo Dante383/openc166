@@ -258,7 +258,8 @@ byte for byte), `openc166-sim run` runs firmware headless and lists the
 registers it touched that are not modelled yet, and `openc166 -g` writes
 debug information ([format](docs/debug-info.md)). `openc166 -o prog.elf`
 writes an ELF file with DWARF line and symbol information for Ghidra,
-readelf, objdump and other tools. See
+readelf, objdump and other tools. The hardware around the CPU is a
+[board file](docs/boards.md) in JSON. See
 [docs/simulator.md](docs/simulator.md) for what is modelled and what is
 next.
 
