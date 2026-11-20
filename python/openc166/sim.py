@@ -387,13 +387,16 @@ _WATCH_KINDS = {"read": 1, "write": 2, "rw": 3, "access": 3, "change": 4}
 class Simulator:
     """A simulated board with a debugger attached."""
 
-    BOARDS = ("5wy19", "c167cs", "c167", "c166")
+    #: The built-in boards. A board can also be the path of a board file
+    #: (.json, see docs/boards.md) or a board file's JSON text.
+    BOARDS = tuple(_lib.oc166_sim_builtin_boards().decode("ascii").split(","))
 
     def __init__(self, image: bytes, board: str = "c167", symbols: Optional[Symbols] = None):
         buf = (ctypes.c_uint8 * max(len(image), 1)).from_buffer_copy(bytes(image) or b"\0")
-        h = _lib.oc166_sim_new(board.lower().encode("ascii"), buf, len(image))
+        spec = os.fspath(board)
+        h = _lib.oc166_sim_new(spec.encode("utf-8"), buf, len(image))
         if not h:
-            raise SimulatorError("cannot create board {!r} (known: {})".format(board, ", ".join(self.BOARDS)))
+            raise SimulatorError(_lib.oc166_sim_last_error().decode("utf-8", "replace") or "cannot create the board")
         self._h = h
         self.board = board
         self.symbols = symbols or Symbols()
@@ -863,6 +866,9 @@ def _int(text: str) -> int:
     return _addr(text) if not text.isdigit() else int(text)
 
 
+BOARD_HELP = "a built-in board ({}) or a board file (.json)".format(", ".join(Simulator.BOARDS))
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """openc166-sim: disassemble images and run firmware headless."""
     import argparse
@@ -881,7 +887,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     r = sub.add_parser("run", help="run firmware and report what it touched that is not modelled")
     r.add_argument("image")
-    r.add_argument("--board", default="c167", choices=Simulator.BOARDS)
+    r.add_argument("--board", default="c167", help=BOARD_HELP)
     r.add_argument("--instructions", type=_int, default=1_000_000)
     r.add_argument("--break", dest="breaks", action="append", default=[], help="stop at an address or symbol")
     r.add_argument("--symbols", help="Ghidra export (JSON or CSV)")
@@ -890,7 +896,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     sv = sub.add_parser("serve", help="serve the ECU's serial port (ASC0) over TCP for host tools")
     sv.add_argument("image")
-    sv.add_argument("--board", default="5wy19", choices=Simulator.BOARDS)
+    sv.add_argument("--board", default="5wy19", help=BOARD_HELP)
     sv.add_argument("--port", type=int, default=5555)
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--raw", action="store_true", help="plain TCP (socket://) instead of RFC 2217")

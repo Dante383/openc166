@@ -4,6 +4,8 @@
 
 #include "sim/machine.hpp"
 
+#include <optional>
+
 namespace oc166::sim {
 
 // RAM-like storage for on-chip modules that are not modelled yet (the CAN
@@ -61,21 +63,79 @@ private:
     std::string name_;
 };
 
-// A C167CS: 3 KB internal RAM, 8 KB XRAM in two blocks, two CAN controllers
-// (stubs for now), enabled through XPERCON.
-Board c167cs_board();
+// An AMD-style NOR flash (AM29F400BB and its kind) on the external bus:
+// reads give the array, and the command set works as on the chip: the
+// unlock cycles (AAH at 555H, 55H at 2AAH, as word addresses on a 16-bit
+// bus or AAAH/555H on an 8-bit one), program (A0H), sector and chip erase
+// (80H, then 30H at each sector or 10H), autoselect (90H: manufacturer,
+// device ID, sector protection) and reset (F0H). While the chip programs or
+// erases, reads give the status: DQ7 data polling, DQ6 toggling on every
+// read, DQ3 once the erase has started and DQ2 toggling in a sector being
+// erased. Program and erase take the times given (the datasheet's typical
+// values by default), on the machine's clock. Programming only clears bits.
+class Flash final : public Device {
+public:
+    struct Geometry {
+        std::vector<std::pair<std::uint32_t, std::uint32_t>> sectors;  // byte offset and size
+        std::uint16_t manufacturer;
+        std::uint16_t device;
+    };
+    // 512 KB bottom boot block: 16, 8, 8 and 32 KB, then seven 64 KB sectors.
+    static Geometry am29f400bb();
+    // Geometry by model name ("am29f400bb", "am29f400bt"), or std::nullopt.
+    static std::optional<Geometry> model(const std::string& name);
 
-// The Siemens 5WY19 engine ECU (docs/debugger-design.md, section 4):
-// C167CS-LM at 24 MHz, a 512 KB AM29F400BB flash on CS0 that appears at
-// both 0 and 80000H, external RAM on CS2 (wherever the firmware puts its
-// window) and the 74HC574 output latch in the CS3 window. The
-// flash is a read-only image until the flash model exists.
-Board siemens_5wy19(std::vector<std::uint8_t> flash);
+    Flash(std::string name, std::vector<std::uint8_t> image, Addr mask, Geometry geometry, int bus_width = 16);
+    std::string name() const override { return name_; }
+    std::uint8_t read8(Addr a) override;
+    std::uint16_t read16(Addr a) override;
+    void write8(Addr a, std::uint8_t v) override;
+    void write16(Addr a, std::uint16_t v) override;
+    std::uint8_t peek8(Addr a) override;
+    void poke8(Addr a, std::uint8_t v) override;
+    void attach(Machine& m) override { m_ = &m; }
+    void reset(bool power_on) override;
+    void save(StateWriter& w) const override;
+    void load(StateReader& r) override;
+    void event(Machine& m, std::uint32_t tag) override;
 
-// Names of the boards that board_by_name() knows.
-std::vector<std::string> board_names();
-// The board called 'name' ("c167", "c167cs", "5wy19") with 'image' as its
-// ROM or flash. Throws std::invalid_argument for an unknown name.
-Board board_by_name(const std::string& name, std::vector<std::uint8_t> image);
+    double program_us = 12;      // per word (or byte)
+    double sector_erase_ms = 1000;
+    double chip_erase_ms = 8000;
+
+    const std::vector<std::uint8_t>& image() const { return *image_; }
+    bool busy() const { return state_ == State::Busy; }
+
+private:
+    enum class State : std::uint8_t {
+        Read, Unlock1, Unlock2, Autoselect, ProgramSetup, Erase1, Erase2, Erase3, EraseSectors, Busy,
+    };
+    enum class Op : std::uint8_t { None, Program, EraseSectors, EraseChip };
+    std::uint32_t offset(Addr a) const { return (a & mask_) % static_cast<std::uint32_t>(image_->size()); }
+    std::uint32_t command_address(Addr a) const;
+    int sector_of(std::uint32_t offset) const;
+    std::uint16_t array16(std::uint32_t off) const;
+    std::uint16_t status(std::uint32_t off);
+    void command(Addr a, std::uint16_t v);
+    void start_erase();
+    std::vector<std::uint8_t>& writable();
+    std::uint64_t cycles(double seconds) const;
+
+    std::string name_;
+    std::shared_ptr<std::vector<std::uint8_t>> image_;
+    Addr mask_;
+    Geometry geometry_;
+    int bus_width_;
+    Machine* m_ = nullptr;
+
+    // Snapshot state.
+    State state_ = State::Read;
+    State resume_ = State::Read;  // where Busy goes back to
+    Op op_ = Op::None;
+    std::uint32_t op_offset_ = 0;
+    std::uint16_t op_data_ = 0;
+    std::uint32_t erase_mask_ = 0;  // sectors to erase
+    std::uint8_t toggle_ = 0;
+};
 
 }  // namespace oc166::sim

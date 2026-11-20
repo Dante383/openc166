@@ -1,0 +1,12 @@
+// A bare 80C166: the image as ROM on CS0 from address 0, mirrored every image
+// size, and nothing else on the bus.
+{
+  "format": "openc166-board",
+  "version": 1,
+  "name": "80C166",
+  "chip": "c166",
+  "clock_hz": "25MHz",
+  "chip_selects": {
+    "cs0": { "device": "rom", "name": "rom", "image": "$IMAGE" }
+  }
+}

@@ -351,10 +351,18 @@ OC166_API void oc166_free(void *p);
 
 typedef struct oc166_sim oc166_sim;
 
-/* A machine for 'board' ("5wy19", "c167cs", "c167" or "c166") with 'image'
- * as its flash or ROM (from address 0), with a debugger attached. Returns
- * NULL for an unknown board or if out of memory. */
+/* A machine for 'board' with a debugger attached. 'board' is a built-in
+ * board ("5wy19", "c167cs", "c167cr", "c167", "c166"), the path of a board
+ * file (.json, see docs/boards.md) or a board file's JSON text; 'image' is
+ * what "$IMAGE" in it stands for (the flash or ROM contents). Returns NULL
+ * if the board cannot be built; oc166_sim_last_error() says why. */
 OC166_API oc166_sim *oc166_sim_new(const char *board, const uint8_t *image, size_t size);
+
+/* Why the last oc166_sim_new() on this thread failed, or "". */
+OC166_API const char *oc166_sim_last_error(void);
+
+/* The built-in boards, separated by commas. */
+OC166_API const char *oc166_sim_builtin_boards(void);
 OC166_API void oc166_sim_free(oc166_sim *s);
 
 /* Resets the machine: 0 power-on, 1 software (SRST), 2 watchdog, 3 hardware. */

@@ -21,7 +21,12 @@ add_custom_command(
     VERBATIM)
 
 # Build the files in inc/ (assembler include files) into the library.
-set(_bundled ${PROJECT_SOURCE_DIR}/inc/REG167.INC)
+set(_bundled ${PROJECT_SOURCE_DIR}/inc/REG167.INC
+    ${PROJECT_SOURCE_DIR}/boards/c166.json
+    ${PROJECT_SOURCE_DIR}/boards/c167.json
+    ${PROJECT_SOURCE_DIR}/boards/c167cr.json
+    ${PROJECT_SOURCE_DIR}/boards/c167cs.json
+    ${PROJECT_SOURCE_DIR}/boards/5wy19.json)
 set(_bundled_inc ${OPENC166_GENERATED_DIR}/openc166/bundled_files.inc)
 string(REPLACE ";" "|" _bundled_arg "${_bundled}")
 add_custom_command(
@@ -45,12 +50,14 @@ add_library(openc166_core STATIC
     disasm_module.cpp
     encode.cpp
     expr.cpp
+    json.cpp
     lexer.cpp
     m166.cpp
     mpl.cpp
     operand.cpp
     output.cpp
     predef.cpp
+    sim/board_config.cpp
     sim/boards.cpp
     sim/cpu.cpp
     sim/debug.cpp

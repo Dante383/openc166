@@ -4,6 +4,7 @@
 #include "openc166/openc166.h"
 
 #include "disasm.hpp"
+#include "sim/board_config.hpp"
 #include "sim/boards.hpp"
 #include "sim/debug.hpp"
 #include "sim/peripherals.hpp"
@@ -146,14 +147,41 @@ const char* oc166_sfr_name(uint32_t address) {
     }
 }
 
+namespace {
+thread_local std::string sim_error;
+}
+
+const char* oc166_sim_last_error(void) { return sim_error.c_str(); }
+
+const char* oc166_sim_builtin_boards(void) {
+    static const std::string names = [] {
+        std::string s;
+        for (const auto& b : builtin_boards()) s += (s.empty() ? "" : ",") + b;
+        return s;
+    }();
+    return names.c_str();
+}
+
 oc166_sim* oc166_sim_new(const char* board, const uint8_t* image, size_t size) {
     try {
-        if (!board || (!image && size)) return nullptr;
+        sim_error.clear();
+        if (!board || (!image && size)) {
+            sim_error = "no board given";
+            return nullptr;
+        }
         auto s = std::make_unique<oc166_sim>();
         std::vector<std::uint8_t> img(image, image + size);
-        s->machine = std::make_unique<Machine>(board_by_name(board, std::move(img)));
+        BoardConfig cfg = load_board(board, std::move(img));
+        s->machine = std::make_unique<Machine>(std::move(cfg.board));
+        apply_board(*s->machine, cfg);
         s->debugger = std::make_unique<Debugger>(*s->machine);
         return s.release();
+    } catch (const std::exception& e) {
+        try {
+            sim_error = e.what();
+        } catch (...) {
+        }
+        return nullptr;
     } catch (...) {
         return nullptr;
     }

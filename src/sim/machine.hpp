@@ -206,9 +206,12 @@ struct InterruptSource {
 };
 
 struct Region {
+    static constexpr int kAlways = -1, kXpenOnly = -2;
     Addr start = 0;
     Addr size = 0;
-    int xpercon_bit = -1;  // enabled by this XPERCON bit (and SYSCON.XPEN); -1: always
+    // Enabled by this XPERCON bit (and SYSCON.XPEN); kXpenOnly: by SYSCON.XPEN
+    // alone (C167CR); kAlways: always.
+    int xpercon_bit = kAlways;
     std::shared_ptr<Device> device;
 };
 
@@ -400,6 +403,10 @@ public:
     // Puts 'd' on chip select 'cs' (0..4), replacing what was there.
     void set_chip_select(int cs, std::shared_ptr<Device> d);
 
+    // Forgets decoded instructions: a device whose contents change without
+    // CPU writes (flash erase) calls it.
+    void invalidate_code();
+
     // Decoded instruction at a physical address (cached).
     std::optional<dis::Insn> decode_at(Addr a);
 
@@ -412,6 +419,8 @@ private:
     bool internal(Addr a, Region** region);
     std::uint8_t bus_read8(Addr a);
     void bus_write8(Addr a, std::uint8_t v);
+    std::uint16_t bus_read16(Addr a);
+    void bus_write16(Addr a, std::uint16_t v);
     std::uint16_t sfr_read(Addr a);
     void sfr_write(Addr a, std::uint16_t v, std::uint16_t mask);
     std::uint16_t* sfr_slot(Addr a);

@@ -1,0 +1,31 @@
+// Siemens 5WY19 engine ECU (SIMK43 family, Hyundai/Kia).
+// What is known and how: docs/simulator.md, "Findings on the 5WY19".
+{
+  "format": "openc166-board",
+  "version": 1,
+  "name": "Siemens 5WY19",
+  "description": "C167CS-LM, AM29F400BB flash, external RAM, 74HC574 output latch",
+  "chip": "c167cs",
+  // An 8 MHz crystal and PLL factor 3: the boot block computes ASC0 reload
+  // values from 24000000 (016E3600H at 089A7CH), and its 1 ms tick is 187
+  // counts of T1 at fCPU / 128.
+  "clock_hz": "24MHz",
+  "chip_selects": {
+    // Only A0..A18 reach the flash, so it appears at 0 and at 80000H.
+    "cs0": { "device": "flash", "name": "flash", "model": "am29f400bb", "image": "$IMAGE", "mask": "0x7FFFF" },
+    // The startup code maps CS2 at 90000H just long enough to test RAM there
+    // and reports an error unless RAM answers. The chip size is not known.
+    "cs2": { "device": "ram", "name": "ram", "size": "64K" },
+    // The 4 KB window at 0A000H that the startup code writes a shadow byte to.
+    "cs3": { "device": "latch", "name": "latch" }
+  },
+  "inputs": {
+    // The boot block's download loop resets the CPU while A/D channel 1
+    // (presumably the supply) reads below 0C4H.
+    "adc": { "1": "0x2A0" }
+  },
+  "options": {
+    // K-line: the boot block checks the echo of every byte it sends.
+    "serial_echo": true
+  }
+}

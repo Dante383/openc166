@@ -667,9 +667,8 @@ LAUNCHER = r"""#!/usr/bin/env bash
 #@menu-group openc166
 #@icon icon.debugger
 #@depends Debugger-rmi-trace
-#@enum Board:str 5wy19 c167cs c167 c166
 #@arg :file "Image" "Flash or ROM image (or an openc166 source, .a66)"
-#@env OPT_BOARD:Board="5wy19" "Board" "The simulated board"
+#@env OPT_BOARD:str="5wy19" "Board" "A built-in board (5wy19, c167cs, c167cr, c167, c166) or the path of a board file (.json)"
 #@env OPT_PYTHON:file="{python}" "Python" "A Python with the openc166 package"
 #@env OPT_SYMBOLS:file="" "Symbols" "Optional: symbols exported with tools/ghidra/ExportOpenc166Symbols.py"
 #@env OPT_ADC:str="1=0x2A0" "A/D inputs" "Space-separated CH=VALUE pairs (the 5WY19 boot block wants channel 1 above 0C4H)"
@@ -729,7 +728,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--install-launcher", metavar="GHIDRA_DIR",
                    help="install the 'openc166 simulator' launcher into this Ghidra's user extensions and exit")
     p.add_argument("--extensions-dir", help="with --install-launcher: write the extension here instead")
-    p.add_argument("--board", default="c167", choices=simmod.Simulator.BOARDS)
+    p.add_argument("--board", default="c167", help=simmod.BOARD_HELP)
     g = p.add_mutually_exclusive_group()
     g.add_argument("--connect", help="Ghidra's Trace RMI address host:port (default: $GHIDRA_TRACE_RMI_ADDR)")
     g.add_argument("--listen", help="wait for Ghidra to connect at [host:]port")

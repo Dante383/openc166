@@ -189,6 +189,8 @@ _declare("oc166_sfr_address", _i64, _str)
 _declare("oc166_bit_address", _i64, _str, ctypes.POINTER(_int))
 _declare("oc166_sfr_name", _str, _u32)
 _declare("oc166_sim_new", _p, _str, _u8p, _size)
+_declare("oc166_sim_last_error", _str)
+_declare("oc166_sim_builtin_boards", _str)
 _declare("oc166_sim_free", None, _p)
 _declare("oc166_sim_reset", None, _p, _int)
 for _name in ("oc166_sim_step", "oc166_sim_reverse_step", "oc166_sim_reverse_continue"):

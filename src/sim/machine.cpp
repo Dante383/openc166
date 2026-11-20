@@ -348,6 +348,7 @@ bool Machine::internal(Addr a, Region** region) {
     for (auto& r : board_.internal) {
         if (a < r.start || a >= r.start + r.size) continue;
         if (r.xpercon_bit >= 0 && !(xpen && (xpercon >> r.xpercon_bit) & 1)) continue;
+        if (r.xpercon_bit == Region::kXpenOnly && !xpen) continue;
         *region = &r;
         return true;
     }
@@ -410,6 +411,34 @@ void Machine::bus_write8(Addr a, std::uint8_t v) {
     report_unmodelled(a, true, v, "CS" + std::to_string(cs) + " " + hexaddr(a));
 }
 
+// A word access outside the SFR and internal RAM block goes to its device as
+// one access, as on the 16-bit bus (a flash chip sees a command word, not
+// two bytes).
+std::uint16_t Machine::bus_read16(Addr a) {
+    a &= 0xFFFFFF;
+    if ((a & 1) == 0 && !(a >= 0xF000 && a <= 0xFFFF)) {
+        Region* r = nullptr;
+        if (internal(a, &r)) return r->device->read16(a);
+        int cs = 0;
+        if (Device* d = external_device(a, &cs)) return d->read16(a);
+    }
+    return static_cast<std::uint16_t>(bus_read8(a) | (bus_read8(a + 1) << 8));
+}
+
+void Machine::bus_write16(Addr a, std::uint16_t v) {
+    a &= 0xFFFFFF;
+    if ((a & 1) == 0 && !(a >= 0xF000 && a <= 0xFFFF)) {
+        Region* r = nullptr;
+        if (internal(a, &r)) return r->device->write16(a, v);
+        int cs = 0;
+        if (Device* d = external_device(a, &cs)) return d->write16(a, v);
+    }
+    bus_write8(a, static_cast<std::uint8_t>(v));
+    bus_write8(a + 1, static_cast<std::uint8_t>(v >> 8));
+}
+
+void Machine::invalidate_code() { std::fill(decode_cache_.begin(), decode_cache_.end(), CachedInsn{}); }
+
 std::uint8_t Machine::read8(Addr a) {
     const std::uint8_t v = bus_read8(a);
     if (on_access) on_access({AccessKind::Read, a & 0xFFFFFF, 1, v, 0});
@@ -422,7 +451,7 @@ std::uint16_t Machine::read16(Addr a) {
     if ((a >= 0xFE00 && a <= 0xFFFF) || (a >= 0xF000 && a < 0xF200))
         v = sfr_read(a);  // one access, so read side effects happen once
     else
-        v = static_cast<std::uint16_t>(bus_read8(a) | (bus_read8(a + 1) << 8));
+        v = bus_read16(a);
     if (on_access) on_access({AccessKind::Read, a, 2, v, 0});
     return v;
 }
@@ -444,8 +473,7 @@ void Machine::write16(Addr a, std::uint16_t v) {
     if ((a >= 0xFE00 && a <= 0xFFFF) || (a >= 0xF000 && a < 0xF200)) {
         sfr_write(a, v, 0xFFFF);
     } else {
-        bus_write8(a, static_cast<std::uint8_t>(v));
-        bus_write8(a + 1, static_cast<std::uint8_t>(v >> 8));
+        bus_write16(a, v);
         for (Addr x : {a, a - 2, a + 2}) {
             CachedInsn& c = decode_cache_[(x >> 1) % kDecodeCache];
             if (c.addr == (x & ~1u)) c.valid = false;
