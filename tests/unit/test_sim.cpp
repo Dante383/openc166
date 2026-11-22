@@ -185,6 +185,35 @@ TEST_CASE("sim: bit instructions") {
     CHECK(m->gpr(5) == 0);
 }
 
+TEST_CASE("sim: an explicit PSW write takes precedence over the flags") {
+    // POP sets N, Z and E from the value popped, MOV from the value moved;
+    // with PSW as the destination the value written is what stays.
+    auto m = load("MOV R4, #0008H\nPUSH R4\nMOV R5, #1\nPOP PSW");
+    finish(*m);
+    CHECK(psw_flags(*m) == Z);  // not cleared from 0008H
+    m = load("MOV R4, #0\nPUSH R4\nPOP PSW");
+    finish(*m);
+    CHECK(psw_flags(*m) == 0);  // not Z from 0000H
+    m = load("MOV R4, #0\nMOV R5, #0FFFFH\nMOV PSW, R4");
+    finish(*m);
+    CHECK(psw_flags(*m) == 0);
+    m = load("MOV R4, #0\nMOVB RL5, #80H\nMOVB 0FF10H, RL4");
+    finish(*m);
+    CHECK(psw_flags(*m) == 0);
+    // BCLR sets N for a bit that was set, but the PSW it writes is the old
+    // one with Z cleared.
+    m = load("MOV R4, #0\nBCLR PSW.3");
+    finish(*m);
+    CHECK(psw_flags(*m) == 0);
+    m = load("MOV R4, #0\nBSET PSW.1");
+    finish(*m);
+    CHECK(psw_flags(*m) == (Z | C));
+    // Other destinations still get their flags.
+    m = load("MOV R4, #0\nPUSH R4\nPOP R6");
+    finish(*m);
+    CHECK(psw_flags(*m) == Z);
+}
+
 TEST_CASE("sim: addressing modes") {
     auto m = load(
         "MOV R0, #0FC40H\n"

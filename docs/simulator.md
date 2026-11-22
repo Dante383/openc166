@@ -182,8 +182,9 @@ they are not part of snapshots, so reverse execution does not replay them.
 ## What the core models, and how closely
 
 - The whole instruction set, decoded from `src/isa/c166.tbl`. Flags follow
-  the instruction set manual; they are checked by unit tests, not yet
-  against a real C167 (design §6: the MiniMon oracle is the next step).
+  the instruction set manual; an instruction that writes PSW itself
+  (`POP PSW`, `BCLR PSW.3`) keeps the value written, not its flag
+  update. They are checked by unit tests, not yet against a real C167 (design §6: the MiniMon oracle is the next step).
 - Register banks in IRAM through CP; DPP paging; EXTR, EXTP(R), EXTS(R)
   and ATOMIC, which also block interrupts. The debugger steps a sequence as
   one unit.

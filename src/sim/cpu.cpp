@@ -105,6 +105,11 @@ struct Exec {
     };
     PostInc post[2] = {};
     int npost = 0;
+    // The flag update, applied when the instruction completes unless it
+    // wrote PSW itself: the explicit write takes precedence.
+    std::uint16_t flags_set = 0;
+    std::uint16_t flags_mask = 0;
+    bool psw_written = false;
 
     // An operand location: a memory address or an immediate.
     struct Loc {
@@ -194,6 +199,7 @@ struct Exec {
     }
     void write(const Loc& l, bool b, std::uint16_t v) {
         if (l.imm) return;
+        if (!l.gpr && (l.addr & 0xFFFFFE) == reg::PSW) psw_written = true;
         if (b) return m.write8(l.addr, static_cast<std::uint8_t>(v));
         if ((l.addr & 1) && !l.gpr) throw TrapAbort{kIllopa};
         m.write16(l.addr, v);
@@ -205,8 +211,13 @@ struct Exec {
     }
 
     void flags(std::uint16_t set, std::uint16_t mask) {
+        flags_set = static_cast<std::uint16_t>((flags_set & ~mask) | (set & mask));
+        flags_mask |= mask;
+    }
+    void commit_flags() {
+        if (psw_written || !flags_mask) return;
         const std::uint16_t p = m.psw();
-        const std::uint16_t v = static_cast<std::uint16_t>((p & ~mask) | (set & mask));
+        const std::uint16_t v = static_cast<std::uint16_t>((p & ~flags_mask) | (flags_set & flags_mask));
         m.sfr_set(reg::PSW, v);
         // Flag updates are not bus accesses, but watchpoints on PSW bits
         // must see them.
@@ -757,8 +768,10 @@ Stop Machine::step() {
     const bool starts_sequence = info.op >= Op::Atomic && info.op <= Op::Extsr;
     try {
         ex.run();
+        ex.commit_flags();
         ip_ = ex.next_ip;
     } catch (const TrapAbort& t) {
+        ex.commit_flags();  // as far as the instruction got
         ip_ = static_cast<std::uint16_t>(ip_ + insn->size);
         raise_trap(t.bit);
     }
