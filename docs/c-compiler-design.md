@@ -272,6 +272,14 @@ modules (`--lib`) so only what a program uses is pulled in:
   call C from hand-written TASKING-convention assembly.
 - **Differential**, if a TASKING C166 compiler is available: compile the same
   sources with both and compare behaviour in the simulator (not bytes).
+- **Keil C166 as a behavioural oracle.** Keil C166 V7.57 (eval) runs under
+  Wine. Its dialect and calling convention differ from TASKING's (arguments
+  from `R8`, e.g. `MOV R4,R8 / ADD R4,R9`), so it cannot check the ABI or
+  the TASKING extensions. It can compile portable C to assembly that
+  openc166 assembles, so the same test program built by both compilers must
+  behave the same in the simulator. The Keil runtime library (`?C_LMUL`,
+  ...) is not ours to ship; tests link it from the local Keil installation
+  only.
 
 ---
 
