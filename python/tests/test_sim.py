@@ -79,6 +79,31 @@ class DebugInfoTest(unittest.TestCase):
             self.assertEqual(inc[0]["include"][0][1], 3)
 
 
+    def test_line_markers(self):
+        src = (
+            "$MOD167\nPROG SECTION CODE AT 100H\n"
+            "        NOP\n"
+            "# 42 \"main.c\"\n"
+            "        NOP\n"
+            "        NOP\n"
+            "PROG ENDS\n END\n"
+        )
+        r = openc166.assemble(src, file_name="prog.a66")
+        self.assertTrue(r.ok, r.errors)
+        info = r.debug_info()
+        marked = [l for l in info["lines"] if "source" in l]
+        self.assertEqual([(l["line"], info["files"][l["source"]["file"]], l["source"]["line"]) for l in marked],
+                         [(5, "main.c", 42), (6, "main.c", 42)])
+        syms = sim.Symbols()
+        syms.load_debug_info(info)
+        first, second = syms.line_at(0x100), syms.line_at(0x102)
+        self.assertEqual((first.file, first.line, first.asm), ("prog.a66", 3, ("prog.a66", 3)))
+        self.assertEqual((second.file, second.line, second.asm), ("main.c", 42, ("prog.a66", 5)))
+        # Breakpoints by C line or by assembly line.
+        self.assertEqual(syms.address_of_line("main.c", 42), 0x102)
+        self.assertEqual(syms.address_of_line("prog.a66", 6), 0x104)
+
+
 class DisassemblerTest(unittest.TestCase):
     def test_names_and_targets(self):
         out = sim.disassemble(bytes.fromhex("e60806f2" "0dff" "da084680" "1a89e3ff"), 0x88046)

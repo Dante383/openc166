@@ -279,9 +279,9 @@ TEST_CASE("TASKING register banks and # lines") {
         "SHARED COMREG R0-R3\n" +
         near(" NOP"));
     CHECK(codes(r) == "");
-    // Keil has no COMREG. It rejects '#' lines too, with an error code that
-    // depends on the rest of the line (A1, A64); openc166 gives A6.
+    // Keil has no COMREG. It rejects '#' lines too (A1, A64), but openc166
+    // reads line markers in both dialects.
     t.keil = true;
     CHECK(codes(t.run("$MOD167\nSHARED COMREG R0-R3\n" + near(" NOP"))) == "A6E");
-    CHECK(codes(t.run("$MOD167\n# 1 \"main.c\"\n" + near(" NOP"))) == "A6E");
+    CHECK(codes(t.run("$MOD167\n# 1 \"main.c\"\n" + near(" NOP"))) == "");
 }

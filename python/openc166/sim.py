@@ -158,12 +158,22 @@ def disassemble_module(data: bytes, base: int = 0, *, cpu: str = "c167") -> Tupl
 
 @dataclass
 class SourceLine:
+    """Where the bytes at 'address' come from. 'file' and 'line' are the
+    place to show: the C (or other) source line that a line marker
+    (# 42 "main.c") gave, if there is one, else the assembly line, whose
+    file and line 'asm' then holds too."""
+
     address: int
     size: int
     file: str
     line: int
     macro: Optional[Tuple[str, int]] = None  # (file, line) of the macro body line
     include: List[Tuple[str, int]] = field(default_factory=list)
+    asm: Optional[Tuple[str, int]] = None  # (file, line) of the assembly line
+
+    def __post_init__(self) -> None:
+        if self.asm is None:
+            self.asm = (self.file, self.line)
 
 
 class Symbols:
@@ -200,19 +210,21 @@ class Symbols:
                 self.add(s["name"], s["value"] + mirror, s.get("label_type") in ("near", "far"))
         for l in info.get("lines", []):
             m = l.get("macro")
+            src = l.get("source")
+            asm = (files[l["file"]], l["line"])
             sl = SourceLine(
                 l["address"] + mirror,
                 l["size"],
-                files[l["file"]],
-                l["line"],
+                files[src["file"]] if src else asm[0],
+                src["line"] if src else asm[1],
                 (files[m["file"]], m["line"]) if m else None,
                 [(files[f], n) for f, n in l.get("include", [])],
+                asm,
             )
             self.lines.append(sl)
-            key = (os.path.normcase(os.path.basename(sl.file)), sl.line)
-            self._line_index.setdefault(key, sl.address)
-            key2 = (os.path.normcase(os.path.abspath(sl.file)), sl.line)
-            self._line_index.setdefault(key2, sl.address)
+            for f, n in {(sl.file, sl.line), asm}:
+                self._line_index.setdefault((os.path.normcase(os.path.basename(f)), n), sl.address)
+                self._line_index.setdefault((os.path.normcase(os.path.abspath(f)), n), sl.address)
             if m:
                 self._line_index.setdefault((os.path.normcase(os.path.basename(files[m["file"]])), m["line"]), sl.address)
         self.lines.sort(key=lambda x: x.address)

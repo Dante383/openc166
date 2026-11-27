@@ -82,6 +82,9 @@ Early development (version 0.x). What works today:
   drivers, which gkflasher's ECU code comes from, rebuild byte for byte
   from their TASKING sources. See
   [docs/tasking.md](https://github.com/Dante383/openc166/blob/main/docs/tasking.md).
+- Line markers (`# 42 "main.c"`), so that a compiler's assembly output
+  carries its source lines into the debug information and the ELF's DWARF
+  line table.
 - A Python package and a C API, for tools that assemble code themselves.
 
 Not done yet:

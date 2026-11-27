@@ -139,6 +139,9 @@ std::string format_debug_info(const AssemblyResult& result) {
                      ", \"line\": " + std::to_string(l.macro_line) + ", \"depth\": " + std::to_string(l.macro_level) +
                      "}";
         }
+        if (l.source_line > 0)
+            lines += ", \"source\": {\"file\": " + std::to_string(files.index(l.source_file)) +
+                     ", \"line\": " + std::to_string(l.source_line) + "}";
         lines += "}";
     }
 

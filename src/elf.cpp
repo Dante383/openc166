@@ -227,9 +227,12 @@ std::vector<std::uint8_t> format_elf(const AssemblyResult& result) {
         for (const ListingLine& l : result.listing) {
             if (l.module != static_cast<int>(m) || !l.has_address || l.bit_address || l.bytes.empty() || l.skipped)
                 continue;
+            // A line marker (C source) wins over the line of a macro body.
+            const bool marked = l.source_line > 0;
             const bool macro = l.macro_level > 0 && !l.macro_file.empty() && l.macro_line > 0;
             rows.push_back({l.address, static_cast<std::int64_t>(l.bytes.size()),
-                            file_of(macro ? l.macro_file : l.file), macro ? l.macro_line : l.file_line});
+                            file_of(marked ? l.source_file : macro ? l.macro_file : l.file),
+                            marked ? l.source_line : macro ? l.macro_line : l.file_line});
         }
         std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.address < b.address; });
         // Where each label of the module was defined (files a label names
@@ -248,9 +251,10 @@ std::vector<std::uint8_t> format_elf(const AssemblyResult& result) {
             auto it = by_line[m].find(s.line);
             if (it != by_line[m].end()) {
                 const ListingLine& l = *it->second;
+                const bool marked = l.source_line > 0;
                 const bool macro = l.macro_level > 0 && !l.macro_file.empty();
-                decl_file = file_of(macro ? l.macro_file : l.file);
-                decl_line = macro ? l.macro_line : l.file_line;
+                decl_file = file_of(marked ? l.source_file : macro ? l.macro_file : l.file);
+                decl_line = marked ? l.source_line : macro ? l.macro_line : l.file_line;
             }
             labels.push_back({&s, decl_file, decl_line});
         }

@@ -567,6 +567,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC33 | error | an MPL macro or `%WHILE` that never stops: calls nested more than 256 deep, or more than 20 million calls and loop rounds; the assembly stops (see [mpl.md](mpl.md)) |
 | OC34 | warning | MPL `%IN` or `%OUT`, which use the console in Keil |
 | OC35 | warning | `--class` ranges for a class that no section has |
+| OC36 | error | a line that starts with `#` but is not a [line marker](#line-markers) |
 
 ## Sections
 
@@ -1211,6 +1212,39 @@ As in Keil, a bad item in a `DB`/`DW`/`DD` list does not stop the rest of
 the list. An undefined name keeps its place (as zero), so the addresses that
 follow are unchanged. Other bad items are dropped.
 
+## Line markers
+
+A compiler that writes assembly can say which of its source lines each
+piece of code comes from, with the line markers of a C preprocessor:
+
+```
+# 42 "main.c"
+        MOV     R4, [R0+#2]
+        ADD     R4, #1
+#line 43 "main.c"
+        MOV     [R0+#2], R4
+```
+
+- `# N "file"` or `#line N "file"`: the code that follows belongs to line
+  `N` of `file`, up to the next marker or the end of the file the marker
+  is in. All of it gets the same line: unlike a preprocessor, openc166
+  does not count lines on from `N`. Backslashes escape the next character,
+  as in C (`"lib\\x.c"` is `lib\x.c`).
+- `# N` without a file keeps the file named last.
+- `# 0` ends the mapping: what follows is assembly again.
+- Flags after the file name (`# 1 "main.c" 2`), a comment, and a lone `#`
+  are ignored.
+- A marker holds for its own file only: an included file starts without
+  one, and the including file's marker holds again after it. Macro, REPT,
+  IRP and IRPC expansions take the marker of the line that calls them.
+  Markers in false `IF` blocks are ignored.
+- The marked lines appear as `source` in the
+  [debug information](debug-info.md), and in the DWARF line table of ELF
+  output in place of the assembly lines, so a debugger shows the C source.
+- A line that starts with `#` but is no marker is error OC36. In the
+  TASKING dialect it is ignored, as TASKING a166 ignores every such line,
+  but markers count there too.
+
 ## Deliberate differences from Keil
 
 | Source | Keil | openc166 |
@@ -1224,6 +1258,7 @@ follow are unchanged. Other bad items are dropped.
 | `-(L1 - L0)`, `NOT (L1 - L0)`, `-(L1 - 1)` | wrong value, no warning | error A63 |
 | `number - label` (`10H - L1`) | wrong value | error A63 |
 | decimal fraction such as `#1.0` | accepted as 0 | error A70 |
+| a line that starts with `#` (`# 42 "main.c"`) | error A1 or A64 | a [line marker](#line-markers); OC36 if it is not one |
 | page breaks and wrapped rows in the listing | on by default (`$PAGING`, 60 rows, 120 columns) | only with `$PAGING`, `$PAGELENGTH` or `$PAGEWIDTH`; `$EJECT` always works |
 | instruction at an odd address | accepted | error A134 |
 | instruction outside a `PROC` | error A45 | accepted |

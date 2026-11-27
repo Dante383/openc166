@@ -186,6 +186,14 @@ class ElfTest(unittest.TestCase):
         self.assertEqual(by_addr[r.symbol("INCFN").value], ("inc.inc", 1))
         self.assertEqual(by_addr[0xF600], ("prog.a66", 15))
 
+    def test_line_markers(self):
+        src = "$MOD167\nPROG SECTION CODE AT 100H\nF: NOP\n# 7 \"main.c\"\nG: NOP\n NOP\nPROG ENDS\n END\n"
+        r = openc166.assemble(src, file_name="prog.a66")
+        self.assertTrue(r.ok, r.errors)
+        rows = {a: (f, l) for a, f, l in line_table(Elf(r.elf()).section(".debug_line"))}
+        self.assertEqual(rows[0x100], ("prog.a66", 3))
+        self.assertEqual(rows[0x102], ("main.c", 7))
+
     def test_examples(self):
         for path in sorted(glob.glob(os.path.join(ROOT, "examples", "**", "*.a66"), recursive=True)):
             with self.subTest(path=os.path.relpath(path, ROOT)):

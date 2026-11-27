@@ -102,6 +102,10 @@ struct ListingLine {
     // its body line was written. 'file' and 'file_line' give the call site.
     std::string macro_file;
     int macro_line = 0;
+    // Set after a line marker (# 42 "main.c"): the line of the program the
+    // assembly was made from, such as C, that the line belongs to.
+    std::string source_file;
+    int source_line = 0;
     bool skipped = false;  // in a false IF block: not assembled, listed without a line number
     // Left out of the printed listing: by $NOLIST, by $NOCOND (assembly is
     // off after it), or a line of a macro expansion under $NOGEN (the

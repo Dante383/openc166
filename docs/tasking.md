@@ -132,7 +132,10 @@ the access (`R`, `RW` or `W`) and ignores the rest.
   syntax and otherwise ignores them. A `REGDEF` or `REGBANK` without a name
   reserves no memory in openc166.
 - **Line information.** Lines starting with `#` (such as `# 12 "main.c"`,
-  which TASKING's C compiler writes) are ignored.
+  which TASKING's C compiler writes) emit nothing. Line markers among them
+  map the code that follows to the C source in the debug information
+  (see [line markers](compatibility.md#line-markers)); other such lines
+  are ignored, as in TASKING.
 
 ## Placing sections
 

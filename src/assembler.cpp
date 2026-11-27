@@ -894,6 +894,15 @@ private:
     unsigned locals_ = 0;  // LOCAL names made so far: ??0000, ??0001, ...
     int macro_level_ = 0;  // expansion depth of the current line
     std::string macro_file_;  // for a line of an expansion: where its body line was written
+    // The last line marker (# 42 "main.c") of the file read at each include
+    // level, if it is still in effect.
+    struct LineMarker {
+        std::size_t file = 0;  // files_ index of the file it is in
+        std::string name;
+        int line = 0;
+    };
+    std::map<int, LineMarker> markers_;
+    void line_marker(std::string_view text, int column, Reporter& rep);
     int macro_line_ = 0;
     bool gen_ = false;  // $GEN: list the lines of expansions
     bool list_ = true;  // $LIST: list the source lines ($NOLIST turns it off)
@@ -1325,6 +1334,7 @@ void Assembler::run_lines() {
     // (EXTEND), and predefines only the core SFRs.
     cpu_ = tasking_ ? isa::Cpu::C167 : opt_.cpu;
     sys166_ = !tasking_ && cpu_ == isa::Cpu::C166;
+    markers_.clear();
     case_ = false;
     sections_.assign(1, Section{});
     sections_[0].loc = opt_.origin;
@@ -1658,10 +1668,17 @@ void Assembler::process_line(std::string_view text) {
     std::size_t lead = text.find_first_not_of(" \t");
     const bool control_line = lead != std::string_view::npos && text[lead] == '$';
     const bool was_active = active();
+    // A line marker holds for the rest of its file, but not for the files
+    // that file includes.
+    markers_.erase(markers_.upper_bound(level_), markers_.end());
     try {
         if (!m166_skipped_) statement(text, rep, lst);
     } catch (const AsmError& e) {
         rep.error(e.code(), e.message(), e.column());
+    }
+    if (auto it = markers_.find(level_); it != markers_.end() && it->second.file == file_) {
+        lst.source_file = it->second.name;
+        lst.source_line = it->second.line;
     }
     // Like Keil, a $IF line is numbered in the listing when the lines after
     // it are assembled, an IF statement when the lines before it are.
@@ -1682,6 +1699,57 @@ void Assembler::process_line(std::string_view text) {
         res_.diagnostics.push_back(std::move(d));
     }
     res_.listing.push_back(std::move(lst));
+}
+
+// A line marker, as a C preprocessor writes them and TASKING's C compiler
+// passes them on: "# 42 "main.c"" or "#line 42 "main.c"", with the text
+// after the '#'. The code that follows, up to the next marker or the end of
+// the file, belongs to that line; without a file name, to that line of the
+// file named last. Line 0 ends the mapping. Flags after the file name are
+// ignored, and so is a lone '#'. TASKING a166 ignores every line that
+// starts with '#', so in that dialect a line that is not a marker is
+// ignored too.
+void Assembler::line_marker(std::string_view text, int column, Reporter& rep) {
+    std::size_t i = text.find_first_not_of(" \t");
+    if (i == std::string_view::npos) return;
+    auto bad = [&] {
+        if (!tasking_)
+            rep.error("OC36", "bad line marker: write # line \"file\", e.g. # 42 \"main.c\"", column);
+    };
+    if (text.substr(i, 4) == "line" && (i + 4 == text.size() || text[i + 4] == ' ' || text[i + 4] == '\t'))
+        i = text.find_first_not_of(" \t", i + 4);
+    if (i == std::string_view::npos || !std::isdigit(static_cast<unsigned char>(text[i]))) return bad();
+    std::int64_t line = 0;
+    while (i < text.size() && std::isdigit(static_cast<unsigned char>(text[i]))) {
+        line = line * 10 + (text[i++] - '0');
+        if (line > 0x7FFFFFFF) return bad();
+    }
+    if (i < text.size() && text[i] != ' ' && text[i] != '\t') return bad();
+    i = text.find_first_not_of(" \t", i);
+    std::optional<std::string> name;
+    if (i != std::string_view::npos && text[i] == '"') {
+        std::string n;
+        for (++i; i < text.size() && text[i] != '"'; ++i) {
+            if (text[i] == '\\' && i + 1 < text.size()) ++i;
+            n += text[i];
+        }
+        if (i == text.size()) return bad();
+        name = std::move(n);
+    } else if (i != std::string_view::npos && text[i] != ';') {
+        return bad();
+    }
+    if (line == 0) {
+        markers_.erase(level_);
+        return;
+    }
+    LineMarker& m = markers_[level_];
+    if (name) {
+        m.name = *name;
+    } else if (m.file != file_ || m.name.empty()) {
+        m.name = files_[file_]->name;
+    }
+    m.file = file_;
+    m.line = static_cast<int>(line);
 }
 
 // Copies 'text' to 'out', replacing the name of each LIT defined earlier in
@@ -1752,9 +1820,11 @@ void Assembler::statement(std::string_view text, Reporter& rep, ListingLine& lst
     }
     std::size_t lead = text.find_first_not_of(" \t");
     if (lead == std::string_view::npos) return;
-    // TASKING a166 skips lines that start with '#', such as the line
-    // markers of a C preprocessor.
-    if (tasking_ && text[lead] == '#') return;
+    // A line marker of a C preprocessor or compiler: # 42 "main.c".
+    if (text[lead] == '#') {
+        if (active()) line_marker(text.substr(lead + 1), static_cast<int>(lead) + 1, rep);
+        return;
+    }
     // Like Keil, replace LIT names before reading the line, in $ controls too,
     // and list the result. Lines that a false IF block skips stay as they are.
     std::string expanded;

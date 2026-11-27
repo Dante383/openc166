@@ -58,6 +58,12 @@ order:
   its ENDM, so its call site is the ENDM line.
 - `section`: the section index, or -1 for code outside sections.
 
+- `source`: for code after a [line marker](compatibility.md#line-markers)
+  (`# 42 "main.c"`), the `file` and `line` of the C (or other) source it
+  was made from. `file` and `line` still give the assembly line. The
+  simulator's `Symbols` show the source line and keep the assembly line in
+  `SourceLine.asm`; breakpoints may name either.
+
 Lines in false IF blocks, and lines that emit no bytes, are left out. Bits
 of BIT sections are not lines.
 
@@ -82,7 +88,8 @@ the same information in the standard formats:
   code from a macro, REPT, IRP or IRPC maps to the line of the body, as a
   compiler maps inlined code; the call site is in the JSON debug
   information. Include files are files of the table under their names as
-  the assembler opened them.
+  the assembler opened them. Code after a line marker maps to the C (or
+  other) source line the marker names, ahead of any macro body.
 
 readelf, objdump (`--dwarf=decodedline`) and even a gdb without C166
 support (`info line *0xE002`, `list LABEL`) read it.
