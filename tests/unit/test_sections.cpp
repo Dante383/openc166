@@ -333,3 +333,32 @@ TEST_CASE("AT with an address that moves") {
     REQUIRE(find(r, "E1") != nullptr);
     CHECK(find(r, "E1")->size == 2);
 }
+
+TEST_CASE("a CODE section longer than 64 KB") {
+    // Keil's A166 checks only DS and ORG; the linker checks the rest.
+    for (const char* seg : {"", "$SEGMENTED\n"}) {
+        CAPTURE(seg);
+        auto r = run(std::string("$MOD167\n") + seg + "CS SECTION CODE\n REPT 32769\n NOP\n ENDM\nCS ENDS\n END\n");
+        CHECK(r.error_count() == 1);
+        CHECK(has(r, "OC37"));
+    }
+    // Exactly 64 KB is fine.
+    auto r = run("$MOD167\n$SEGMENTED\nCS SECTION CODE\n REPT 32768\n NOP\n ENDM\nCS ENDS\n END\n");
+    CHECK(r.ok());
+    // Relative jumps that wrap around no longer end in A133.
+    r = run("$MOD167\n$SEGMENTED\nCS SECTION CODE\nL0: JMP cc_Z, L1\n REPT 33000\n NOP\n ENDM\n"
+            "L1: JMP cc_Z, L0\nCS ENDS\n END\n");
+    CHECK(has(r, "OC37"));
+    CHECK(!has(r, "A133"));
+    // Parts joined from two modules count together.
+    AssembleOptions o;
+    o.controls = {"MOD167", "SEGMENTED"};
+    r = assemble(std::vector<Source>{{"a.a66", "CS SECTION CODE PUBLIC\n REPT 20000\n NOP\n ENDM\nCS ENDS\n END\n"},
+                                     {"b.a66", "CS SECTION CODE PUBLIC\n REPT 20000\n NOP\n ENDM\nCS ENDS\n END\n"}},
+                 o);
+    CHECK(has(r, "OC37"));
+    // After A86 from DS, no second error.
+    r = run("$MOD167\n$SEGMENTED\nH SECTION HDATA\n DS 70000\nH ENDS\n END\n");
+    CHECK(has(r, "A86"));
+    CHECK(!has(r, "OC37"));
+}

@@ -706,6 +706,7 @@ struct Section {
     std::string combine = "PRIVATE";  // or "AT" for a section with a fixed address
     std::string class_name;
     bool placed = false;  // AssembleOptions::section_addresses gives the address
+    bool overflowed = false;  // A86 was reported for it, so the linker need not say it again
     // BIT section: base, loc, size and align count bits (byte address * 8 +
     // bit), so 0FD02H.3 is 7E813H.
     bool bits = false;
@@ -3272,8 +3273,10 @@ void Assembler::bit_directive(const Token* name, const Token& dir, TokenCursor& 
     }
     advance(n);
     // Keil still reserves the bits after this error.
-    if (std::string why = length_overflow(section(), section().loc); !why.empty())
+    if (std::string why = length_overflow(section(), section().loc); !why.empty()) {
         rep.error("A86", "section length overflow: " + why, column);
+        section().overflowed = true;
+    }
 }
 
 void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
@@ -3285,8 +3288,10 @@ void Assembler::data(const std::string& dir, TokenCursor& cur, Reporter& rep, Li
         if (n < 0) throw AsmError("A19", "numeric value out of range", column);
         advance(n * (dir == "DSW" ? 2 : dir == "DSD" ? 4 : 1) * unit());
         // Keil still reserves the space after this error.
-        if (std::string why = length_overflow(section(), section().loc); !why.empty())
+        if (std::string why = length_overflow(section(), section().loc); !why.empty()) {
             rep.error("A86", "section length overflow: " + why, column);
+            section().overflowed = true;
+        }
         return;
     }
     const int width = dir == "DB" ? 1 : dir == "DW" ? 2 : 4;
@@ -4380,6 +4385,7 @@ private:
     // the key a module looks them up by (both spellings: with and without
     // $CASE).
     std::map<std::string, PublicDef> made_;
+    bool oversized_ = false;  // the final pass found a section longer than its type allows
     void make_symbols(const std::vector<Unit>& all);
 
     bool run_pass(int pass, bool final);
@@ -4485,7 +4491,9 @@ AssemblyResult Program::run(const std::vector<Source>& given) {
     }
     out.passes = pass;
     const std::string& main_name = link_.modules.front();
-    if (!converged)
+    // A section too long for its segment makes relative jumps wrap around,
+    // so addresses never settle; OC37 already says why.
+    if (!converged && !oversized_)
         out.diagnostics.push_back({Severity::Error, "A133",
                                    "addresses do not settle; code size keeps changing between passes", main_name, 0, 0});
     // Like L166, the first module sets the CPU mode of the program.
@@ -4668,6 +4676,21 @@ std::vector<Program::Unit> Program::units() {
 // uses a byte that a BIT section touches.
 void Program::locate(bool final) {
     std::vector<Unit> all = units();
+    // What the linker checks of every section, joined from all modules: a
+    // CODE, HDATA or HCONST section must fit in one 64 KB segment, with
+    // $SEGMENTED too (Keil's assembler checks only DS and ORG, A86).
+    std::vector<bool> too_big(all.size());
+    for (std::size_t i = 0; i < all.size() && final; ++i) {
+        const Section& s = all[i].parts[0].section();
+        if (all[i].bits || section_boundary(s.type) != 0x10000 || all[i].size <= 0x10000) continue;
+        too_big[i] = oversized_ = true;
+        if (std::any_of(all[i].parts.begin(), all[i].parts.end(), [](const Part& p) { return p.section().overflowed; }))
+            continue;
+        all[i].parts[0].m->report_at_section(all[i].parts[0].index, Severity::Error, "OC37",
+                                             "section '" + s.name + "' (" + hex(all[i].size, 5) +
+                                                 "H bytes) is longer than 64 KB, the most a " + s.type +
+                                                 " section may be (one segment)");
+    }
     using Ranges = std::vector<std::pair<std::int64_t, std::int64_t>>;
     Ranges used;      // [from, to) in bytes
     Ranges bit_used;  // [from, to) in bits, of BIT sections
@@ -4965,7 +4988,9 @@ void Program::locate(bool final) {
                                     "section '" + s.name + "' (" + hex(u.size, 4) +
                                         "H bytes) does not fit in one 16 KB data page (L166 reports L129)");
             std::optional<std::int64_t> a = fit_in(u, windows(u, low, from, to), boundary, taken(u.bits));
-            if (!a) {
+            if (!a && too_big[i]) {
+                a = s.base;  // OC37 says why
+            } else if (!a) {
                 m.report(Severity::Error, "OC12",
                          "no room for section '" + s.name + "' (" +
                              (u.bits ? std::to_string(u.size) + " bits" : hex(u.size, 4) + "H bytes") +

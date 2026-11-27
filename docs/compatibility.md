@@ -568,6 +568,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC34 | warning | MPL `%IN` or `%OUT`, which use the console in Keil |
 | OC35 | warning | `--class` ranges for a class that no section has |
 | OC36 | error | a line that starts with `#` but is not a [line marker](#line-markers) |
+| OC37 | error | a `CODE`, `HDATA` or `HCONST` section, joined from all modules, that is longer than 64 KB (one segment) |
 
 ## Sections
 
@@ -926,7 +927,10 @@ differs, L15 in L166).
   [Where sections without AT go](#where-sections-without-at-go), in order
   of first appearance over all modules. A `DATA` or `CONST` section
   without `AT` that ends up bigger than a 16 KB page, in one module or
-  joined from several, is error OC21 (L129).
+  joined from several, is error OC21 (L129). A `CODE`, `HDATA` or
+  `HCONST` section longer than 64 KB is error OC37, with or without
+  `$SEGMENTED`: Keil's assembler checks the length only at `DS` and `ORG`
+  (A86), and openc166 checks the rest as the linker.
 - Groups of the same name in several modules are one group, holding the
   sections of all of them.
 - Code outside sections starts at `--origin` in every module, so it
