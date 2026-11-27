@@ -111,7 +111,7 @@ compatible: LLVM is Apache-2.0 with the LLVM exception, openc166 is MIT.
 
 **`double`**: the compiler specification says `double` and `long double`
 are 64-bit IEEE binary64, as C99 expects. An explicit 32-bit mode
-(`-mdouble=32`, like TASKING's option of the same purpose) makes `double`
+(`-mdouble=32`, Classic's `-Fs`) makes `double`
 the same as `float`. The 32-bit mode is implemented first, because it needs
 only the single-precision runtime and is what small ECU code uses; the
 64-bit default follows in the full-firmware milestone. Until then the
@@ -158,22 +158,29 @@ sequences for spaces 1–3 later.
 ### 3.4 Calling convention (TASKING C166)
 
 Confirmed on 2026-11-27 against the stock 5WY19 boot block in Ghidra, which
-TASKING's classic C166 compiler built:
+TASKING's Classic C166 compiler built, and against the TASKING C166/ST10
+v8.9 C compiler manual (§3.6 Function Parameters, §3.15 Register Usage,
+§7 stack layout; public at
+<https://www.tasking.com/support/c166-classic/c166_v8.9.pdf>):
 
 | Item | Register / place | Seen in |
 |---|---|---|
 | Arguments | first words in `R12`, `R13`, `R14`, `R15`, in order; a 32-bit argument (`long`, `_huge` pointer) takes two consecutive registers, low word first (`R12` offset, `R13` segment); the rest on the user stack | `BL_read_triple_redundant_block` (4 arguments, `_huge` pointer in `R12:R13` used with `EXTS R13`), `calculate_crc16_checksum`, `BL_compare_block_mirror_masked` |
-| Return value | `RL4` (8-bit), `R4` (16-bit), `R4:R5` (32-bit, `R4` low); structs: to be confirmed | the same functions; the 32-bit division helper |
+| Arguments on the stack | an argument that no longer fits, any `float`/`double`, and any struct or union passed by value goes on the user stack, **and so does every argument after it**, even one that would fit a register (`f(long, int, long, char *)`: `R12:R13`, `R14`, stack, stack — `R15` stays unused). The `...` arguments of a variadic function and every argument of a `_stackparm` function go on the stack | manual §3.6 |
+| Return value | `RL4` (`char`), `R4` (`int`, near pointer), `R4:R5` (`long`, `float`, far/huge/shuge pointer; `R4` offset, `R5` page or segment), `PSW.6`/`USR0` (`_bit`); `double` and structs: in a block on the user stack, `R4` points to it | manual Table 3-15; the functions above; the 32-bit division helper |
 | User stack pointer | `R0`, grows downwards; push is `MOV [-R0],Rn`, pop is `MOV Rn,[R0+]`, frames dropped with `ADD R0,#n` | every function |
-| Callee-saved | `R6`, `R7`, `R8`, `R9`, saved only when used | `BL_read_triple_redundant_block` saves all four; others save `R6` or `R9` alone |
+| Callee-saved | `R6`, `R7`, `R8`, `R9`, saved only when used | manual §3.6.1; `BL_read_triple_redundant_block` saves all four; others save `R6` or `R9` alone |
+| Parameter registers in the callee | a leaf function keeps its parameters in `R12`–`R15` and may use the free ones for locals; a non-leaf function stores them on the user stack at entry "as if pushed by the caller" | manual §3.6; `BL_load_verify_redundant_blocks` pushes `R13`, `R12` first |
 | Caller-saved | `R1`–`R5`, `R10`–`R15`, `MDH`, `MDL`, `MDC`, `PSW` flags | callees change `R3`, `R4`, `R5`, `R10`–`R15` without saving; callers reload `R12`–`R15` before each call and keep values across calls in `RL6` |
 
 Runtime helpers do not follow this convention: the 32-bit unsigned division
 at `002014H` takes its operands in `R4:R5` and `R10:R11` and returns in
 `R4:R5`. The backend calls such helpers with their own register conventions,
 named after TASKING's helper names where they can be identified in the
-firmware. Still to confirm: varargs, struct arguments and returns, and what
-happens when a 32-bit argument would start in `R15`.
+firmware. The manual documents the floating-point helpers' registers
+(§3.16). Still open: the order of stack arguments, which the manual's stack
+diagram (§7) shows only in outline; to be settled with a test program once
+a Classic compiler runs, or from calls in the firmware.
 | Frame | locals at `[R0+#d16]`; no frame pointer unless needed (variable-length arrays, `alloca`) |
 | Calls | `CALLA`/`CALLR` in the small model; `CALLS` and `RETS` for far code later |
 
@@ -319,9 +326,8 @@ modules (`--lib`) so only what a program uses is pulled in:
 - **Rebasing the fork.** Clang changes for the TASKING keywords touch the
   parser and Sema. Keep them small and behind the C166 target so rebases on
   new LLVM releases stay cheap.
-- **Calling convention details** still unconfirmed (§3.4): struct
-  arguments and returns, varargs, a 32-bit argument that would start in
-  `R15`. Settled with the TASKING manual and a TASKING compiler (below).
+- **Calling convention details**: settled by the Classic manual (§3.4)
+  except the order of stack arguments.
 - **DPP assumptions** of the small model must match how openc166 and the
   startup code set the data page pointers; a mismatch fails silently at run
   time. The linker map and a startup check should catch it.
@@ -330,9 +336,12 @@ modules (`--lib`) so only what a program uses is pulled in:
 - **A TASKING C166 compiler for differential testing.** Both TASKING C166
   products are now legacy, and neither has a public download:
   - *C166/ST10 Classic* (v8.x and earlier): the compiler that built the
-    stock firmware, and the one whose convention and output we match. Only
-    through TASKING's support portal or sales; still wanted, to settle the
-    open calling-convention details and to compare code.
+    stock firmware, and the one whose convention and output we match. Its
+    manuals (v6.0–v8.9) are public on tasking.com, and the v8.6r1 patch 3
+    there contains `c166.exe`, `a166.exe` and `l166.exe`, which run under
+    Wine but stop with a FLEXlm licence error without a TASKING licence.
+    Wanted for code comparison; needs a licence or evaluation from
+    TASKING support.
   - *VX-toolset for C166* (v3.1r2, 15-day trial, installed under Wine on
     2026-11-27): **not a reference for the ABI.** Its user guide (§21.6.4)
     says its calling convention is "completely different" from Classic's,
