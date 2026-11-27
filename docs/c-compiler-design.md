@@ -449,6 +449,15 @@ modules (`--lib`) so only what a program uses is pulled in:
      once, since compiler-rt has both. A `double` result comes back through
      a hidden pointer in R12, not TASKING's block on the user stack.
    - Aliases (`x EQU y` in A166) for the builtins that define several names.
+   - `_far` and `_huge` pointers: LLVM address spaces 1 and 2, 32 bits,
+     low word first (offset, then page or segment). Loads and stores
+     through them are caught while LLVM legalises the 32-bit address and
+     become one pseudo each, printed as `EXTP Rpage, #1` / `EXTS Rseg, #1`
+     and the access, so nothing can come between. Arithmetic is 32-bit
+     (`_shuge` is the same as `_huge`). Near to far/huge reads the DPP
+     that selects the page (DPP0 at 0FE00H); far and huge convert
+     arithmetically. Checked by reading flash above 64 KB on the simulated
+     5WY19.
 
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.

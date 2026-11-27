@@ -605,6 +605,60 @@ int test(int a, int b) {
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class FarHugeTest(unittest.TestCase):
+    """_huge (EXTS) and _far (EXTP) pointers on the simulated 5WY19, whose
+    flash appears at 0 and at 80000H: reading flash above 64 KB, and
+    pointers made from near ones through the DPPs."""
+
+    SOURCE = r"""
+#include <c166.h>
+unsigned crc(const unsigned char _huge *p, unsigned n) {
+  unsigned c = 0xFFFF;
+  while (n--) {
+    c ^= *p++;
+    for (int i = 0; i < 8; i++)
+      c = (c & 1) ? (c >> 1) ^ 0xA001 : c >> 1;
+  }
+  return c;
+}
+unsigned crc_at(unsigned seg, unsigned sof, unsigned n) {
+  return crc(_mkhp(sof, seg), n);
+}
+long long_at(unsigned seg, unsigned sof) { return *(long _huge *)_mkhp(sof, seg); }
+int x;
+int roundtrip(void) {
+  int _far *f = &x;
+  int _huge *h = &x;
+  *f = 0x1234;
+  int a = *h;
+  *h = 0x0042;
+  /* With the reset DPPs (DPPn = n) near addresses are segment 0 ones. */
+  return a + x + (_pag(&x) == _pag(f)) + (_seg(h) == 0 && _sof(h) == (unsigned)&x);
+}
+"""
+
+    def test_flash_above_64k_and_conversions(self):
+        image = bytes((i * 37 + (i >> 8)) & 0xFF for i in range(0x80000))
+        p = Program(
+            [self.SOURCE],
+            image=image,
+            board="5wy19",
+            classes={
+                "CPROGRAM": [(0xF200, 0xF8FF)],
+                "CNEARROM": [(0xF200, 0xF8FF)],
+                "CNEAR": [(0xF900, 0xF9FF)],
+            },
+        )
+        lo, _, _ = p.call("crc_at", 0x8, 0x1234, 200)
+        self.assertEqual(lo, crc16(image[0x1234 : 0x1234 + 200]))
+        lo, hi, _ = p.call("long_at", 0x9, 0x0010)
+        self.assertEqual(lo | hi << 16, int.from_bytes(image[0x10010:0x10014], "little"))
+        lo, _, s = p.call("roundtrip")
+        self.assertEqual(lo, 0x1234 + 0x42 + 1 + 1)
+        self.assertEqual(s.read16(p.address("_x")), 0x42)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
 class Payload5WY19Test(unittest.TestCase):
     """A MiniMon-style payload in C, loaded into the internal RAM of the
     simulated 5WY19: it sets up ASC0 (the K-line), answers commands from the
