@@ -758,8 +758,12 @@ struct PublicDef {
     std::string name;  // as written
     Value value;
     SymbolKind kind = SymbolKind::Label;
-    std::size_t module = 0;
+    std::size_t module = 0;  // kLinkerModule for the symbols the linker makes
 };
+
+// The module of the symbols that the linker makes: ?SECTION_START?name and
+// the like.
+constexpr std::size_t kLinkerModule = static_cast<std::size_t>(-1);
 
 // What the modules of a program know about each other: the PUBLIC and
 // GLOBAL symbols defined in the previous pass, by the name the linker
@@ -3459,10 +3463,28 @@ void Assembler::declare_extern(const Token& name, const std::string& type, int d
                        name.column);
     const std::uint16_t id = static_cast<std::uint16_t>(Value::kExternBase + externs_++);
     auto pub_it = link_.publics.find(k);
+    // Class names ignore case, so the linker's ?CLASS_ names do too.
+    if (pub_it == link_.publics.end() && upper(name.text).rfind("?CLASS_", 0) == 0) {
+        pub_it = link_.publics.find(upper(name.text));
+        if (pub_it != link_.publics.end() && pub_it->second.module != kLinkerModule) pub_it = link_.publics.end();
+    }
     const PublicDef* pub = pub_it != link_.publics.end() && pub_it->second.module != module_ ? &pub_it->second : nullptr;
     const std::string who = "'" + std::string(name.text) + "'";
-    if (final_ && !pub)
-        rep.error("OC15", "unresolved external " + who + ": no other module makes it PUBLIC or GLOBAL", name.column);
+    if (final_ && !pub) {
+        std::string why = "no other module makes it PUBLIC or GLOBAL";
+        // The linker's names for where sections and classes went.
+        const std::string u = upper(name.text);
+        for (const char* kind : {"SECTION", "CLASS"})
+            for (const char* part : {"_START?", "_END?", "_SIZE?"}) {
+                const std::string prefix = std::string("?") + kind + part;
+                if (u.rfind(prefix, 0) != 0) continue;
+                const std::string what = std::string(name.text.substr(prefix.size()));
+                why = kind == std::string("SECTION")
+                          ? "there is no section '" + what + "' (BIT sections and register banks have none)"
+                          : "no section has class '" + what + "' (BIT sections and register banks count in none)";
+            }
+        rep.error("OC15", "unresolved external " + who + ": " + why, name.column);
+    }
 
     std::string bad;
     Value v = Value::number(type == "BITWORD" ? 0xFD00 : 0);
@@ -3470,7 +3492,8 @@ void Assembler::declare_extern(const Token& name, const std::string& type, int d
     v.movable = id;
     if (pub) {
         const Value& p = pub->value;
-        const std::string where = " in " + link_.modules[pub->module];
+        const std::string where =
+            pub->module == kLinkerModule ? " (made by the linker)" : " in " + link_.modules[pub->module];
         if (type == "BIT") {
             if (p.type == VType::Bit && bit_word_address(p) >= 0) {
                 v.type = VType::Bit;
@@ -3574,8 +3597,10 @@ void Assembler::check_public(const Token& name, Reporter& rep) {
         return rep.error("A42", "undefined identifier '" + std::string(name.text) + "'", name.column);
     }
     if (auto p = link_.publics.find(k); p != link_.publics.end() && p->second.module != module_)
-        rep.error("OC16", "'" + std::string(name.text) + "' is also PUBLIC or GLOBAL in " +
-                              link_.modules[p->second.module],
+        rep.error("OC16", "'" + std::string(name.text) + "' is also " +
+                              (p->second.module == kLinkerModule
+                                   ? std::string("a symbol made by the linker")
+                                   : "PUBLIC or GLOBAL in " + link_.modules[p->second.module]),
                   name.column);
 }
 
@@ -4351,6 +4376,11 @@ private:
     std::vector<std::unique_ptr<Assembler>> mods_;
     std::vector<SectionInfo> infos_;  // of the final pass
     std::vector<std::pair<std::int64_t, std::int64_t>> common_;  // [from, to) of combined COMMON sections
+    // The symbols the linker makes for where sections and classes went, by
+    // the key a module looks them up by (both spellings: with and without
+    // $CASE).
+    std::map<std::string, PublicDef> made_;
+    void make_symbols(const std::vector<Unit>& all);
 
     bool run_pass(int pass, bool final);
     std::vector<Source> with_libraries(const std::vector<Source>& sources) const;
@@ -4504,10 +4534,50 @@ bool Program::run_pass(int pass, bool final) {
 // Takes the PUBLIC and GLOBAL symbols of this pass for the next one. If a
 // name is exported twice, the first module wins (check_public() reports
 // the others). Returns true if another module may now see other values.
+// For each section (all its parts in all modules joined) and each class of
+// sections: ?SECTION_START?name, ?SECTION_END?name (the first address after
+// it) and ?SECTION_SIZE?name, and the same with ?CLASS_. A class spans from
+// its lowest section to the end of its highest, gaps included. A module
+// declares them EXTERN to use them, so that startup code can clear or copy
+// data that other modules put in a section. BIT sections and register
+// banks have none.
+void Program::make_symbols(const std::vector<Unit>& all) {
+    made_.clear();
+    auto add = [&](const std::string& name, std::int64_t value, SymbolKind kind) {
+        PublicDef def{name, Value::number(value), kind, kLinkerModule};
+        def.value.unsig = true;
+        made_[name] = def;
+        made_.try_emplace(upper(name), def);
+    };
+    auto add_range = [&](const std::string& what, const std::string& name, std::int64_t start, std::int64_t end) {
+        add("?" + what + "_START?" + name, start, SymbolKind::Label);
+        add("?" + what + "_END?" + name, end, SymbolKind::Label);
+        add("?" + what + "_SIZE?" + name, end - start, SymbolKind::Equ);
+    };
+    struct Span {
+        std::string name;
+        std::int64_t start, end;
+    };
+    std::map<std::string, Span> classes;  // by upper-case name
+    for (const Unit& u : all) {
+        const Section& s = u.parts[0].section();
+        if (u.bits || s.bank) continue;
+        add_range("SECTION", s.name, u.base, u.base + u.size);
+        if (s.class_name.empty()) continue;
+        auto [it, added] = classes.try_emplace(upper(s.class_name), Span{s.class_name, u.base, u.base + u.size});
+        if (!added) {
+            it->second.start = std::min(it->second.start, u.base);
+            it->second.end = std::max(it->second.end, u.base + u.size);
+        }
+    }
+    for (const auto& [k, c] : classes) add_range("CLASS", c.name, c.start, c.end);
+}
+
 bool Program::update_publics() {
     std::map<std::string, PublicDef> publics;
     for (const auto& m : mods_)
         for (auto& [k, def] : m->exported()) publics.try_emplace(k, std::move(def));
+    for (const auto& [k, def] : made_) publics.try_emplace(k, def);
     auto same = [](const auto& a, const auto& b) {
         const Value &x = a.second.value, &y = b.second.value;
         return a.first == b.first && a.second.module == b.second.module && a.second.kind == b.second.kind &&
@@ -4517,8 +4587,8 @@ bool Program::update_publics() {
     const bool changed = publics.size() != link_.publics.size() ||
                          !std::equal(publics.begin(), publics.end(), link_.publics.begin(), same);
     link_.publics = std::move(publics);
-    // A single module has no one to tell.
-    return changed && mods_.size() > 1;
+    // A single module has no one to tell, unless it uses the linker's symbols.
+    return changed && (mods_.size() > 1 || !made_.empty());
 }
 
 // The sections of all modules in order of first appearance. Like L166,
@@ -4913,6 +4983,7 @@ void Program::locate(bool final) {
     for (const Unit& u : all)
         for (const Part& p : u.parts)
             if (!p.section().absolute) p.m->layout_[p.m->key(p.section().name)] = u.base + p.offset;
+    make_symbols(all);
     for (LinkGroup& g : groups) {
         const std::int64_t region = g.code ? 0x10000 : 0x4000;
         if (!g.placed && !g.members.empty()) g.base = all[g.members[0]].base / region * region;

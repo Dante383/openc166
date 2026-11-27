@@ -72,7 +72,9 @@ Early development (version 0.x). What works today:
   across files. Each file is assembled separately (a "module"), so a name
   that is not `PUBLIC` stays private to its file. Library modules
   (`--lib`) are linked only when the program needs a name they define, as
-  L166 takes modules from a library.
+  L166 takes modules from a library. Linker symbols such as
+  `?SECTION_START?name` and `?SECTION_SIZE?name` tell startup code where a
+  section ended up and how big it is.
 - Register banks (`REGBANK`/`REGDEF`), placed in `0FC00H..0FDFFH` as L166
   places them, and the `NAME`, `SSKDEF`, `PECDEF` and `TYPEDEC` directives.
 - **TASKING sources** (`--dialect tasking`): the common part of TASKING's

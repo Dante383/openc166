@@ -963,6 +963,38 @@ To decide, openc166 runs a first pass over each module on its own. A
 `PUBLIC` or `EXTERN` that depends on conditional assembly counts as that
 first pass sees it.
 
+### Symbols for where sections went
+
+Startup code has to clear or copy data that other modules put in a
+section, so it needs to know where that section ended up and how big it
+grew. openc166's linker makes these symbols, which any module can declare
+`EXTERN` (L166 has no such symbols):
+
+| Symbol | Value |
+|---|---|
+| `?SECTION_START?name` | address of section `name`, all its parts in all modules joined |
+| `?SECTION_END?name` | the first address after it |
+| `?SECTION_SIZE?name` | its size in bytes |
+| `?CLASS_START?name` | address of the lowest section of class `name` |
+| `?CLASS_END?name` | the first address after the highest section of the class |
+| `?CLASS_SIZE?name` | `END` − `START`, gaps between its sections included |
+
+```
+        EXTERN  ?SECTION_START??BSS:WORD, ?SECTION_SIZE??BSS:DATA16
+        MOV     R4, #POF ?SECTION_START??BSS
+        MOV     R5, #PAG ?SECTION_START??BSS
+        MOV     R6, #?SECTION_SIZE??BSS    ; bytes to clear
+```
+
+- The section name is spelled as for the section itself, so with `$CASE`
+  its case counts. Class names ignore case, as everywhere else.
+- Declare them with any `EXTERN` type: `WORD` or `BYTE` for an address
+  used as a memory operand or with `POF`, `PAG`, `SOF` and `SEG`; `DATA16`
+  for a plain number.
+- BIT sections and register banks have none, and count in no class.
+- A name that matches no section or class is OC15, which says so.
+- A module's own `PUBLIC` or `GLOBAL` symbol of the same name wins.
+
 ## Data alignment
 
 Keil moves word data to an even address and double-word data to a multiple

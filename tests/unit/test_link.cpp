@@ -255,3 +255,47 @@ TEST_CASE("a single source can use library modules") {
     REQUIRE(r.ok());
     CHECK(r.modules == std::vector<std::string>{"main.a66", "mul.a66"});
 }
+
+// openc166's own symbols for where sections and classes went.
+TEST_CASE("the linker makes symbols for where sections and classes went") {
+    AssembleOptions o;
+    o.class_ranges = {{"NDATA", {0xC000, 0xDFFF}}};
+    auto r = link({{"start.a66",
+                    "$CASE\n"
+                    " EXTERN ?SECTION_START??BSS:WORD, ?SECTION_END??BSS:WORD, ?SECTION_SIZE??BSS:DATA16\n"
+                    " EXTERN ?CLASS_START?ndata:DATA16, ?CLASS_END?NDATA:DATA16, ?CLASS_SIZE?NDATA:DATA16\n"
+                    "CS SECTION CODE AT 0\n"
+                    " MOV R4, #POF ?SECTION_START??BSS\n"
+                    " MOV R5, #POF ?SECTION_END??BSS\n"
+                    " MOV R6, #?SECTION_SIZE??BSS\n"
+                    " MOV R7, #?CLASS_START?ndata\n"
+                    " MOV R8, #?CLASS_END?NDATA\n"
+                    " MOV R9, #?CLASS_SIZE?NDATA\n"
+                    "CS ENDS\n"
+                    "?BSS SECTION DATA PUBLIC 'NDATA'\n DSW 3\n?BSS ENDS\n END\n"},
+                   {"vars.a66",
+                    "$CASE\n?BSS SECTION DATA PUBLIC 'NDATA'\n DSW 5\n?BSS ENDS\n"
+                    "D2 SECTION DATA 'ndata'\n DSB 3\nD2 ENDS\n END\n"}},
+                  o);
+    CHECK(diags(r) == "");
+    REQUIRE(r.ok());
+    // ?BSS: both parts, 10H bytes at 0C000H; class NDATA: ?BSS and D2.
+    CHECK(image(r).substr(0, 48) == "E6F40000E6F51000E6F61000E6F700C0E6F813C0E6F91300");
+}
+
+TEST_CASE("linker symbols without $CASE and for a module's own section") {
+    AssembleOptions o;
+    o.origin = 0x100;
+    auto r = link({{"a.a66", " EXTERN ?section_start?p:DATA16\np SECTION CODE\n MOV R4, #?section_start?p\np ENDS\n END\n"}},
+                  o);
+    REQUIRE(r.ok());
+    CHECK(image(r) == "E6F40001");
+}
+
+TEST_CASE("linker symbols for sections and classes that do not exist") {
+    auto r = link({{"a.a66", " EXTERN ?SECTION_SIZE?NOPE:DATA16, ?CLASS_START?NONE:DATA16, OTHER:DATA16\n END\n"}});
+    CHECK(diags(r) == "a.a66:1:OC15E a.a66:1:OC15E a.a66:1:OC15E");
+    CHECK(r.diagnostics[0].message.find("there is no section 'NOPE'") != std::string::npos);
+    CHECK(r.diagnostics[1].message.find("no section has class 'NONE'") != std::string::npos);
+    CHECK(r.diagnostics[2].message.find("no other module") != std::string::npos);
+}
