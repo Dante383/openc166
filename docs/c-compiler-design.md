@@ -1,6 +1,6 @@
 # openc166 — C Compiler: Design
 
-Status: written 2026-11-27 as the design. Milestone 1 is done (2026-11-27)
+Status: written 2026-11-27 as the design. Milestones 1 and 2 are done (2026-11-27)
 in a local llvm-project fork, `openc166-llvm`, branch `c166`, based on LLVM
 23.1.6; its `C166.md` says how to build it.
 
@@ -314,6 +314,33 @@ modules (`--lib`) so only what a program uses is pulled in:
 2. **Integer core, small model.** 8/16-bit arithmetic, loads and stores,
    branches, calls, locals on the user stack, the TASKING convention, line
    markers. The driver runs openc166. First execution tests pass.
+   *Done.* `python/tests/test_c_compiler.py` compiles C at -O0 and -O2,
+   links it with openc166 and runs it in the simulator (skipped when no
+   C166 clang is found; `OPENC166_CLANG` points at one). Decided on the way:
+   - **An object file is A166 source.** Asked for an object, the back end
+     writes assembly; openc166 links modules as source, as L166 links
+     objects. So `clang -c` and `clang a.c b.c -o prog.hex` work, with
+     openc166 as the linker, and no object format is needed.
+   - **Compare and branch, and multiply/divide, are single instructions
+     until printing.** Every data move on the C166 sets N and Z, so a
+     register copy between `CMP` and `JMP cc` would break the branch; kept
+     whole, nothing can come between. The same holds for `MUL`/`DIV` and
+     reading `MDL`/`MDH`.
+   - **Generic `JMP` and `CALL`.** openc166 picks `JMPR`/`JMPA` and
+     `CALLR`/`CALLA` by distance, so the back end does no branch
+     relaxation of its own (a change from §3.5).
+   - **Bytes use the low half of a word register** (`R5` printed as `RL5`)
+     instead of an 8-bit register class: `i8` stays an illegal type that is
+     promoted to 16 bits, and only `R0`-`R7` can be used for byte access.
+   - **TASKING's stack rules are in the argument assignment**: once one
+     argument is on the stack all later ones are, a `long` never starts in
+     `R15`, `...` arguments are on the stack. Stack arguments are laid out
+     first argument lowest, starting at `R0` on entry; that order is still
+     to be checked against Classic.
+   - Each global gets its own section internally, mapped back onto the
+     module's A166 sections, which keeps ELF's `.comm` out of the output;
+     compiler-made names with `.` (`.str`, `f.counter`) are renamed with
+     `?`.
 3. **32-bit integers and runtime helpers.** `long`, multiply/divide via
    `MDH`/`MDL`, the helper library, startup code. Torture-test subset passes.
 4. **TASKING extensions for payloads.** `_sfr`/`_sfrbit`, `_bit`,
