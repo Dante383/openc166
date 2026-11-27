@@ -103,11 +103,21 @@ compatible: LLVM is Apache-2.0 with the LLVM exception, openc166 is MIT.
 | `short`, `int` | 16 | 16 | |
 | `long` | 32 | 16 | low word at the lower address |
 | `long long` | 64 | 16 | later |
-| `float` | 32 | 16 | later, soft-float |
-| `double` | 64 | 16 | later, soft-float; TASKING's 32-bit-double option is an open question (§9) |
+| `float` | 32 | 16 | soft-float |
+| `double` | 64 (`-mdouble=32`: 32) | 16 | soft-float; see below |
 | `_near` pointer | 16 | 16 | small model default |
 | `_far`, `_huge`, `_shuge` pointer | 32 | 16 | later |
 | function pointer | 16 (near code), 32 (far code) | 16 | small model: 16 |
+
+**`double`**: the compiler specification says `double` and `long double`
+are 64-bit IEEE binary64, as C99 expects. An explicit 32-bit mode
+(`-mdouble=32`, like TASKING's option of the same purpose) makes `double`
+the same as `float`. The 32-bit mode is implemented first, because it needs
+only the single-precision runtime and is what small ECU code uses; the
+64-bit default follows in the full-firmware milestone. Until then the
+compiler refuses to compile code that uses `double` without `-mdouble=32`,
+rather than silently changing its meaning. The two modes are not
+link-compatible, and the assembly output records which one was used.
 
 Little-endian. Words need even addresses: the C167 traps on an odd word
 access, so no 16-bit value is ever under-aligned. Proposed data layout string
@@ -145,21 +155,31 @@ sequences for spaces 1–3 later.
   physical registers that `MUL`, `DIV`, `CMP`, ALU instructions and
   conditional jumps define and use.
 
-### 3.4 Calling convention (TASKING C166) — to be confirmed
+### 3.4 Calling convention (TASKING C166)
 
-The convention below is TASKING's as best known before work starts. Step 1
-of milestone 1 is to confirm it against the TASKING C166 manual and against
-calls in the stock 5WY19 firmware in Ghidra; this table is then corrected.
+Confirmed on 2026-11-27 against the stock 5WY19 boot block in Ghidra, which
+TASKING's classic C166 compiler built:
 
-| Item | Register / place |
-|---|---|
-| Arguments | first words in `R12`, `R13`, `R14`, `R15`; a `long` takes two consecutive registers, low word first; the rest on the user stack |
-| Return value | `R4` (8/16-bit), `R4:R5` (32-bit, `R4` low), pointer to a caller buffer for structs |
-| User stack pointer | `R0`, grows downwards; push is `MOV [-R0],Rn`, pop is `MOV Rn,[R0+]` |
-| Callee-saved | to be confirmed (expected: `R6`–`R9`) |
-| Caller-saved | the rest, `MDH`, `MDL`, `MDC`, `PSW` flags |
+| Item | Register / place | Seen in |
+|---|---|---|
+| Arguments | first words in `R12`, `R13`, `R14`, `R15`, in order; a 32-bit argument (`long`, `_huge` pointer) takes two consecutive registers, low word first (`R12` offset, `R13` segment); the rest on the user stack | `BL_read_triple_redundant_block` (4 arguments, `_huge` pointer in `R12:R13` used with `EXTS R13`), `calculate_crc16_checksum`, `BL_compare_block_mirror_masked` |
+| Return value | `RL4` (8-bit), `R4` (16-bit), `R4:R5` (32-bit, `R4` low); structs: to be confirmed | the same functions; the 32-bit division helper |
+| User stack pointer | `R0`, grows downwards; push is `MOV [-R0],Rn`, pop is `MOV Rn,[R0+]`, frames dropped with `ADD R0,#n` | every function |
+| Callee-saved | `R6`, `R7`, `R8`, `R9`, saved only when used | `BL_read_triple_redundant_block` saves all four; others save `R6` or `R9` alone |
+| Caller-saved | `R1`–`R5`, `R10`–`R15`, `MDH`, `MDL`, `MDC`, `PSW` flags | callees change `R3`, `R4`, `R5`, `R10`–`R15` without saving; callers reload `R12`–`R15` before each call and keep values across calls in `RL6` |
+
+Runtime helpers do not follow this convention: the 32-bit unsigned division
+at `002014H` takes its operands in `R4:R5` and `R10:R11` and returns in
+`R4:R5`. The backend calls such helpers with their own register conventions,
+named after TASKING's helper names where they can be identified in the
+firmware. Still to confirm: varargs, struct arguments and returns, and what
+happens when a 32-bit argument would start in `R15`.
 | Frame | locals at `[R0+#d16]`; no frame pointer unless needed (variable-length arrays, `alloca`) |
 | Calls | `CALLA`/`CALLR` in the small model; `CALLS` and `RETS` for far code later |
+
+The boot block mixes near functions (`CALLA` … `RET`) and far ones (`RETS`)
+in one program, so TASKING's medium/large-model code is what the far-code
+milestone has to match.
 
 Interrupt functions (`_interrupt(n)`) save every register they use plus
 `MDH`/`MDL`/`MDC` when they multiply or divide, end in `RETI`, and get a
@@ -215,8 +235,9 @@ modules (`--lib`) so only what a program uses is pulled in:
   initialised data, zeroing `.bss`, calling `main`. Payloads that are
   started by a loader can skip most of it.
 - **helpers** for what the backend calls instead of inlining: 32-bit
-  multiply, divide, modulo and shifts; later 64-bit and soft-float. Named
-  as LLVM's libcalls, written for the TASKING convention.
+  multiply, divide, modulo and shifts; later 64-bit integers and soft-float
+  (single precision first, then double). Their register use follows
+  TASKING's own helpers where the firmware shows them (§3.4).
 - **libc**: only `mem*`/`str*` at first. A small libc (picolibc, or
   newlib-nano's subset) comes after the full-firmware milestone.
 
@@ -256,7 +277,7 @@ modules (`--lib`) so only what a program uses is pulled in:
 
 ## 8. Milestones
 
-1. **Ground work.** Confirm the calling convention (§3.4). Fork
+1. **Ground work.** Fork
    llvm-project, add an empty C166 target and Clang target info with the data
    layout; `clang --target=c166 -S` on an empty function prints a `RET` that
    openc166 assembles.
@@ -273,7 +294,9 @@ modules (`--lib`) so only what a program uses is pulled in:
    instructions, branch shortening, comparison against TASKING output on
    real code.
 6. **Full firmware.** Far/huge pointers and `EXTP`/`EXTS`, far code with
-   `CALLS`/`RETS`, segmented memory models, `long long`, soft-float, libc.
+   `CALLS`/`RETS`, segmented memory models, `long long`, soft-float
+   (single precision and `-mdouble=32` first, then 64-bit `double` as the
+   default), libc.
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.
 
@@ -282,19 +305,29 @@ modules (`--lib`) so only what a program uses is pulled in:
 ## 9. Risks and open questions
 
 - **Building and shipping LLVM.** A trimmed Clang/LLVM with one target is
-  still a long build (tens of minutes on 32 cores) and a ~100 MB binary per
-  platform. Prebuilt releases per OS from CI are needed; users should never
-  have to build LLVM.
+  still a long build (tens of minutes on 32 cores). Decided: CI publishes
+  prebuilt releases of about 100 MB per platform (Linux, Windows, macOS);
+  users never build LLVM.
 - **Rebasing the fork.** Clang changes for the TASKING keywords touch the
   parser and Sema. Keep them small and behind the C166 target so rebases on
   new LLVM releases stay cheap.
-- **Calling convention details** are unconfirmed (§3.4): callee-saved set,
-  how structs and `long` arguments that do not fit are passed, varargs.
-- **`double` width**: TASKING C166 can make `double` 32-bit. Which default
-  matches the code we want to build?
+- **Calling convention details** still unconfirmed (§3.4): struct
+  arguments and returns, varargs, a 32-bit argument that would start in
+  `R15`. Settled with the TASKING manual and a TASKING compiler (below).
 - **DPP assumptions** of the small model must match how openc166 and the
   startup code set the data page pointers; a mismatch fails silently at run
   time. The linker map and a startup check should catch it.
 - **MDH/MDL in interrupts**: an interrupt that divides while the interrupted
   code divides needs `MDC`'s busy flag handled correctly, as TASKING does.
-- **Is a TASKING C166 compiler available** for differential testing?
+- **A TASKING C166 compiler for differential testing.** Both TASKING C166
+  products are now legacy, and neither has a public download:
+  - *C166/ST10 Classic* (v8.x and earlier): the compiler that built the
+    stock firmware, and the one whose convention and output we match. Only
+    through TASKING's support portal or sales.
+  - *VX-toolset for C166* (v2.1–v4.0r1, 2006–2015): a newer compiler.
+    Release notes and user guides are public on tasking.com; installers ran
+    as a 15-day trial without a licence. Its calling convention must be
+    checked against Classic's before its output is used as a reference.
+
+  The plan is to ask TASKING for a Classic licence or evaluation. The VX
+  manuals serve as the dialect reference in the meantime.
