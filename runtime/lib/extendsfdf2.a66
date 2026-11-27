@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 EXTENDSFDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___extendsfdf2                  ; -- Begin function __extendsfdf2
 ___extendsfdf2:                         ; @__extendsfdf2
+___extendsfdf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	SUB	R0, #16
 	MOV	R1, [R0+#16]
@@ -178,7 +181,8 @@ ___extendsfdf2:                         ; @__extendsfdf2
 	MOV	[R12+#4], R3
 	MOV	[R12+#6], R2
 	ADD	R0, #16
-	RET
+	RETS
+___extendsfdf2?F	ENDP
                                         ; -- End function
 EXTENDSFDF2_PR	ENDS
 	END

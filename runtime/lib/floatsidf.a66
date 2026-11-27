@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FLOATSIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___floatsidf                    ; -- Begin function __floatsidf
 ___floatsidf:                           ; @__floatsidf
+___floatsidf?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
 	SUB	R0, #16
@@ -156,7 +159,8 @@ ___floatsidf:                           ; @__floatsidf
 	MOV	[R12+#6], R10
 	ADD	R0, #16
 	MOV	R6, [R0+]
-	RET
+	RETS
+___floatsidf?F	ENDP
                                         ; -- End function
 FLOATSIDF_PR	ENDS
 	END

@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FIXUNSDFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___fixunsdfdi                   ; -- Begin function __fixunsdfdi
 ___fixunsdfdi:                          ; @__fixunsdfdi
+___fixunsdfdi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -32,7 +35,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#2], R5
 	MOV	[R0+#22], R1                    ; 2-byte Folded Spill
 	MOV	[R0], R1
-	CALL	___ledf2
+	CALLS	SEG ___ledf2, SOF ___ledf2
 	MOV	R1, #1
 	MOV	R2, R1
 	CMP	R5, #1
@@ -62,7 +65,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#6], R8
 	MOV	R12, R0
 	ADD	R12, #50
-	CALL	___muldf3
+	CALLS	SEG ___muldf3, SOF ___muldf3
 	MOV	R4, [R0+#50]
 	MOV	R5, [R0+#52]
 	MOV	R1, [R0+#54]
@@ -71,7 +74,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	CALL	___fixunsdfsi
+	CALLS	SEG ___fixunsdfsi, SOF ___fixunsdfsi
 	MOV	[R0+#20], R4                    ; 2-byte Folded Spill
 	MOV	[R0+#16], R8                    ; 2-byte Folded Spill
 	MOV	R8, R5
@@ -79,7 +82,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	ADD	R12, #42
 	MOV	R13, R4
 	MOV	R14, R8
-	CALL	___floatunsidf
+	CALLS	SEG ___floatunsidf, SOF ___floatunsidf
 	MOV	R4, [R0+#42]
 	MOV	R5, [R0+#44]
 	MOV	R1, [R0+#46]
@@ -95,7 +98,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #34
-	CALL	___muldf3
+	CALLS	SEG ___muldf3, SOF ___muldf3
 	MOV	R4, [R0+#18]                    ; 2-byte Folded Reload
 	MOV	[R0+#2], R4
 	MOV	[R0], R7
@@ -113,7 +116,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#8], R4
 	MOV	R12, R0
 	ADD	R12, #26
-	CALL	___adddf3
+	CALLS	SEG ___adddf3, SOF ___adddf3
 	MOV	R4, [R0+#26]
 	MOV	R5, [R0+#28]
 	MOV	R1, [R0+#30]
@@ -122,7 +125,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	CALL	___fixunsdfsi
+	CALLS	SEG ___fixunsdfsi, SOF ___fixunsdfsi
 	MOV	R9, R4
 	MOV	R4, [R0+#20]                    ; 2-byte Folded Reload
 	JMP	cc_UC, ?LBB0_9
@@ -152,7 +155,8 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___fixunsdfdi?F	ENDP
                                         ; -- End function
 	EXTRN	___ledf2 : NEAR
 	EXTRN	___muldf3 : NEAR

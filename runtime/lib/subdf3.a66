@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 SUBDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___subdf3                       ; -- Begin function __subdf3
 ___subdf3:                              ; @__subdf3
+___subdf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
 	SUB	R0, #24
@@ -32,7 +35,7 @@ ___subdf3:                              ; @__subdf3
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #16
-	CALL	___adddf3
+	CALLS	SEG ___adddf3, SOF ___adddf3
 	MOV	R4, [R0+#18]
 	MOV	R5, [R0+#16]
 	MOV	R1, [R0+#22]
@@ -43,7 +46,8 @@ ___subdf3:                              ; @__subdf3
 	MOV	[R6+#2], R4
 	ADD	R0, #24
 	MOV	R6, [R0+]
-	RET
+	RETS
+___subdf3?F	ENDP
                                         ; -- End function
 	EXTRN	___adddf3 : NEAR
 SUBDF3_PR	ENDS

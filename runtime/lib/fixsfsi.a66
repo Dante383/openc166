@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FIXSFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___fixsfsi                      ; -- Begin function __fixsfsi
 ___fixsfsi:                             ; @__fixsfsi
+___fixsfsi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -55,11 +58,11 @@ ___fixsfsi:                             ; @__fixsfsi
 	MOV	R4, #150
 	SUB	R4, R14
 	MOV	R14, R4
-	CALL	___lshrsi3
+	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
 	JMP	cc_UC, ?LBB0_11
 ?LBB0_10:                               ; %if.else.i
 	SUB	R14, #150
-	CALL	___ashlsi3
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 ?LBB0_11:                               ; %__fixint.exit
 	MUL	R4, R7
 	MOV	R1, MDL
@@ -74,7 +77,8 @@ ___fixsfsi:                             ; @__fixsfsi
 ?LBB0_12:                               ; %__fixint.exit
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
-	RET
+	RETS
+___fixsfsi?F	ENDP
                                         ; -- End function
 	EXTRN	___lshrsi3 : NEAR
 	EXTRN	___ashlsi3 : NEAR

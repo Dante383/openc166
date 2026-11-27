@@ -69,11 +69,18 @@ def compile_c(source, opt="-O2", name="test.c"):
 class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
-    def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167"):
-        modules = [("harness.a66", HARNESS)]
+    def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167",
+                 sections=None, tiny=False):
+        # The harness module matches the model: $SEGMENTED for far code.
+        harness = HARNESS if tiny else HARNESS.replace("$CASE\n", "$CASE\n$SEGMENTED\n", 1)
+        modules = [("harness.a66", harness)]
+        runtime = os.path.join(RUNTIME, "tiny") if tiny else RUNTIME
         if startup:
-            with open(os.path.join(RUNTIME, "cstart.a66")) as f:
+            with open(os.path.join(runtime, "cstart.a66")) as f:
                 modules.append(("cstart.a66", f.read()))
+        self.tiny = tiny
+        if tiny:
+            opt += " -mabi=tiny"
         for i, src in enumerate(sources):
             modules.append((f"m{i}.a66", compile_c(src, opt, name=f"m{i}.c")))
         self.asm = modules
@@ -81,21 +88,23 @@ class Program:
         self.result = openc166.assemble_many(
             modules,
             classes=classes or {"CPROGRAM": [ROM], "CNEARROM": [ROM], "CNEAR": [RAM]},
-            libraries=[os.path.join(RUNTIME, "lib")],
+            sections=sections,
+            libraries=[os.path.join(runtime, "lib")],
         )
         if not self.result.ok:
             listing = "\n".join(str(e) for e in self.result.errors)
             raise AssertionError("openc166 failed:\n" + listing + "\n" + modules[-1][1])
-        # Without an image, the program is the ROM; with one (a flash image),
-        # the program is loaded into RAM as a loader would.
+        # Without an image, the program is the ROM. With one (a flash image),
+        # what lies in the internal RAM is loaded as a loader would, the
+        # rest goes into the image as if flashed.
         rom = bytearray(image if image is not None else b"\xff" * 0x8000)
         self.loaded = []
         for chunk in self.result.chunks:
-            if image is None:
-                assert chunk.end <= len(rom), "only the ROM has bytes in the image"
-                rom[chunk.address : chunk.end] = chunk.data
-            else:
+            if image is not None and 0xF000 <= chunk.address < 0x10000:
                 self.loaded.append(chunk)
+            else:
+                assert chunk.end <= len(rom), "outside the image"
+                rom[chunk.address : chunk.end] = chunk.data
         self.rom = bytes(rom)
         self.sections = self.result.sections
 
@@ -135,9 +144,7 @@ class Program:
         for i, v in enumerate(stack):
             s.write16(r0 + 2 * i, v & 0xFFFF)
         s.r[0] = r0
-        sp = s.sfr["SP"] - 2
-        s.sfr["SP"] = sp
-        s.write16(sp, HALT)
+        push_return(s, far=not self.tiny)
         s.break_at(HALT)
         s.pc = self.address(name if name.startswith("_") else "_" + name)
         stop = s.cont(max_instructions)
@@ -146,6 +153,19 @@ class Program:
         if s.r[0] != r0:
             raise AssertionError(f"{name} left R0 at {s.r[0]:04X}, not {r0:04X}")
         return s.r[4], s.r[5], s
+
+
+def push_return(s, far=True):
+    """The return address a CALLS (far, the small model) or CALLA (near,
+    the tiny model) would leave on the system stack: back to HALT."""
+    if far:
+        sp = s.sfr["SP"] - 4
+        s.write16(sp, HALT)  # IP, popped first by RETS
+        s.write16(sp + 2, 0)  # CSP
+    else:
+        sp = s.sfr["SP"] - 2
+        s.write16(sp, HALT)
+    s.sfr["SP"] = sp
 
 
 def place(args):
@@ -280,9 +300,7 @@ int pressure(int a, int b, int c, int d) {
             s.r[reg] = v
         s.r[0] = USER_STACK
         s.r[12], s.r[13], s.r[14], s.r[15] = 1, 2, 3, 4
-        sp = s.sfr["SP"] - 2
-        s.sfr["SP"] = sp
-        s.write16(sp, HALT)
+        push_return(s)
         s.break_at(HALT)
         s.pc = p.address("_pressure")
         s.cont(100000)
@@ -494,9 +512,7 @@ class StartupTest(unittest.TestCase):
         # RAM starts out as garbage; __cstart must set up every variable.
         s = p.simulator()
         s.write(RAM[0], b"\xA5" * (RAM[1] - RAM[0] + 1))
-        sp = s.sfr["SP"] - 2
-        s.sfr["SP"] = sp
-        s.write16(sp, HALT)
+        push_return(s)
         s.r[0] = 0x1234
         s.break_at(HALT)
         s.pc = p.address("__cstart")
@@ -659,6 +675,65 @@ int roundtrip(void) {
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class FarCodeTest(unittest.TestCase):
+    """The small memory model (TASKING's): functions are far, called with
+    CALLS and returning with RETS, and function pointers are segment offset
+    and segment. Here code lies in segments 1 and 3 of the 5WY19's flash."""
+
+    MAIN = r"""
+typedef int (*fn)(int);
+extern const fn ops[2];
+int far_add(int a, int b);
+static int twice(int x) { return x + x; }      /* near: CALL/RET */
+int call(fn f, int x) { return f(x); }          /* through __c166_icall */
+int test(int x) {
+  return far_add(x, 1000) + call(ops[0], x) + ops[1](x) + twice(x);
+}
+int fpsize(void) { return sizeof(fn); }
+"""
+    OTHER = r"""
+typedef int (*fn)(int);
+int far_add(int a, int b) { return a + b; }
+static int square(int x) { return x * x; }
+static int negate(int x) { return -x; }
+const fn ops[2] = { square, negate };
+"""
+
+    def test_calls_across_segments(self):
+        image = bytes(0x80000 * [0xFF])
+        p = Program(
+            [self.MAIN, self.OTHER],
+            "-Os",
+            image=image,
+            board="5wy19",
+            classes={
+                "CPROGRAM": [(0x10000, 0x1FFFF)],
+                "CNEARROM": [(0x8000, 0xBFFF)],
+                "CNEAR": [(0xF900, 0xF9FF)],
+            },
+            sections={"M1_PR": 0x30000},
+        )
+        self.assertEqual(p.address("_test") >> 16, 1)
+        self.assertEqual(p.address("_far_add") >> 16, 3)
+        lo, _, _ = p.call("test", 7)
+        self.assertEqual(lo, (7 + 1000) + 49 + (-7 & 0xFFFF) + 14 & 0xFFFF)
+        self.assertEqual(p.call("fpsize")[0], 4)
+        asm = p.asm[1][1]  # m0
+        self.assertIn("CALLS\tSEG _far_add, SOF _far_add", asm)
+        self.assertIn("CALLS\tSEG ___c166_icall, SOF ___c166_icall", asm)
+        self.assertIn("RETS", asm)
+        # openc166 assembles all of it without a warning (OC35: this test
+        # has no variables for the CNEAR range).
+        self.assertEqual([w for w in p.result.warnings if w.code != "OC35"], [])
+
+    def test_tiny_model(self):
+        p = Program([CompiledCodeTest.SOURCE], "-Os", tiny=True)
+        self.assertEqual(p.call("fib", 10)[0], 55)
+        self.assertEqual(p.call("call_five")[0], 10010)
+        self.assertNotIn("RETS", p.asm[-1][1])
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
 class Payload5WY19Test(unittest.TestCase):
     """A MiniMon-style payload in C, loaded into the internal RAM of the
     simulated 5WY19: it sets up ASC0 (the K-line), answers commands from the
@@ -734,9 +809,7 @@ int main(void) {
         )
         s = p.simulator()
         s.serial_echo = False
-        sp = s.sfr["SP"] - 2
-        s.sfr["SP"] = sp
-        s.write16(sp, HALT)
+        push_return(s)
         s.break_at(HALT)
         s.pc = p.address("__cstart")
         s.run_for(0.002)

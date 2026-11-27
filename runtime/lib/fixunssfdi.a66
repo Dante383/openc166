@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FIXUNSSFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___fixunssfdi                   ; -- Begin function __fixunssfdi
 ___fixunssfdi:                          ; @__fixunssfdi
+___fixunssfdi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -23,7 +26,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0+#4], R9
 	MOV	[R0+#2], R8
 	MOV	[R0], R7
-	CALL	___lesf2
+	CALLS	SEG ___lesf2, SOF ___lesf2
 	MOV	R1, #1
 	MOV	R2, R1
 	CMP	R5, #1
@@ -42,7 +45,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #56
-	CALL	___extendsfdf2
+	CALLS	SEG ___extendsfdf2, SOF ___extendsfdf2
 	MOV	R5, [R0+#56]
 	MOV	[R0+#22], R5                    ; 2-byte Folded Spill
 	MOV	R1, [R0+#58]
@@ -63,7 +66,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0], R5
 	MOV	R12, R0
 	ADD	R12, #48
-	CALL	___muldf3
+	CALLS	SEG ___muldf3, SOF ___muldf3
 	MOV	R4, [R0+#48]
 	MOV	R5, [R0+#50]
 	MOV	R1, [R0+#52]
@@ -72,14 +75,14 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	CALL	___fixunsdfsi
+	CALLS	SEG ___fixunsdfsi, SOF ___fixunsdfsi
 	MOV	R7, R4
 	MOV	R8, R5
 	MOV	R12, R0
 	ADD	R12, #40
 	MOV	R13, R7
 	MOV	R14, R8
-	CALL	___floatunsidf
+	CALLS	SEG ___floatunsidf, SOF ___floatunsidf
 	MOV	R4, [R0+#40]
 	MOV	R5, [R0+#42]
 	MOV	R1, [R0+#44]
@@ -95,7 +98,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #32
-	CALL	___muldf3
+	CALLS	SEG ___muldf3, SOF ___muldf3
 	MOV	R4, [R0+#16]                    ; 2-byte Folded Reload
 	MOV	[R0+#6], R4
 	MOV	R4, [R0+#18]                    ; 2-byte Folded Reload
@@ -114,7 +117,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0+#8], R4
 	MOV	R12, R0
 	ADD	R12, #24
-	CALL	___adddf3
+	CALLS	SEG ___adddf3, SOF ___adddf3
 	MOV	R4, [R0+#24]
 	MOV	R5, [R0+#26]
 	MOV	R1, [R0+#28]
@@ -123,7 +126,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	CALL	___fixunsdfsi
+	CALLS	SEG ___fixunsdfsi, SOF ___fixunsdfsi
 	MOV	R9, R4
 	JMP	cc_UC, ?LBB0_9
 ?LBB0_5:                                ; %entry
@@ -152,7 +155,8 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___fixunssfdi?F	ENDP
                                         ; -- End function
 	EXTRN	___lesf2 : NEAR
 	EXTRN	___extendsfdf2 : NEAR

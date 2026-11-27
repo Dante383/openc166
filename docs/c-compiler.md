@@ -7,7 +7,8 @@ assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
-Status: small memory model, integers up to 64 bits, `float` and `double`, TASKING keywords and
+Status: TASKING's small and tiny memory models, integers up to 64 bits,
+`float` and `double`, TASKING keywords and
 intrinsics for payloads and drivers. Checked by running compiled C in the
 simulator (`python/tests/test_c_compiler.py`), including a MiniMon-style
 payload on the simulated 5WY19.
@@ -42,8 +43,35 @@ clang --target=c166 -Os main.c util.c -o prog.hex \
 The entry point is `__cstart`. It sets up the user stack, initialises the
 variables, calls `main` and returns `main`'s result in R4, keeping the
 caller's R0 and R6-R9: a loader or existing firmware can call a C program
-and get control back. A program that starts from reset must first set up
+and get control back (with `CALLS` in the small model, `CALLA` in the
+tiny one). A program that starts from reset must first set up
 SYSCON, BUSCON, the system stack and the watchdog itself.
+
+## Memory models
+
+`-mabi=` picks TASKING's memory model:
+
+| `-mabi=` | Code | Data | Function pointers |
+|---|---|---|---|
+| `small` (default) | far: anywhere in 16 MB, `CALLS`/`RETS` | near, first 64 KB (DPPn = n) | 32 bits |
+| `tiny` | near: first 64 KB, `CALL`/`RET` | near, first 64 KB | 16 bits |
+
+In the small model every function is far, as in TASKING, except:
+
+- a `_near` function (`int _near f(int);`), called with `CALLA`/`CALLR`
+  and returning with `RET`: it must be in the same segment as its
+  callers. Use it to call TASKING `_near` functions;
+- a `static` function whose address is never taken, which is in the same
+  code section as all its callers, so it is near without asking.
+
+A call through a function pointer goes through `__c166_icall` in the
+runtime (`PUSH R5`, `PUSH R4`, `RETS`, as the stock 5WY19 firmware does at
+2000H). The output is `$SEGMENTED`, so openc166 places code above 64 KB;
+near data references are written as `SOF name` (their address in the first
+64 KB) and SFRs through `ASSUME DPP3:SYSTEM`. Each model has its own
+runtime (`runtime/` and `runtime/tiny/`), which the driver picks; modules
+of different models do not mix. Medium, large and huge need far data by
+default and are not done yet.
 
 ## Memory map
 
@@ -128,7 +156,9 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 ## Not yet
 
 - `_far`/`_huge` variables (their sections and initial values), and the
-  medium, large and huge memory models (far code, `CALLS`/`RETS`).
+  medium, large and huge memory models.
+- `_near` function pointers (all function pointers are far in the small
+  model), and register bank switching.
 - Structs passed by value (an error). Structs returned by value work, but
   through a hidden pointer argument, not TASKING's block on the user stack,
   so such functions cannot be called from TASKING-built code.

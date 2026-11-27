@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 COMPARESF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___lesf2                        ; -- Begin function __lesf2
 ___lesf2:                               ; @__lesf2
+___lesf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R2, [R0]
 	MOV	R1, [R0+#2]
@@ -31,7 +34,7 @@ ___lesf2:                               ; @__lesf2
 ?LBB0_4:                                ; %entry
 	JNB	R3.0, ?LBB0_8
 ?LBB0_5:                                ; %__leXf2__.exit
-	RET
+	RETS
 ?LBB0_6:                                ; %entry
 	MOV	R10, R5
 	CMP	R11, #32640
@@ -111,11 +114,11 @@ ___lesf2:                               ; @__lesf2
 	JMP	cc_NE, ?LBB0_5
 ; %bb.25:                               ; %if.else18.i
 	MOV	R4, R5
-	RET
+	RETS
 ?LBB0_26:
 	MOV	R4, #0
 	MOV	R5, R4
-	RET
+	RETS
 ?LBB0_27:                               ; %if.else15.i
 	MOV	R4, #1
 	MOV	R11, R4
@@ -127,9 +130,11 @@ ___lesf2:                               ; @__lesf2
 	CMP	R1, R3
 	JMP	cc_SLE, ?LBB0_20
 	JMP	cc_UC, ?LBB0_21
+___lesf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___gesf2                        ; -- Begin function __gesf2
 ___gesf2:                               ; @__gesf2
+___gesf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R2, [R0]
 	MOV	R1, [R0+#2]
@@ -214,7 +219,7 @@ ___gesf2:                               ; @__gesf2
 	JMP	cc_NE, ?LBB1_27
 ; %bb.20:                               ; %if.else18.i
 	MOV	R4, R5
-	RET
+	RETS
 ?LBB1_21:                               ; %entry
 	MOV	R5, R3
 	CMP	R11, #32640
@@ -238,7 +243,7 @@ ___gesf2:                               ; @__gesf2
 ?LBB1_26:
 	MOV	R5, R4
 ?LBB1_27:                               ; %__geXf2__.exit
-	RET
+	RETS
 ?LBB1_28:                               ; %if.else15.i
 	MOV	R4, #1
 	MOV	R11, R4
@@ -250,9 +255,11 @@ ___gesf2:                               ; @__gesf2
 	CMP	R1, R3
 	JMP	cc_SLE, ?LBB1_15
 	JMP	cc_UC, ?LBB1_16
+___gesf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___unordsf2                     ; -- Begin function __unordsf2
 ___unordsf2:                            ; @__unordsf2
+___unordsf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R2, [R0]
 	MOV	R3, [R0+#2]
@@ -292,7 +299,7 @@ ___unordsf2:                            ; @__unordsf2
 	MOV	R3, R1
 ?LBB2_10:                               ; %entry
 	OR	R4, R3
-	RET
+	RETS
 ?LBB2_11:                               ; %entry
 	MOV	R3, R5
 	CMP	R2, #32640
@@ -302,6 +309,7 @@ ___unordsf2:                            ; @__unordsf2
 	CMP	R2, #32640
 	JMP	cc_NE, ?LBB2_9
 	JMP	cc_UC, ?LBB2_10
+___unordsf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___cmpsf2
 ___cmpsf2	EQU	___lesf2

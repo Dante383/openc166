@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FLOATDISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___floatdisf                    ; -- Begin function __floatdisf
 ___floatdisf:                           ; @__floatdisf
+___floatdisf?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -416,7 +419,8 @@ ___floatdisf:                           ; @__floatdisf
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___floatdisf?F	ENDP
                                         ; -- End function
 FLOATDISF_PR	ENDS
 	END

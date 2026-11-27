@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 DIVSF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___divsf3                       ; -- Begin function __divsf3
 ___divsf3:                              ; @__divsf3
+___divsf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -78,7 +81,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #80
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#86]
 	MOV	R5, [R0+#84]
 	MOV	R1, R9
@@ -95,7 +98,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #72
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R7, [R0+#78]
 	MOV	R8, [R0+#74]
 	MOV	R4, [R0+#76]
@@ -117,7 +120,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R8
 	MOV	R12, R0
 	ADD	R12, #64
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#70]
 	MOV	R5, [R0+#68]
 	MOV	R1, R9
@@ -134,7 +137,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #56
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R8, [R0+#62]
 	MOV	R7, [R0+#58]
 	MOV	R4, [R0+#60]
@@ -156,7 +159,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #48
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#54]
 	MOV	R5, [R0+#52]
 	MOV	R1, R9
@@ -173,7 +176,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #40
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#42]
 	MOV	R5, [R0+#46]
 	MOV	R1, [R0+#44]
@@ -207,7 +210,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #32
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#38]
 	MOV	R6, [R0+#36]
 	CMP	R4, #255
@@ -405,13 +408,13 @@ ___divsf3:                              ; @__divsf3
 	SUB	R14, R9
 	ADD	R9, #23
 	MOV	R12, R6
-	CALL	___lshrsi3
+	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
 	MOV	R6, R4
 	MOV	R8, R5
 	MOV	R12, [R0+#30]                   ; 2-byte Folded Reload
 	MOV	R13, R7
 	MOV	R14, R9
-	CALL	___ashlsi3
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	MOV	R15, [R0+#24]                   ; 2-byte Folded Reload
 	MOV	R11, [R0+#26]                   ; 2-byte Folded Reload
 	MOV	R9, R4
@@ -468,7 +471,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_48:                               ; %if.end46.i
 	MOV	R4, R6
 	OR	R4, R5
@@ -580,7 +583,7 @@ ___divsf3:                              ; @__divsf3
 	SUB	R14, #8
 	MOV	R12, R6
 	MOV	R13, R15
-	CALL	___ashlsi3
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	MOV	R1, R4
 	MOV	R15, R5
 	MOV	R9, #9
@@ -673,7 +676,7 @@ ___divsf3:                              ; @__divsf3
 ?LBB0_68:                               ; %cond.end2
 	MOV	R14, R6
 	SUB	R14, #8
-	CALL	___ashlsi3
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	MOV	R12, R4
 	MOV	R13, R5
 	ADD	R9, R6
@@ -681,6 +684,7 @@ ___divsf3:                              ; @__divsf3
 	MOV	R11, [R0+#16]                   ; 2-byte Folded Reload
 	MOV	R15, R8
 	JMP	cc_UC, ?LBB0_3
+___divsf3?F	ENDP
                                         ; -- End function
 	EXTRN	___muldi3 : NEAR
 	EXTRN	___lshrsi3 : NEAR

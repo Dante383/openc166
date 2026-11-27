@@ -1,10 +1,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 MEMMOVE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_memmove                        ; -- Begin function memmove
 _memmove:                               ; @memmove
+_memmove?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R4, R12
 	CMP	R4, R13
@@ -43,7 +46,8 @@ _memmove:                               ; @memmove
 	CMP	R1, #0
 	JMP	cc_NE, ?LBB0_6
 ?LBB0_7:                                ; %if.end
-	RET
+	RETS
+_memmove?F	ENDP
                                         ; -- End function
 MEMMOVE_PR	ENDS
 	END

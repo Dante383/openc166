@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 ADDDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___adddf3                       ; -- Begin function __adddf3
 ___adddf3:                              ; @__adddf3
+___adddf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -1363,7 +1366,7 @@ ___adddf3:                              ; @__adddf3
 	OR	R6, R11
 	MOV	R7, R12
 	OR	R6, R12
-	CALL	___fe_getround
+	CALLS	SEG ___fe_getround, SOF ___fe_getround
 	CMP	R4, #2
 	JMP	cc_EQ, ?LBB0_175
 ; %bb.156:                              ; %if.end139.i
@@ -1508,7 +1511,7 @@ ___adddf3:                              ; @__adddf3
 	ADD	R8, R5
 	ADDC	R6, R4
 ?LBB0_187:                              ; %if.then173.i
-	CALL	___fe_raise_inexact
+	CALLS	SEG ___fe_raise_inexact, SOF ___fe_raise_inexact
 ?LBB0_188:                              ; %__addXf3__.exit
 	MOV	R4, [R0+#10]                    ; 2-byte Folded Reload
 	MOV	[R4], R9
@@ -1520,7 +1523,7 @@ ___adddf3:                              ; @__adddf3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_189:                              ; %sw.epilog.thread.i
 	MOV	R1, R4
 	CMP	R9, R11
@@ -1549,6 +1552,7 @@ ___adddf3:                              ; @__adddf3
 	MOV	R9, R15
 	MOV	R7, R1
 	JMP	cc_UC, ?LBB0_188
+___adddf3?F	ENDP
                                         ; -- End function
 	EXTRN	___fe_getround : NEAR
 	EXTRN	___fe_raise_inexact : NEAR

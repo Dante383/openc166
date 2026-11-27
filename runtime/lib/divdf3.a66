@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 DIVDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___divdf3                       ; -- Begin function __divdf3
 ___divdf3:                              ; @__divdf3
+___divdf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -98,7 +101,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#8], R6
 	MOV	R12, R0
 	ADD	R12, #236
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#242]
 	MOV	R5, [R0+#240]
 	MOV	R1, R8
@@ -115,7 +118,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #228
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R6, [R0+#234]
 	MOV	R9, [R0+#230]
 	MOV	R4, [R0+#232]
@@ -138,7 +141,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R9
 	MOV	R12, R0
 	ADD	R12, #220
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#226]
 	MOV	R5, [R0+#224]
 	MOV	R1, R8
@@ -155,7 +158,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #212
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R9, [R0+#218]
 	MOV	R6, [R0+#214]
 	MOV	R4, [R0+#216]
@@ -177,7 +180,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R6
 	MOV	R12, R0
 	ADD	R12, #204
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#210]
 	MOV	R5, [R0+#208]
 	MOV	R1, R8
@@ -194,7 +197,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #196
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R7, [R0+#198]
 	MOV	R6, [R0+#202]
 	MOV	R4, [R0+#200]
@@ -221,7 +224,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#8], R7
 	MOV	R12, R0
 	ADD	R12, #188
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#194]
 	MOV	[R0+#70], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#192]
@@ -243,7 +246,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#8], R7
 	MOV	R12, R0
 	ADD	R12, #180
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R3, [R0+#34]                    ; 2-byte Folded Reload
 	MOV	R1, [R0+#186]
 	MOV	R2, [R0+#184]
@@ -315,7 +318,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	R12, R0
 	ADD	R12, #164
 	MOV	[R0+#64], R10                   ; 2-byte Folded Spill
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R7, [R0+#168]
 	MOV	R4, [R0+#170]
 	MOV	[R0+#70], R4                    ; 2-byte Folded Spill
@@ -341,7 +344,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #172
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R13, [R0+#64]                   ; 2-byte Folded Reload
 	MOV	R2, [R0+#174]
 	MOV	R4, [R0+#178]
@@ -454,7 +457,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R1
 	MOV	R12, R0
 	ADD	R12, #140
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#146]
 	MOV	[R0+#36], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#144]
@@ -472,7 +475,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #132
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#138]
 	MOV	[R0+#62], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#136]
@@ -495,7 +498,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #156
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#162]
 	MOV	[R0+#30], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#160]
@@ -516,7 +519,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #148
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R10, [R0+#34]                   ; 2-byte Folded Reload
 	MOV	R3, [R0+#36]                    ; 2-byte Folded Reload
 	MOV	R1, R3
@@ -734,7 +737,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#4], R10
 	MOV	R12, R0
 	ADD	R12, #116
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R1, [R0+#116]
 	MOV	R2, [R0+#118]
 	MOV	R5, R9
@@ -860,7 +863,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#4], R1
 	MOV	R12, R0
 	ADD	R12, #124
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R2, [R0+#124]
 	MOV	R3, [R0+#126]
 	MOV	R8, #0
@@ -1169,7 +1172,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	[R0+#8], R10
 	MOV	R12, R0
 	ADD	R12, #76
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R15, [R0+#60]                   ; 2-byte Folded Reload
 	MOV	R14, [R0+#72]                   ; 2-byte Folded Reload
 	MOV	R4, [R0+#76]
@@ -1337,7 +1340,7 @@ ___divdf3:                              ; @__divdf3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_157:                              ; %if.then47.i
 	OR	R4, R6
 	OR	R2, R4
@@ -1728,6 +1731,7 @@ ___divdf3:                              ; @__divdf3
 	SUB	R12, #12
 	MOV	[R0+#42], R12                   ; 2-byte Folded Spill
 	JMP	cc_UC, ?LBB0_3
+___divdf3?F	ENDP
                                         ; -- End function
 	EXTRN	___muldi3 : NEAR
 DIVDF3_PR	ENDS

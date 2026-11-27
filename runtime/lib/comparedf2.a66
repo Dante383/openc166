@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 COMPAREDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___ledf2                        ; -- Begin function __ledf2
 ___ledf2:                               ; @__ledf2
+___ledf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -215,7 +218,7 @@ ___ledf2:                               ; @__ledf2
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_51:                               ; %if.else15.i
 	MOV	R4, #1
 	MOV	R15, R4
@@ -244,9 +247,11 @@ ___ledf2:                               ; @__ledf2
 	CMP	R3, R13
 	JMP	cc_SLE, ?LBB0_39
 	JMP	cc_UC, ?LBB0_40
+___ledf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___gedf2                        ; -- Begin function __gedf2
 ___gedf2:                               ; @__gedf2
+___gedf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -449,7 +454,7 @@ ___gedf2:                               ; @__gedf2
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB1_52:                               ; %if.else15.i
 	MOV	R4, #1
 	MOV	R15, R4
@@ -478,9 +483,11 @@ ___gedf2:                               ; @__gedf2
 	CMP	R3, R13
 	JMP	cc_SLE, ?LBB1_37
 	JMP	cc_UC, ?LBB1_38
+___gedf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___unorddf2                     ; -- Begin function __unorddf2
 ___unorddf2:                            ; @__unorddf2
+___unorddf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R2, [R0]
 	MOV	R10, [R0+#2]
@@ -570,7 +577,7 @@ ___unorddf2:                            ; @__unorddf2
 	MOV	R2, R11
 ?LBB2_26:                               ; %entry
 	OR	R4, R2
-	RET
+	RETS
 ?LBB2_27:                               ; %entry
 	MOV	R11, R5
 	CMP	R10, #32752
@@ -580,6 +587,7 @@ ___unorddf2:                            ; @__unorddf2
 	CMP	R10, #32752
 	JMP	cc_NE, ?LBB2_23
 	JMP	cc_UC, ?LBB2_24
+___unorddf2?F	ENDP
                                         ; -- End function
 	PUBLIC	___cmpdf2
 ___cmpdf2	EQU	___ledf2

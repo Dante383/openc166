@@ -1,0 +1,689 @@
+; Compiled from LLVM compiler-rt, lib/builtins/divsf3.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+DIVSF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___divsf3                       ; -- Begin function __divsf3
+___divsf3:                              ; @__divsf3
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #88
+	MOV	R4, [R0+#102]
+	MOV	R12, [R0+#100]
+	MOV	R8, [R0+#98]
+	MOV	R6, [R0+#96]
+	MOV	R11, R8
+	SHR	R11, #7
+	AND	R11, #255
+	MOV	R7, R4
+	SHR	R7, #7
+	AND	R7, #255
+	MOV	R10, R4
+	XOR	R10, R8
+	AND	R10, #32768
+	MOV	R9, #0
+	MOV	R15, R8
+	AND	R15, #127
+	MOV	R13, R4
+	AND	R13, #127
+	MOV	R5, R11
+	SUB	R5, #255
+	CMP	R5, #65282
+	JMP	cc_ULT, ?LBB0_8
+; %bb.1:                                ; %entry
+	MOV	R5, R7
+	SUB	R5, #255
+	CMP	R5, #65281
+	JMP	cc_ULE, ?LBB0_8
+; %bb.2:
+	MOV	[R0+#22], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#20], R6                    ; 2-byte Folded Spill
+?LBB0_3:                                ; %if.end71.i
+	MOV	[R0+#26], R12                   ; 2-byte Folded Spill
+	OR	R15, #128
+	MOV	[R0+#28], R15                   ; 2-byte Folded Spill
+	OR	R13, #128
+	MOV	[R0+#24], R13                   ; 2-byte Folded Spill
+	SUB	R11, R7
+	ADD	R11, R9
+	MOV	[R0+#16], R11                   ; 2-byte Folded Spill
+	ADD	R11, #127
+	MOV	[R0+#18], R11                   ; 2-byte Folded Spill
+	MOV	R4, R12
+	SHR	R4, #8
+	MOV	R6, R13
+	SHL	R6, #8
+	OR	R6, R4
+	SHL	R12, #8
+	MOV	[R0+#30], R12                   ; 2-byte Folded Spill
+	MOV	R8, #29956
+	MOV	R7, #62259
+	SUB	R7, R12
+	SUBC	R8, R6
+	MOV	R9, #0
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	[R0+#8], R12
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R6
+	MOV	[R0+#2], R8
+	MOV	[R0], R7
+	MOV	R12, R0
+	ADD	R12, #80
+	CALL	___muldi3
+	MOV	R4, [R0+#86]
+	MOV	R5, [R0+#84]
+	MOV	R1, R9
+	MOV	R2, R9
+	SUB	R1, R5
+	SUBC	R2, R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R8
+	MOV	[R0+#8], R7
+	MOV	[R0+#2], R2
+	MOV	[R0], R1
+	MOV	R12, R0
+	ADD	R12, #72
+	CALL	___muldi3
+	MOV	R7, [R0+#78]
+	MOV	R8, [R0+#74]
+	MOV	R4, [R0+#76]
+	MOV	R5, R4
+	SHL	R5, #1
+	SHR	R8, #15
+	OR	R8, R5
+	SHR	R4, #15
+	SHL	R7, #1
+	OR	R7, R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	R4, [R0+#30]                    ; 2-byte Folded Reload
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R6
+	MOV	[R0+#2], R7
+	MOV	[R0], R8
+	MOV	R12, R0
+	ADD	R12, #64
+	CALL	___muldi3
+	MOV	R4, [R0+#70]
+	MOV	R5, [R0+#68]
+	MOV	R1, R9
+	MOV	R2, R9
+	SUB	R1, R5
+	SUBC	R2, R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R8
+	MOV	[R0+#2], R2
+	MOV	[R0], R1
+	MOV	R12, R0
+	ADD	R12, #56
+	CALL	___muldi3
+	MOV	R8, [R0+#62]
+	MOV	R7, [R0+#58]
+	MOV	R4, [R0+#60]
+	MOV	R5, R4
+	SHL	R5, #1
+	SHR	R7, #15
+	OR	R7, R5
+	SHR	R4, #15
+	SHL	R8, #1
+	OR	R8, R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	R4, [R0+#30]                    ; 2-byte Folded Reload
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R6
+	MOV	[R0+#2], R8
+	MOV	[R0], R7
+	MOV	R12, R0
+	ADD	R12, #48
+	CALL	___muldi3
+	MOV	R4, [R0+#54]
+	MOV	R5, [R0+#52]
+	MOV	R1, R9
+	MOV	R2, R9
+	SUB	R1, R5
+	SUBC	R2, R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R8
+	MOV	[R0+#8], R7
+	MOV	[R0+#2], R2
+	MOV	[R0], R1
+	MOV	R12, R0
+	ADD	R12, #40
+	CALL	___muldi3
+	MOV	R4, [R0+#42]
+	MOV	R5, [R0+#46]
+	MOV	R1, [R0+#44]
+	MOV	R2, R1
+	SHR	R2, #15
+	SHL	R5, #1
+	OR	R5, R2
+	SHL	R1, #1
+	SHR	R4, #15
+	OR	R4, R1
+	MOV	R1, #65535
+	MOV	R2, #65524
+	ADD	R4, R2
+	ADDC	R5, R1
+	MOV	R8, [R0+#20]                    ; 2-byte Folded Reload
+	MOV	R1, R8
+	SHR	R1, #15
+	MOV	R7, [R0+#28]                    ; 2-byte Folded Reload
+	SHL	R7, #1
+	OR	R7, R1
+	MOV	R1, R8
+	SHL	R1, #1
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R9
+	MOV	[R0+#30], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#8], R1
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R9
+	MOV	[R0+#10], R7
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	MOV	R12, R0
+	ADD	R12, #32
+	CALL	___muldi3
+	MOV	R4, [R0+#38]
+	MOV	R6, [R0+#36]
+	CMP	R4, #255
+	JMP	cc_UGT, ?LBB0_23
+; %bb.4:                                ; %if.then117.i
+	MOV	R10, [R0+#18]                   ; 2-byte Folded Reload
+	MOV	R3, R8
+	MOV	R15, [R0+#24]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#26]                   ; 2-byte Folded Reload
+	MOV	R5, #1
+	CMP	R4, #128
+	JMP	cc_ULT, ?LBB0_6
+; %bb.5:                                ; %if.then117.i
+	MOV	R5, R9
+?LBB0_6:                                ; %if.then117.i
+	MOV	R1, R4
+	SHL	R1, R5
+	MOV	R2, R5
+	XOR	R2, #15
+	MOV	R13, R6
+	SHR	R13, #1
+	SHR	R13, R2
+	OR	R13, R1
+	SHL	R6, R5
+	MOV	R8, [R0+#16]                    ; 2-byte Folded Reload
+	MOV	R5, R3
+	CMP	R4, #128
+	JMP	cc_ULT, ?LBB0_30
+; %bb.7:                                ; %if.then117.i
+	MOV	R8, R10
+	JMP	cc_UC, ?LBB0_31
+?LBB0_8:                                ; %if.then.i
+	MOV	R5, R8
+	AND	R5, #32767
+	MOV	R2, #1
+	MOV	R1, R2
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_19
+; %bb.9:                                ; %if.then.i
+	MOV	R1, R9
+	CMP	R5, #32640
+	JMP	cc_UGE, ?LBB0_20
+?LBB0_10:                               ; %if.then.i
+	CMP	R5, #32640
+	JMP	cc_EQ, ?LBB0_21
+?LBB0_11:                               ; %if.then.i
+	MOV	R1, R2
+	JNB	R1.0, ?LBB0_22
+?LBB0_12:                               ; %if.end.i
+	MOV	R14, R4
+	AND	R14, #32767
+	MOV	R3, #0
+	MOV	R2, #1
+	MOV	R1, R2
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB0_26
+; %bb.13:                               ; %if.end.i
+	MOV	R1, R3
+	CMP	R14, #32640
+	JMP	cc_UGE, ?LBB0_27
+?LBB0_14:                               ; %if.end.i
+	CMP	R14, #32640
+	JMP	cc_EQ, ?LBB0_28
+?LBB0_15:                               ; %if.end.i
+	MOV	R1, R2
+	JNB	R1.0, ?LBB0_29
+?LBB0_16:                               ; %if.end31.i
+	MOV	R4, R5
+	XOR	R4, #32640
+	OR	R4, R6
+	JMP	cc_NE, ?LBB0_36
+; %bb.17:                               ; %if.then34.i
+	XOR	R14, #32640
+	OR	R14, R12
+	MOV	R8, #32704
+	MOV	R6, #0
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_47
+; %bb.18:                               ; %if.else.i
+	OR	R10, #32640
+	JMP	cc_UC, ?LBB0_38
+?LBB0_19:                               ; %if.then.i
+	CMP	R5, #32640
+	JMP	cc_ULT, ?LBB0_10
+?LBB0_20:                               ; %if.then.i
+	MOV	R2, R9
+	CMP	R5, #32640
+	JMP	cc_NE, ?LBB0_11
+?LBB0_21:                               ; %if.then.i
+	JB	R1.0, ?LBB0_12
+?LBB0_22:                               ; %if.then22.i
+	OR	R8, #64
+	JMP	cc_UC, ?LBB0_47
+?LBB0_23:                               ; %if.else129.i
+	MOV	R5, R6
+	SHR	R5, #1
+	MOV	R6, R4
+	SHL	R6, #15
+	OR	R6, R5
+	SHR	R4, #1
+	MOV	R5, R8
+	SHL	R5, #7
+	MOV	R15, [R0+#24]                   ; 2-byte Folded Reload
+	MUL	R6, R15
+	MOV	R1, MDL
+	MOV	R11, [R0+#26]                   ; 2-byte Folded Reload
+	MULU	R6, R11
+	MOV	R2, MDH
+	ADD	R2, R1
+	MUL	R4, R11
+	MOV	R1, MDL
+	ADD	R1, R2
+	MUL	R6, R11
+	MOV	R2, MDL
+	SUB	R9, R2
+	SUBC	R5, R1
+	MOV	R13, R4
+	MOV	[R0+#30], R8                    ; 2-byte Folded Spill
+	MOV	R7, [R0+#28]                    ; 2-byte Folded Reload
+	MOV	R8, [R0+#18]                    ; 2-byte Folded Reload
+	CMP	R8, #255
+	JMP	cc_SGE, ?LBB0_32
+?LBB0_24:                               ; %if.end140.i
+	CMP	R8, #1
+	JMP	cc_SLT, ?LBB0_34
+; %bb.25:                               ; %if.then143.i
+	AND	R13, #127
+	SHL	R8, #7
+	OR	R8, R13
+	MOV	R4, R9
+	SHR	R4, #15
+	SHL	R5, #1
+	OR	R5, R4
+	SHL	R9, #1
+	JMP	cc_UC, ?LBB0_40
+?LBB0_26:                               ; %if.end.i
+	CMP	R14, #32640
+	JMP	cc_ULT, ?LBB0_14
+?LBB0_27:                               ; %if.end.i
+	MOV	R2, R3
+	CMP	R14, #32640
+	JMP	cc_NE, ?LBB0_15
+?LBB0_28:                               ; %if.end.i
+	JB	R1.0, ?LBB0_16
+?LBB0_29:                               ; %if.then27.i
+	OR	R4, #64
+	MOV	R6, R12
+	MOV	R8, R4
+	JMP	cc_UC, ?LBB0_47
+?LBB0_30:
+	ADD	R8, #126
+?LBB0_31:                               ; %if.then117.i
+	SHL	R5, #8
+	MUL	R6, R15
+	MOV	R4, MDL
+	MULU	R6, R11
+	MOV	R1, MDH
+	ADD	R1, R4
+	MUL	R13, R11
+	MOV	R4, MDL
+	ADD	R4, R1
+	MUL	R6, R11
+	MOV	R1, MDL
+	SUB	R9, R1
+	SUBC	R5, R4
+	SUB	R8, #1
+	CMP	R8, #255
+	JMP	cc_SLT, ?LBB0_24
+?LBB0_32:                               ; %if.then137.i
+	MOV	R8, [R0+#22]                    ; 2-byte Folded Reload
+	OR	R8, #32640
+?LBB0_33:                               ; %if.then47.i
+	MOV	R6, #0
+	JMP	cc_UC, ?LBB0_47
+?LBB0_34:                               ; %if.else149.i
+	CMP	R8, #65512
+	JMP	cc_SGT, ?LBB0_39
+; %bb.35:                               ; %if.then153.i
+	MOV	R6, #0
+	MOV	R8, [R0+#22]                    ; 2-byte Folded Reload
+	JMP	cc_UC, ?LBB0_47
+?LBB0_36:                               ; %if.end41.i
+	MOV	R4, R14
+	XOR	R4, #32640
+	OR	R4, R12
+	JMP	cc_NE, ?LBB0_48
+?LBB0_37:                               ; %if.then44.i
+	MOV	R6, #0
+?LBB0_38:                               ; %__divXf3__.exit
+	MOV	R8, R10
+	JMP	cc_UC, ?LBB0_47
+?LBB0_39:                               ; %if.end155.i
+	MOV	R9, R8
+	MOV	R14, #1
+	SUB	R14, R9
+	ADD	R9, #23
+	MOV	R12, R6
+	CALL	___lshrsi3
+	MOV	R6, R4
+	MOV	R8, R5
+	MOV	R12, [R0+#30]                   ; 2-byte Folded Reload
+	MOV	R13, R7
+	MOV	R14, R9
+	CALL	___ashlsi3
+	MOV	R15, [R0+#24]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#26]                   ; 2-byte Folded Reload
+	MOV	R9, R4
+	MUL	R11, R8
+	MOV	R4, MDL
+	MULU	R11, R6
+	MOV	R1, MDH
+	ADD	R1, R4
+	MUL	R15, R6
+	MOV	R4, MDL
+	ADD	R4, R1
+	SHL	R4, #1
+	MUL	R11, R6
+	MOV	R2, MDL
+	MOV	R1, R2
+	SHR	R1, #15
+	OR	R1, R4
+	SHL	R2, #1
+	SUB	R9, R2
+	SUBC	R5, R1
+?LBB0_40:                               ; %if.end165.i
+	MOV	R2, R6
+	AND	R2, #1
+	MOV	R4, #0
+	MOV	R1, R4
+	ADD	R2, R9
+	ADDC	R1, R5
+	MOV	R5, #1
+	MOV	R3, R5
+	CMP	R1, R15
+	JMP	cc_UGT, ?LBB0_42
+; %bb.41:                               ; %if.end165.i
+	MOV	R3, R4
+?LBB0_42:                               ; %if.end165.i
+	MOV	R10, [R0+#22]                   ; 2-byte Folded Reload
+	CMP	R2, R11
+	JMP	cc_UGT, ?LBB0_44
+; %bb.43:                               ; %if.end165.i
+	MOV	R5, R4
+?LBB0_44:                               ; %if.end165.i
+	CMP	R1, R15
+	JMP	cc_EQ, ?LBB0_46
+; %bb.45:                               ; %if.end165.i
+	MOV	R5, R3
+?LBB0_46:                               ; %if.end165.i
+	ADD	R6, R5
+	ADDC	R8, R4
+	OR	R8, R10
+?LBB0_47:                               ; %__divXf3__.exit
+	MOV	R4, R6
+	MOV	R5, R8
+	ADD	R0, #88
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+?LBB0_48:                               ; %if.end46.i
+	MOV	R4, R6
+	OR	R4, R5
+	JMP	cc_EQ, ?LBB0_54
+; %bb.49:                               ; %if.end53.i
+	MOV	R4, R12
+	OR	R4, R14
+	JMP	cc_EQ, ?LBB0_56
+; %bb.50:                               ; %if.end58.i
+	MOV	R9, #0
+	MOV	[R0+#22], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#16], R11                   ; 2-byte Folded Spill
+	CMP	R5, #127
+	JMP	cc_UGT, ?LBB0_57
+; %bb.51:                               ; %if.then61.i
+	MOV	R4, R6
+	OR	R4, R15
+	MOV	[R0+#26], R12                   ; 2-byte Folded Spill
+	MOV	[R0+#24], R13                   ; 2-byte Folded Spill
+	MOV	[R0+#30], R14                   ; 2-byte Folded Spill
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_58
+; %bb.52:                               ; %cond.false
+	CMP	R15, #0
+	JMP	cc_NE, ?LBB0_59
+; %bb.53:                               ; %cond.false
+	MOV	R4, R6
+	SHR	R4, #1
+	OR	R4, R6
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R8, R4
+	SHR	R8, #8
+	ADD	R8, R4
+	AND	R8, #31
+	ADD	R8, #16
+	JMP	cc_UC, ?LBB0_60
+?LBB0_54:                               ; %if.then47.i
+	OR	R14, R12
+	MOV	R8, #32704
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_33
+; %bb.55:                               ; %if.then47.i
+	MOV	R8, R10
+	JMP	cc_UC, ?LBB0_33
+?LBB0_56:                               ; %if.then55.i
+	OR	R10, #32640
+	JMP	cc_UC, ?LBB0_37
+?LBB0_57:
+	MOV	R1, R6
+	JMP	cc_UC, ?LBB0_61
+?LBB0_58:
+	MOV	R8, #32
+	JMP	cc_UC, ?LBB0_60
+?LBB0_59:
+	MOV	R4, R15
+	SHR	R4, #1
+	OR	R4, R15
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R8, R4
+	SHR	R8, #8
+	ADD	R8, R4
+	AND	R8, #31
+?LBB0_60:                               ; %cond.end
+	MOV	R14, R8
+	SUB	R14, #8
+	MOV	R12, R6
+	MOV	R13, R15
+	CALL	___ashlsi3
+	MOV	R1, R4
+	MOV	R15, R5
+	MOV	R9, #9
+	SUB	R9, R8
+	MOV	R12, [R0+#26]                   ; 2-byte Folded Reload
+	MOV	R13, [R0+#24]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#16]                   ; 2-byte Folded Reload
+	MOV	R14, [R0+#30]                   ; 2-byte Folded Reload
+?LBB0_61:                               ; %if.end63.i
+	MOV	[R0+#20], R1                    ; 2-byte Folded Spill
+	CMP	R14, #127
+	JMP	cc_UGT, ?LBB0_3
+; %bb.62:                               ; %if.then66.i
+	MOV	R4, R12
+	OR	R4, R13
+	JMP	cc_EQ, ?LBB0_65
+; %bb.63:                               ; %cond.false1
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB0_66
+; %bb.64:                               ; %cond.false1
+	MOV	R4, R12
+	SHR	R4, #1
+	OR	R4, R12
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R6, R4
+	SHR	R6, #8
+	ADD	R6, R4
+	AND	R6, #31
+	ADD	R6, #16
+	JMP	cc_UC, ?LBB0_67
+?LBB0_65:
+	MOV	R8, R15
+	MOV	R6, #32
+	JMP	cc_UC, ?LBB0_68
+?LBB0_66:
+	MOV	R4, R13
+	SHR	R4, #1
+	OR	R4, R13
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R6, R4
+	SHR	R6, #8
+	ADD	R6, R4
+	AND	R6, #31
+?LBB0_67:                               ; %cond.false1
+	MOV	R8, R15
+?LBB0_68:                               ; %cond.end2
+	MOV	R14, R6
+	SUB	R14, #8
+	CALL	___ashlsi3
+	MOV	R12, R4
+	MOV	R13, R5
+	ADD	R9, R6
+	SUB	R9, #9
+	MOV	R11, [R0+#16]                   ; 2-byte Folded Reload
+	MOV	R15, R8
+	JMP	cc_UC, ?LBB0_3
+                                        ; -- End function
+	EXTRN	___muldi3 : NEAR
+	EXTRN	___lshrsi3 : NEAR
+	EXTRN	___ashlsi3 : NEAR
+DIVSF3_PR	ENDS
+	END

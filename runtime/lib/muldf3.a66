@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 MULDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___muldf3                       ; -- Begin function __muldf3
 ___muldf3:                              ; @__muldf3
+___muldf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -85,7 +88,7 @@ ___muldf3:                              ; @__muldf3
 	MOV	[R0+#2], R11
 	MOV	R12, R0
 	ADD	R12, #140
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#142]
 	MOV	[R0+#26], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#146]
@@ -108,7 +111,7 @@ ___muldf3:                              ; @__muldf3
 	MOV	[R0+#2], R5
 	MOV	R12, R0
 	ADD	R12, #132
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#138]
 	MOV	[R0+#50], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#136]
@@ -131,7 +134,7 @@ ___muldf3:                              ; @__muldf3
 	MOV	[R0+#10], R9
 	MOV	R12, R0
 	ADD	R12, #124
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#130]
 	MOV	[R0+#46], R4                    ; 2-byte Folded Spill
 	MOV	R4, [R0+#128]
@@ -151,7 +154,7 @@ ___muldf3:                              ; @__muldf3
 	MOV	[R0+#2], R4
 	MOV	R12, R0
 	ADD	R12, #116
-	CALL	___muldi3
+	CALLS	SEG ___muldi3, SOF ___muldi3
 	AND	R6, #63488
 	MOV	R11, R6
 	MOV	R10, R7
@@ -728,7 +731,7 @@ ___muldf3:                              ; @__muldf3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_92:                               ; %if.end49.i
 	MOV	R11, R9
 	OR	R11, R3
@@ -1189,6 +1192,7 @@ ___muldf3:                              ; @__muldf3
 	ADD	R8, #12
 	MOV	[R0+#28], R8                    ; 2-byte Folded Spill
 	JMP	cc_UC, ?LBB0_3
+___muldf3?F	ENDP
                                         ; -- End function
 	EXTRN	___muldi3 : NEAR
 MULDF3_PR	ENDS

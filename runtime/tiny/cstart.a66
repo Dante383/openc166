@@ -1,0 +1,85 @@
+; C startup code for openc166's C166 compiler, tiny memory model (near code
+; and data, -mabi=tiny).
+;
+; __cstart sets up the user stack, copies the initial values of initialised
+; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the
+; zero-initialised ones (C166_BSS) and the _bitword variables
+; (C166_BITWORD, in the bit-addressable RAM), calls main and returns
+; main's result in R4. It keeps the caller's R0 and R6-R9, so a loader or
+; existing firmware can CALL a C program and get control back.
+;
+; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
+; watchdog: a program that starts from reset must set those up first.
+; The DPPs must map the near data (default: DPPn = n, the first 64 KB).
+
+$NOMACRO
+$CASE
+
+        PUBLIC  __cstart
+        EXTRN   _main : NEAR
+        EXTRN   ?SECTION_START?C166_DATA : WORD
+        EXTRN   ?SECTION_SIZE?C166_DATA : DATA16
+        EXTRN   ?SECTION_START?C166_DATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_BSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_BSS : DATA16
+        EXTRN   ?SECTION_START?C166_BITWORD : WORD
+        EXTRN   ?SECTION_SIZE?C166_BITWORD : DATA16
+
+; The sections the compiler puts variables in, so that they exist even when
+; no module has any.
+C166_DATA       SECTION DATA WORD PUBLIC 'CNEAR'
+C166_DATA       ENDS
+C166_DATA_INIT  SECTION DATA WORD PUBLIC 'CNEARROM'
+C166_DATA_INIT  ENDS
+C166_BSS        SECTION DATA WORD PUBLIC 'CNEAR'
+C166_BSS        ENDS
+C166_BITWORD    SECTION DATA BITADDRESSABLE PUBLIC 'CBITWORDS'
+C166_BITWORD    ENDS
+
+; The user stack (R0), 512 bytes; it grows downwards.
+C166_USTACK     SECTION DATA WORD PUBLIC 'CNEAR'
+                DSB     512
+?USTACK_TOP:
+C166_USTACK     ENDS
+
+C166_CSTART     SECTION CODE WORD PUBLIC 'CPROGRAM'
+__cstart:
+        PUSH    R0
+        MOV     R0, #?USTACK_TOP
+
+        MOV     R4, #?SECTION_START?C166_DATA_INIT
+        MOV     R5, #?SECTION_START?C166_DATA
+        MOV     R10, #?SECTION_SIZE?C166_DATA
+?COPY:  CMP     R10, #0
+        JMP     cc_EQ, ?COPIED
+        MOVB    RL1, [R4+]
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?COPY
+?COPIED:
+        MOV     R5, #?SECTION_START?C166_BSS
+        MOV     R10, #?SECTION_SIZE?C166_BSS
+        MOV     R1, #0
+?CLEAR: CMP     R10, #0
+        JMP     cc_EQ, ?CLEARED
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?CLEAR
+?CLEARED:
+        MOV     R5, #?SECTION_START?C166_BITWORD
+        MOV     R10, #?SECTION_SIZE?C166_BITWORD
+?CLEARBW:
+        CMP     R10, #0
+        JMP     cc_EQ, ?BWCLEARED
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?CLEARBW
+?BWCLEARED:
+        CALL    _main
+        POP     R0
+        RET
+C166_CSTART     ENDS
+        END

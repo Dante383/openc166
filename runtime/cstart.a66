@@ -1,11 +1,13 @@
-; C startup code for openc166's C166 compiler (TASKING-style small model).
+; C startup code for openc166's C166 compiler, small memory model (TASKING's:
+; far code, near data). runtime/tiny/cstart.a66 is the tiny model's.
 ;
 ; __cstart sets up the user stack, copies the initial values of initialised
 ; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the
 ; zero-initialised ones (C166_BSS) and the _bitword variables
 ; (C166_BITWORD, in the bit-addressable RAM), calls main and returns
 ; main's result in R4. It keeps the caller's R0 and R6-R9, so a loader or
-; existing firmware can CALL a C program and get control back.
+; existing firmware can call a C program (CALLS: __cstart is a far
+; function, as all C functions are here) and get control back.
 ;
 ; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
 ; watchdog: a program that starts from reset must set those up first.
@@ -13,6 +15,10 @@
 
 $NOMACRO
 $CASE
+$MOD167
+$SEGMENTED
+; Near data is in the first 64 KB with DPPn = n, as in the compiler's output:
+; addresses are written with SOF.
 
         PUBLIC  __cstart
         EXTRN   _main : NEAR
@@ -42,12 +48,12 @@ C166_USTACK     SECTION DATA WORD PUBLIC 'CNEAR'
 C166_USTACK     ENDS
 
 C166_CSTART     SECTION CODE WORD PUBLIC 'CPROGRAM'
-__cstart:
+__cstart        PROC    FAR
         PUSH    R0
-        MOV     R0, #?USTACK_TOP
+        MOV     R0, #SOF ?USTACK_TOP
 
-        MOV     R4, #?SECTION_START?C166_DATA_INIT
-        MOV     R5, #?SECTION_START?C166_DATA
+        MOV     R4, #SOF ?SECTION_START?C166_DATA_INIT
+        MOV     R5, #SOF ?SECTION_START?C166_DATA
         MOV     R10, #?SECTION_SIZE?C166_DATA
 ?COPY:  CMP     R10, #0
         JMP     cc_EQ, ?COPIED
@@ -57,7 +63,7 @@ __cstart:
         SUB     R10, #1
         JMP     cc_UC, ?COPY
 ?COPIED:
-        MOV     R5, #?SECTION_START?C166_BSS
+        MOV     R5, #SOF ?SECTION_START?C166_BSS
         MOV     R10, #?SECTION_SIZE?C166_BSS
         MOV     R1, #0
 ?CLEAR: CMP     R10, #0
@@ -67,7 +73,7 @@ __cstart:
         SUB     R10, #1
         JMP     cc_UC, ?CLEAR
 ?CLEARED:
-        MOV     R5, #?SECTION_START?C166_BITWORD
+        MOV     R5, #SOF ?SECTION_START?C166_BITWORD
         MOV     R10, #?SECTION_SIZE?C166_BITWORD
 ?CLEARBW:
         CMP     R10, #0
@@ -77,8 +83,9 @@ __cstart:
         SUB     R10, #1
         JMP     cc_UC, ?CLEARBW
 ?BWCLEARED:
-        CALL    _main
+        CALLS   SEG _main, SOF _main
         POP     R0
-        RET
+        RETS
+__cstart        ENDP
 C166_CSTART     ENDS
         END

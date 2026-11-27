@@ -1,10 +1,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 UDIVDI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___udivdi3                      ; -- Begin function __udivdi3
 ___udivdi3:                             ; @__udivdi3
+___udivdi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
 	SUB	R0, #34
@@ -41,7 +44,8 @@ ___udivdi3:                             ; @__udivdi3
 	MOV	[R6], R4
 	ADD	R0, #34
 	MOV	R6, [R0+]
-	RET
+	RETS
+___udivdi3?F	ENDP
                                         ; -- End function
 _divmod64:                              ; -- Begin function divmod64
                                         ; @divmod64
@@ -297,6 +301,7 @@ _divmod64:                              ; -- Begin function divmod64
                                         ; -- End function
 	PUBLIC	___umoddi3                      ; -- Begin function __umoddi3
 ___umoddi3:                             ; @__umoddi3
+___umoddi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
 	SUB	R0, #34
@@ -333,10 +338,12 @@ ___umoddi3:                             ; @__umoddi3
 	MOV	[R6], R4
 	ADD	R0, #34
 	MOV	R6, [R0+]
-	RET
+	RETS
+___umoddi3?F	ENDP
                                         ; -- End function
 	PUBLIC	___divdi3                       ; -- Begin function __divdi3
 ___divdi3:                              ; @__divdi3
+___divdi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -515,10 +522,12 @@ ___divdi3:                              ; @__divdi3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___divdi3?F	ENDP
                                         ; -- End function
 	PUBLIC	___moddi3                       ; -- Begin function __moddi3
 ___moddi3:                              ; @__moddi3
+___moddi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -690,7 +699,8 @@ ___moddi3:                              ; @__moddi3
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___moddi3?F	ENDP
                                         ; -- End function
 UDIVDI3_PR	ENDS
 	END

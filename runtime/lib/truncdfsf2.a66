@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 TRUNCDFSF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___truncdfsf2                   ; -- Begin function __truncdfsf2
 ___truncdfsf2:                          ; @__truncdfsf2
+___truncdfsf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -138,7 +141,7 @@ ___truncdfsf2:                          ; @__truncdfsf2
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
 ?LBB0_24:                               ; %if.else39.i
 	MOV	R12, #1
 	CMP	R11, #0
@@ -320,6 +323,7 @@ ___truncdfsf2:                          ; @__truncdfsf2
 ; %bb.49:
 	XOR	R3, #128
 	JMP	cc_UC, ?LBB0_23
+___truncdfsf2?F	ENDP
                                         ; -- End function
 TRUNCDFSF2_PR	ENDS
 	END

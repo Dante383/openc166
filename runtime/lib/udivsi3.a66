@@ -1,10 +1,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 UDIVSI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___udivsi3                      ; -- Begin function __udivsi3
 ___udivsi3:                             ; @__udivsi3
+___udivsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	SUB	R0, #6
 	MOV	R4, R0
@@ -12,7 +15,8 @@ ___udivsi3:                             ; @__udivsi3
 	MOV	[R0], R4
 	CALL	_divmod
 	ADD	R0, #6
-	RET
+	RETS
+___udivsi3?F	ENDP
                                         ; -- End function
 _divmod:                                ; -- Begin function divmod
                                         ; @divmod
@@ -105,6 +109,7 @@ _divmod:                                ; -- Begin function divmod
                                         ; -- End function
 	PUBLIC	___umodsi3                      ; -- Begin function __umodsi3
 ___umodsi3:                             ; @__umodsi3
+___umodsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	SUB	R0, #6
 	MOV	R4, R0
@@ -114,10 +119,12 @@ ___umodsi3:                             ; @__umodsi3
 	MOV	R5, [R0+#4]
 	MOV	R4, [R0+#2]
 	ADD	R0, #6
-	RET
+	RETS
+___umodsi3?F	ENDP
                                         ; -- End function
 	PUBLIC	___divsi3                       ; -- Begin function __divsi3
 ___divsi3:                              ; @__divsi3
+___divsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -172,10 +179,12 @@ ___divsi3:                              ; @__divsi3
 	ADD	R0, #6
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
-	RET
+	RETS
+___divsi3?F	ENDP
                                         ; -- End function
 	PUBLIC	___modsi3                       ; -- Begin function __modsi3
 ___modsi3:                              ; @__modsi3
+___modsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -230,7 +239,8 @@ ___modsi3:                              ; @__modsi3
 	ADD	R0, #6
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
-	RET
+	RETS
+___modsi3?F	ENDP
                                         ; -- End function
 UDIVSI3_PR	ENDS
 	END

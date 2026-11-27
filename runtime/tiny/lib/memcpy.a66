@@ -1,0 +1,26 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+MEMCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memcpy                         ; -- Begin function memcpy
+_memcpy:                                ; @memcpy
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %while.body.preheader
+	MOV	R5, R4
+?LBB0_2:                                ; %while.body
+                                        ; =>This Inner Loop Header: Depth=1
+	SUB	R14, #1
+	MOVB	RL1, [R13+]
+	MOVB	[R5], RL1
+	ADD	R5, #1
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_3:                                ; %while.end
+	RET
+                                        ; -- End function
+MEMCPY_PR	ENDS
+	END

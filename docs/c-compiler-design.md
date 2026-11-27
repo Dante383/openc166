@@ -458,6 +458,18 @@ modules (`--lib`) so only what a program uses is pulled in:
      that selects the page (DPP0 at 0FE00H); far and huge convert
      arithmetically. Checked by reading flash above 64 KB on the simulated
      5WY19.
+   - Far code, TASKING's small model, now the default: TASKING's own
+     manual says its small model makes every call far unless `_near` is
+     used, and the stock firmware's `RETS` functions are that. Functions
+     are `CALLS SEG f, SOF f` / `RETS` (inside `PROC FAR`), function
+     pointers 32 bits in LLVM's program address space 3 (`P3` in the data
+     layout); local functions whose address is not taken and `_near` ones
+     are near; indirect calls go through `__c166_icall`. The model is the
+     ABI name (`-mabi=small|tiny`), which selects the data layout in both
+     Clang and LLVM; Clang sizes function pointers by the program address
+     space (a small change in ASTContext). The output is `$SEGMENTED` with
+     near data written as `SOF x`; jump tables are off (JMPI stays in its
+     segment). Checked with code in segments 1 and 3 of the 5WY19's flash.
 
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.

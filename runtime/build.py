@@ -24,6 +24,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FLAGS = ["--target=c166", "-Os", "-ffreestanding", "-fno-builtin", "-S"]
+# One runtime per memory model: lib/ for small (far code), tiny/lib/ for
+# tiny. Calls and returns differ (CALLS/RETS against CALL/RET), so they do
+# not mix. lib/icall.a66 is hand-written and stays as it is.
+MODELS = [("small", "lib"), ("tiny", os.path.join("tiny", "lib"))]
 
 # compiler-rt/lib/builtins: what LLVM calls for float and double.
 COMPILER_RT = [
@@ -57,12 +61,18 @@ def main():
         os.path.dirname(os.path.dirname(HERE)), "openc166-llvm"
     )
     clang = os.environ.get("OPENC166_CLANG") or os.path.join(fork, "build", "bin", "clang")
-    os.makedirs(os.path.join(HERE, "lib"), exist_ok=True)
+    for model, libdir in MODELS:
+        build(clang, fork, model, os.path.join(HERE, libdir))
+
+
+def build(clang, fork, model, libdir):
+    flags = FLAGS + ["-mabi=" + model]
+    os.makedirs(libdir, exist_ok=True)
     for src in sorted(glob.glob(os.path.join(HERE, "src", "*.c"))):
         name = os.path.splitext(os.path.basename(src))[0]
-        out = os.path.join(HERE, "lib", name + ".a66")
+        out = os.path.join(libdir, name + ".a66")
         subprocess.run(
-            [clang, *FLAGS, os.path.join("src", name + ".c"), "-o", out],
+            [clang, *flags, os.path.join("src", name + ".c"), "-o", out],
             cwd=HERE,
             check=True,
         )
@@ -71,9 +81,9 @@ def main():
 
     builtins = os.path.join(fork, "compiler-rt", "lib", "builtins")
     for name in COMPILER_RT:
-        out = os.path.join(HERE, "lib", name + ".a66")
+        out = os.path.join(libdir, name + ".a66")
         asm = subprocess.run(
-            [clang, *FLAGS, "-I", builtins, name + ".c", "-o", "-"],
+            [clang, *flags, "-I", builtins, name + ".c", "-o", "-"],
             cwd=builtins,
             check=True,
             capture_output=True,

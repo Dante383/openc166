@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FLOATSISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___floatsisf                    ; -- Begin function __floatsisf
 ___floatsisf:                           ; @__floatsisf
+___floatsisf?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -109,7 +112,7 @@ ___floatsisf:                           ; @__floatsisf
 ; %bb.10:                               ; %if.then6
 	MOV	R14, R7
 	SUB	R14, #8
-	CALL	___ashlsi3
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	XOR	R5, #128
 	JMP	cc_UC, ?LBB0_16
 ?LBB0_11:                               ; %if.else
@@ -158,7 +161,8 @@ ___floatsisf:                           ; @__floatsisf
 ?LBB0_17:                               ; %cleanup
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
-	RET
+	RETS
+___floatsisf?F	ENDP
                                         ; -- End function
 	EXTRN	___ashlsi3 : NEAR
 FLOATSISF_PR	ENDS

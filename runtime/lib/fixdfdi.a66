@@ -5,10 +5,13 @@
 $NOMACRO
 $CASE
 $MOD167
+$SEGMENTED
 $INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
 FIXDFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___fixdfdi                      ; -- Begin function __fixdfdi
 ___fixdfdi:                             ; @__fixdfdi
+___fixdfdi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -30,7 +33,7 @@ ___fixdfdi:                             ; @__fixdfdi
 	MOV	[R0+#4], R4
 	MOV	[R0+#2], R6
 	MOV	[R0], R9
-	CALL	___ltdf2
+	CALLS	SEG ___ltdf2, SOF ___ltdf2
 	MOV	R4, #1
 	MOV	R1, R4
 	JB	R5.15, ?LBB0_10
@@ -48,7 +51,7 @@ ___fixdfdi:                             ; @__fixdfdi
 	MOV	[R0+#6], R7
 	MOV	R12, R0
 	ADD	R12, #20
-	CALL	___fixunsdfdi
+	CALLS	SEG ___fixunsdfdi, SOF ___fixunsdfdi
 	MOV	R5, [R0+#20]
 	MOV	R1, [R0+#22]
 	MOV	R4, #0
@@ -96,7 +99,7 @@ ___fixdfdi:                             ; @__fixdfdi
 	MOV	[R0+#6], R7
 	MOV	R12, R0
 	ADD	R12, #28
-	CALL	___fixunsdfdi
+	CALLS	SEG ___fixunsdfdi, SOF ___fixunsdfdi
 	MOV	R2, [R0+#34]
 	MOV	R3, [R0+#32]
 	MOV	R10, [R0+#30]
@@ -112,7 +115,8 @@ ___fixdfdi:                             ; @__fixdfdi
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
-	RET
+	RETS
+___fixdfdi?F	ENDP
                                         ; -- End function
 	EXTRN	___ltdf2 : NEAR
 	EXTRN	___fixunsdfdi : NEAR
