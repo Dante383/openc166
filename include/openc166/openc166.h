@@ -116,6 +116,15 @@ OC166_API int oc166_options_add_class_range(oc166_options *opts, const char *cla
  * for a range that is empty or outside 0..0FFFFFFH. */
 OC166_API int oc166_options_add_reserved(oc166_options *opts, int64_t first, int64_t last);
 
+/* Adds a library module: 'length' bytes of source, and the name of its file
+ * (may be NULL: "libraryN.a66"), for diagnostics and $INCLUDE. Like a member
+ * of an L166 library, it is linked only if it makes PUBLIC or GLOBAL a name
+ * that a linked module declares EXTERN and no linked module defines; it may
+ * then pull in other library modules. When several define a name, the first
+ * one added is used. The text is copied. Returns 0, or -1 on failure. */
+OC166_API int oc166_options_add_library(oc166_options *opts, const char *source, size_t length,
+                                        const char *file_name);
+
 /* ---- Assembling -------------------------------------------------------- */
 
 typedef struct oc166_result oc166_result;
@@ -149,6 +158,9 @@ OC166_API oc166_result *oc166_assemble_many(const oc166_options *opts, size_t co
  * module 'index', or NULL if 'index' is out of range. */
 OC166_API size_t oc166_result_module_count(const oc166_result *r);
 OC166_API const char *oc166_result_module(const oc166_result *r, size_t index);
+/* How many of the last modules are library modules that were linked
+ * (oc166_options_add_library). */
+OC166_API size_t oc166_result_library_module_count(const oc166_result *r);
 
 OC166_API size_t oc166_result_error_count(const oc166_result *r);
 OC166_API size_t oc166_result_warning_count(const oc166_result *r);

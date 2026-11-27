@@ -932,6 +932,36 @@ differs, L15 in L166).
   overlaps (OC1) if more than one module has some. Keil does not allow
   such code at all (A44).
 
+### Library modules
+
+L166 takes from a library only the modules that the program needs.
+openc166 does the same with library modules, which are sources rather
+than object files: `--lib FILE` on the command line (a directory gives each
+of its `.a66` files, in order of name), `libraries=` in Python, and
+`oc166_options_add_library()` in C.
+
+```sh
+openc166 main.a66 --lib runtime/ -o prog.hex
+```
+
+- A library module is linked only if it makes `PUBLIC` or `GLOBAL` a name
+  that a linked module declares `EXTERN` and that no linked module defines.
+  Its own `EXTERN`s may then pull in other library modules, from any
+  library, in any order.
+- When several library modules define a needed name, the first one given
+  is used. A name that the program's own modules define never pulls in a
+  library module, so a module can replace a library routine.
+- Linked library modules follow the other modules, in the order given, and
+  are then exactly like them: their sections join, their names are
+  checked, and their errors count. An `EXTERN` that is declared but never
+  used still pulls in its module, as in L166.
+- Library modules that are not linked do not appear in the result, and
+  their errors are not reported.
+
+To decide, openc166 runs a first pass over each module on its own. A
+`PUBLIC` or `EXTERN` that depends on conditional assembly counts as that
+first pass sees it.
+
 ## Data alignment
 
 Keil moves word data to an even address and double-word data to a multiple

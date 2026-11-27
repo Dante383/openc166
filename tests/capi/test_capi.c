@@ -58,6 +58,10 @@ static void test_options(void) {
     CHECK(oc166_options_add_reserved(opts, 0x200, 0x1FF) == -1);
     CHECK(oc166_options_add_reserved(opts, 0, 0x1000000) == -1);
     CHECK(oc166_options_add_reserved(NULL, 0, 1) == -1);
+    CHECK(oc166_options_add_library(opts, " END\n", 5, "lib.a66") == 0);
+    CHECK(oc166_options_add_library(opts, NULL, 0, NULL) == 0);
+    CHECK(oc166_options_add_library(opts, NULL, 5, NULL) == -1);
+    CHECK(oc166_options_add_library(NULL, " END\n", 5, NULL) == -1);
     oc166_options_free(opts);
     oc166_options_free(NULL);
 }
@@ -385,7 +389,24 @@ static void test_linking(void) {
     CHECK(strcmp(oc166_result_section_class(r, 0), "ROM") == 0);
     CHECK(strcmp(oc166_result_section_class(r, 1), "") == 0);
     CHECK(oc166_result_section_class(r, 2) == NULL);
+    CHECK(oc166_result_library_module_count(r) == 0);
     oc166_result_free(r);
+
+    /* The data module as a library module: linked, because main.a66 needs
+     * COUNT and LIMIT. */
+    {
+        oc166_options *lib_opts = oc166_options_new();
+        oc166_options_set_origin(lib_opts, 0x8000);
+        CHECK(oc166_options_add_library(lib_opts, data_src, strlen(data_src), "data.a66") == 0);
+        r = oc166_assemble_many(lib_opts, 1, sources, lengths, names);
+        CHECK(oc166_result_error_count(r) == 0);
+        CHECK(oc166_result_module_count(r) == 2 && oc166_result_library_module_count(r) == 1);
+        CHECK(strcmp(oc166_result_module(r, 1), "data.a66") == 0);
+        CHECK(oc166_result_chunk(r, 0, &chunk) == 0);
+        CHECK(chunk.size == sizeof code && memcmp(chunk.data, code, sizeof code) == 0);
+        oc166_result_free(r);
+        oc166_options_free(lib_opts);
+    }
 
     /* Without file names; an EXTERN that no module defines. */
     r = oc166_assemble_many(NULL, 1, &bad_src, &bad_len, NULL);

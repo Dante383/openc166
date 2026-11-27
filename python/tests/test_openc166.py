@@ -425,6 +425,27 @@ class LinkTest(unittest.TestCase):
         "       END\n"
     )
 
+    def test_libraries(self):
+        unused = ("unused.a66", "PUBLIC OTHER\nOTHER EQU 1\n garbage\n       END\n")
+        for libraries in ([unused, ("data.a66", self.DATA)], {"unused.a66": unused[1], "data.a66": self.DATA}):
+            result = openc166.assemble(self.MAIN, file_name="main.a66", origin=0x8000, libraries=libraries)
+            self.assertTrue(result.ok, result.diagnostics)
+            self.assertEqual(result.modules, ["main.a66", "data.a66"])
+            self.assertEqual(result.library_modules, 1)
+            self.assertEqual(result.chunks[0].data.hex(), "f2f400c0e6f53412cb00")
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in (unused, ("data.a66", self.DATA)):
+                with open(os.path.join(d, name), "w") as f:
+                    f.write(text)
+            main = os.path.join(d, "main.src")
+            with open(main, "w") as f:
+                f.write(self.MAIN)
+            for libraries in (d, [os.path.join(d, "data.a66")]):
+                result = openc166.assemble_files([main], origin=0x8000, libraries=libraries)
+                self.assertTrue(result.ok, result.diagnostics)
+                self.assertEqual(result.library_modules, 1)
+                self.assertEqual(os.path.basename(result.modules[1]), "data.a66")
+
     def test_assemble_many(self):
         for sources in ({"main.a66": self.MAIN, "data.a66": self.DATA.encode()},
                         [("main.a66", self.MAIN), ("data.a66", self.DATA)]):

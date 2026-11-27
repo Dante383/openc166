@@ -70,7 +70,9 @@ Early development (version 0.x). What works today:
 - Several source files linked into one program, as L166 does: `EXTERN`,
   `PUBLIC` and `GLOBAL` symbols, and sections of the same name combined
   across files. Each file is assembled separately (a "module"), so a name
-  that is not `PUBLIC` stays private to its file.
+  that is not `PUBLIC` stays private to its file. Library modules
+  (`--lib`) are linked only when the program needs a name they define, as
+  L166 takes modules from a library.
 - Register banks (`REGBANK`/`REGDEF`), placed in `0FC00H..0FDFFH` as L166
   places them, and the `NAME`, `SSKDEF`, `PECDEF` and `TYPEDEC` directives.
 - **TASKING sources** (`--dialect tasking`): the common part of TASKING's
@@ -84,7 +86,8 @@ Early development (version 0.x). What works today:
 
 Not done yet:
 
-- OMF-166 object files and libraries
+- OMF-166 object files and libraries (library modules are sources; see
+  `--lib`)
 - TASKING's m166 macros with parameters (`@DEFINE`), loops and string
   functions
 
@@ -126,6 +129,11 @@ linker joins the object files of A166:
   each symbol comes from.
 - Code outside sections starts at `--origin` in every file, so normally
   each file puts its code in sections.
+- `--lib FILE` adds a library module, which is linked only if it defines a
+  name that the program needs (`EXTERN`) and no other module defines; it
+  may then pull in other library modules. `--lib DIR` adds each `.a66`
+  file of a directory. A runtime library can be a directory with one
+  routine per file.
 
 `$INCLUDE` looks in each file's own directory.
 [docs/compatibility.md](https://github.com/Dante383/openc166/blob/main/docs/compatibility.md#linking-several-files)
@@ -147,6 +155,7 @@ carry the address of every record, so they hold only the bytes used.
 | `--origin ADDR` | address of code outside sections, and the lowest address for sections without `AT` (default 0) |
 | `--section NAME=ADDR` | put section `NAME`, which has no `AT`, at `ADDR` (may be repeated) |
 | `--class NAME=FIRST-LAST[,...]` | put the sections of class `NAME` in these address ranges, like L166's `CLASSES` (may be repeated) |
+| `--lib PATH` | library module, or a directory of them: linked only when needed (may be repeated) |
 | `--reserve FIRST-LAST[,...]` | keep these addresses free of placed sections, like L166's `RESERVE` (may be repeated) |
 | `--base ADDR` | binary: address of the first byte of the file |
 | `--fill BYTE` | binary: value of gaps between pieces of code (default `0FFh`) |
@@ -208,7 +217,10 @@ image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
   assembles a `str` or `bytes`. `sections` gives addresses for sections
   without `AT`, e.g. `{"VARS": 0xF600}`; `classes` gives address ranges
   for the sections of a class, e.g. `{"NDATA": [(0xC000, 0xDFFF)]}`, and
-  `reserve` ranges that no placed section may use. `dialect="tasking"` reads TASKING
+  `reserve` ranges that no placed section may use; `libraries` gives
+  library modules (paths of files or directories, `(name, text)` pairs or
+  a dict), linked only when needed, and `result.library_modules` says how
+  many of `result.modules` were. `dialect="tasking"` reads TASKING
   source; `controls` is a list of controls read before the source, as with
   `-c`. `openc166.assemble_file(path, ...)`
   reads a file; `$INCLUDE` then also searches the file's directory.

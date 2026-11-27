@@ -2,9 +2,11 @@
 // openc166 command-line tool.
 #include "assembler.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -51,6 +53,10 @@ options:
       --reserve RANGE[,RANGE...]
                       keep these addresses free of the sections openc166 places,
                       like L166's RESERVE (may be repeated)
+      --lib PATH      library module: linked only if it defines a name that the
+                      program needs and nothing else defines, like a member of an
+                      L166 library; a directory gives each of its .a66 files, in
+                      order of name (may be repeated)
       --base ADDR     bin: address of the first byte of the file (default: lowest address used)
       --fill BYTE     bin: value of unused bytes inside the file (default 0FFh)
       --record-size N hex, srec: data bytes per record (default 16)
@@ -146,6 +152,7 @@ std::string replace_extension(const std::string& path, const std::string& ext) {
 int run(int argc, char** argv) {
     oc166::AssembleOptions opt;
     std::vector<std::string> inputs;
+    std::vector<std::string> libraries;
     std::string output, listing, debug_info;
     std::optional<std::int64_t> base;
     std::uint8_t fill = 0xFF;
@@ -227,6 +234,8 @@ int run(int argc, char** argv) {
                 opt.class_ranges.emplace_back(std::string(v.substr(0, eq)), r);
         } else if (is("", "--reserve")) {
             for (const auto& r : parse_ranges(value(), "--reserve")) opt.reserved.push_back(r);
+        } else if (is("", "--lib")) {
+            libraries.emplace_back(value());
         } else if (is("", "--base")) {
             base = parse_number(value(), "base address");
         } else if (is("-I", "--incdir")) {
@@ -270,6 +279,21 @@ int run(int argc, char** argv) {
 
     std::vector<oc166::Source> sources;
     for (const auto& input : inputs) sources.push_back({input, read_file(input)});
+    for (const auto& lib : libraries) {
+        namespace fs = std::filesystem;
+        std::error_code ec;
+        if (!fs::is_directory(lib, ec)) {
+            opt.libraries.push_back({lib, read_file(lib)});
+            continue;
+        }
+        std::vector<std::string> files;
+        for (const auto& entry : fs::directory_iterator(lib, ec))
+            if (entry.is_regular_file(ec) && lower(entry.path().extension().string()) == ".a66")
+                files.push_back(entry.path().string());
+        if (ec) throw std::runtime_error("cannot read directory '" + lib + "'");
+        std::sort(files.begin(), files.end());
+        for (const auto& f : files) opt.libraries.push_back({f, read_file(f)});
+    }
     opt.file_name = inputs.front();
     oc166::AssemblyResult result = oc166::assemble(sources, opt);
 

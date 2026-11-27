@@ -4283,13 +4283,64 @@ private:
     std::vector<std::pair<std::int64_t, std::int64_t>> common_;  // [from, to) of combined COMMON sections
 
     bool run_pass(int pass, bool final);
+    std::vector<Source> with_libraries(const std::vector<Source>& sources) const;
     std::vector<Unit> units();
     void locate(bool final);
     bool update_publics();
 };
 
-AssemblyResult Program::run(const std::vector<Source>& sources) {
-    if (sources.empty()) return {};
+// The sources and the library modules they need, directly or through
+// other library modules. A first pass over each module, on its own, finds
+// the names it declares EXTERN and those it makes PUBLIC or GLOBAL.
+std::vector<Source> Program::with_libraries(const std::vector<Source>& sources) const {
+    struct Names {
+        std::set<std::string> exports, externs;
+    };
+    auto names = [&](const Source& src) {
+        LinkState link;
+        link.modules.push_back(src.file_name);
+        Assembler m(opt_, src.file_name, 0, link);
+        m.load(src.text);
+        m.begin_pass(1, false);
+        m.run_lines();
+        Names n;
+        for (const auto& [k, e] : m.exports_) n.exports.insert(k);
+        for (const auto& [k, e] : m.symbols_)
+            if (e.sym.kind == SymbolKind::Extern) n.externs.insert(k);
+        return n;
+    };
+    std::set<std::string> defined, wanted;
+    auto add = [&](const Names& n) {
+        defined.insert(n.exports.begin(), n.exports.end());
+        wanted.insert(n.externs.begin(), n.externs.end());
+    };
+    for (const Source& src : sources) add(names(src));
+    std::vector<Names> lib_names;
+    for (const Source& lib : opt_.libraries) lib_names.push_back(names(lib));
+    std::vector<bool> linked(opt_.libraries.size());
+    // A library module that defines a wanted name may want others: look
+    // again from the first library module until nothing more is needed.
+    for (bool more = true; more;) {
+        more = false;
+        for (std::size_t i = 0; i < lib_names.size() && !more; ++i) {
+            if (linked[i]) continue;
+            const bool needed = std::any_of(lib_names[i].exports.begin(), lib_names[i].exports.end(),
+                                            [&](const std::string& k) { return wanted.count(k) && !defined.count(k); });
+            if (!needed) continue;
+            linked[i] = true;
+            add(lib_names[i]);
+            more = true;
+        }
+    }
+    std::vector<Source> out = sources;
+    for (std::size_t i = 0; i < linked.size(); ++i)
+        if (linked[i]) out.push_back(opt_.libraries[i]);
+    return out;
+}
+
+AssemblyResult Program::run(const std::vector<Source>& given) {
+    if (given.empty()) return {};
+    const std::vector<Source> sources = opt_.libraries.empty() ? given : with_libraries(given);
     for (const auto& src : sources) link_.modules.push_back(src.file_name);
     for (std::size_t i = 0; i < sources.size(); ++i) {
         mods_.push_back(std::make_unique<Assembler>(opt_, sources[i].file_name, i, link_));
@@ -4367,6 +4418,7 @@ AssemblyResult Program::run(const std::vector<Source>& sources) {
     });
     out.sections = std::move(infos_);
     out.modules = link_.modules;
+    out.library_modules = sources.size() - given.size();
     return out;
 }
 

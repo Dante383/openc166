@@ -26,6 +26,12 @@ enum class Dialect : std::uint8_t {
     Tasking,  // TASKING a166, with the part of its m166 preprocessor that openc166 supports
 };
 
+// A source text and the name of its file, for diagnostics and $INCLUDE.
+struct Source {
+    std::string file_name;
+    std::string text;
+};
+
 struct AssembleOptions {
     // The language of the source. See docs/compatibility.md for what the
     // TASKING dialect covers.
@@ -63,6 +69,12 @@ struct AssembleOptions {
     std::vector<std::pair<std::string, Range>> class_ranges;
     // Addresses no section without AT may use, like L166's RESERVE control.
     std::vector<Range> reserved;
+    // Library modules, like the members of an L166 library: each is linked
+    // only if it makes PUBLIC or GLOBAL a name that a linked module declares
+    // EXTERN and no linked module defines yet; it may then pull in others in
+    // turn. When several define a name, the first one listed is used. Linked
+    // library modules follow the other modules, in this order.
+    std::vector<Source> libraries;
     // Directories searched by $INCLUDE. The order is: the current directory,
     // the directory of file_name, these directories, then the directories
     // given by $INCDIR in the source. A bare file name that is found nowhere
@@ -163,6 +175,9 @@ struct AssemblyResult {
     // that L166 would combine count as one section.
     std::vector<SectionInfo> sections;
     std::vector<std::string> modules;  // file name of each source
+    // How many of the last 'modules' are library modules that were linked
+    // (AssembleOptions::libraries).
+    std::size_t library_modules = 0;
     std::vector<ListingOptions> listing_options;  // of each module
     isa::Cpu cpu = isa::Cpu::C166;
     int passes = 0;
@@ -174,12 +189,6 @@ struct AssemblyResult {
 
 // Assembles a complete source text.
 AssemblyResult assemble(std::string_view source, const AssembleOptions& options = {});
-
-// A source text and the name of its file, for diagnostics and $INCLUDE.
-struct Source {
-    std::string file_name;
-    std::string text;
-};
 
 // Assembles several modules and links them into one program, as A166 and
 // L166 would: EXTERN symbols take the value of the PUBLIC or GLOBAL symbol

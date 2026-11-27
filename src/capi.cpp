@@ -226,6 +226,18 @@ int oc166_options_add_reserved(oc166_options* opts, int64_t first, int64_t last)
     }
 }
 
+int oc166_options_add_library(oc166_options* opts, const char* source, size_t length, const char* file_name) {
+    if (!opts || (!source && length != 0)) return -1;
+    try {
+        std::string name = file_name ? file_name
+                                     : "library" + std::to_string(opts->opt.libraries.size() + 1) + ".a66";
+        opts->opt.libraries.push_back({std::move(name), std::string(source ? source : "", length)});
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
 oc166_result* oc166_assemble(const oc166_options* opts, const char* source, size_t length, const char* file_name) {
     if (!source && length != 0) return nullptr;
     try {
@@ -363,6 +375,8 @@ const char* oc166_result_debug_info(oc166_result* r) {
 }
 
 size_t oc166_result_module_count(const oc166_result* r) { return r ? r->res.modules.size() : 0; }
+
+size_t oc166_result_library_module_count(const oc166_result* r) { return r ? r->res.library_modules : 0; }
 
 const char* oc166_result_module(const oc166_result* r, size_t index) {
     if (!r || index >= r->res.modules.size()) return nullptr;

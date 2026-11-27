@@ -58,6 +58,9 @@ __version__: str = _lib.oc166_version().decode("ascii")
 PathLike = Union[str, "os.PathLike[str]"]
 SourceText = Union[str, bytes]
 Ranges = Union[Tuple[int, int], Iterable[Tuple[int, int]]]
+# Library modules: paths of files or directories of .a66 files, (file name,
+# source text) pairs, or a dict of file name to source text.
+Libraries = Union[PathLike, Mapping[PathLike, SourceText], Iterable[Union[PathLike, Tuple[PathLike, SourceText]]]]
 
 
 def _text(b: Optional[bytes]) -> str:
@@ -236,7 +239,11 @@ class Result:
             _text(_lib.oc166_result_module(handle, i))
             for i in range(_lib.oc166_result_module_count(handle))
         ]
-        """File name of each module: one per source."""
+        """File name of each module: one per source, then the library
+        modules that were linked."""
+
+        self.library_modules: int = _lib.oc166_result_library_module_count(handle)
+        """How many of the last modules are linked library modules."""
 
         self.all_symbols: List[Symbol] = []
         """The names defined in every module, sorted by name, then module."""
@@ -429,6 +436,7 @@ def assemble(
     sections: Optional[Mapping[str, int]] = None,
     classes: Optional[Mapping[str, Ranges]] = None,
     reserve: Ranges = (),
+    libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -455,6 +463,12 @@ def assemble(
                   ranges where it fits.
     reserve       address ranges (first, last), inclusive, that no section
                   placed by openc166 may use, like L166's RESERVE.
+    libraries     library modules, like the members of an L166 library:
+                  paths of .a66 files or of directories (each .a66 file in
+                  them, by name), (file name, source) pairs, or a dict of
+                  file name to source. A library module is linked only if it
+                  makes PUBLIC or GLOBAL a name that a linked module needs
+                  (EXTERN) and none defines; it may pull in others in turn.
     dialect       "keil" (the default) for Keil A166 sources, or "tasking"
                   for TASKING a166 sources, which first pass through
                   openc166's m166 preprocessor (@SET, @IF, ...). TASKING
@@ -472,6 +486,7 @@ def assemble(
         sections,
         classes,
         reserve,
+        libraries,
         dialect,
         controls,
     )
@@ -501,7 +516,33 @@ def _ranges(ranges, what):
     return out
 
 
-def _run(call, cpu, origin, include_dirs, sections, classes, reserve, dialect, controls) -> Result:
+def _library_sources(libraries):
+    """(file name, source bytes) of each library module."""
+    if isinstance(libraries, (str, bytes)) or hasattr(libraries, "__fspath__"):
+        libraries = [libraries]
+    items = list(libraries.items()) if isinstance(libraries, Mapping) else list(libraries)
+    out = []
+    for item in items:
+        if isinstance(item, tuple):
+            lib_name, text = item
+            out.append((os.fsencode(os.fspath(lib_name)), _source_bytes(text)))
+            continue
+        path = os.fspath(item)
+        if os.path.isdir(path):
+            files = sorted(
+                os.path.join(path, f)
+                for f in os.listdir(path)
+                if f.lower().endswith(".a66") and os.path.isfile(os.path.join(path, f))
+            )
+        else:
+            files = [path]
+        for f in files:
+            with open(f, "rb") as fh:
+                out.append((os.fsencode(f), fh.read()))
+    return out
+
+
+def _run(call, cpu, origin, include_dirs, sections, classes, reserve, libraries, dialect, controls) -> Result:
     """Makes the options, calls call(options) and wraps the result."""
     opts = _lib.oc166_options_new()
     if not opts:
@@ -533,6 +574,9 @@ def _run(call, cpu, origin, include_dirs, sections, classes, reserve, dialect, c
                     raise ValueError("bad class name {!r}".format(class_name))
         for first, last in _ranges(reserve, "reserve"):
             _lib.oc166_options_add_reserved(opts, first, last)
+        for lib_name, text in _library_sources(libraries):
+            if _lib.oc166_options_add_library(opts, text, len(text), lib_name) != 0:
+                raise MemoryError("cannot add library module")
         handle = call(opts)
     finally:
         _lib.oc166_options_free(opts)
@@ -550,6 +594,7 @@ def assemble_file(
     sections: Optional[Mapping[str, int]] = None,
     classes: Optional[Mapping[str, Ranges]] = None,
     reserve: Ranges = (),
+    libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -565,6 +610,7 @@ def assemble_file(
         sections=sections,
         classes=classes,
         reserve=reserve,
+        libraries=libraries,
         dialect=dialect,
         controls=controls,
     )
@@ -579,6 +625,7 @@ def assemble_many(
     sections: Optional[Mapping[str, int]] = None,
     classes: Optional[Mapping[str, Ranges]] = None,
     reserve: Ranges = (),
+    libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -619,6 +666,7 @@ def assemble_many(
         sections,
         classes,
         reserve,
+        libraries,
         dialect,
         controls,
     )
@@ -633,6 +681,7 @@ def assemble_files(
     sections: Optional[Mapping[str, int]] = None,
     classes: Optional[Mapping[str, Ranges]] = None,
     reserve: Ranges = (),
+    libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -652,6 +701,7 @@ def assemble_files(
         sections=sections,
         classes=classes,
         reserve=reserve,
+        libraries=libraries,
         dialect=dialect,
         controls=controls,
     )

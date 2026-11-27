@@ -182,3 +182,76 @@ TEST_CASE("each module finds its include files from its own directory") {
     REQUIRE(r.ok());
     CHECK(image(r) == "01000200");
 }
+
+// Library modules: openc166's equivalent of the members of an L166 library.
+namespace {
+
+// A library module that defines 'name' (a NOP, RET procedure) and, if
+// 'needs' is not empty, calls that external.
+Source lib_module(const std::string& file, const std::string& name, const std::string& needs = "") {
+    std::string text = " PUBLIC " + name + "\n";
+    if (!needs.empty()) text += " EXTERN " + needs + ":NEAR\n";
+    text += "RT SECTION CODE PUBLIC\n" + name + " PROC NEAR\n";
+    text += needs.empty() ? " NOP\n" : " CALL " + needs + "\n";
+    text += " RET\n" + name + " ENDP\nRT ENDS\n END\n";
+    return {file, text};
+}
+
+const Source kCaller{"main.a66",
+                     " EXTERN MUL32:NEAR\nRT SECTION CODE PUBLIC\nMAIN PROC NEAR\n CALL MUL32\n RET\nMAIN ENDP\nRT ENDS\n END\n"};
+
+}  // namespace
+
+TEST_CASE("library modules are linked only when a name they define is needed") {
+    AssembleOptions o;
+    o.libraries = {lib_module("div.a66", "DIV32"), lib_module("mul.a66", "MUL32", "HELP"),
+                   lib_module("help.a66", "HELP")};
+    auto r = link({kCaller}, o);
+    REQUIRE(r.ok());
+    // MUL32 pulls in HELP; DIV32 is not needed. Library modules follow in
+    // the order given.
+    CHECK(r.modules == std::vector<std::string>{"main.a66", "mul.a66", "help.a66"});
+    CHECK(r.library_modules == 2);
+    // MAIN: CALLA MUL32, RET; MUL32: CALLA HELP, RET; HELP: NOP, RET.
+    CHECK(image(r) == "CA000600CB00CA000C00CB00CC00CB00");
+}
+
+TEST_CASE("a library module is not linked for a name that a module defines") {
+    AssembleOptions o;
+    o.libraries = {lib_module("mul.a66", "MUL32")};
+    auto r = link({kCaller, lib_module("mine.a66", "MUL32")}, o);
+    REQUIRE(r.ok());
+    CHECK(r.modules.size() == 2);
+    CHECK(r.library_modules == 0);
+    // Nothing needs the library at all.
+    r = link({lib_module("mine.a66", "OTHER")}, o);
+    REQUIRE(r.ok());
+    CHECK(r.modules == std::vector<std::string>{"mine.a66"});
+}
+
+TEST_CASE("the first library module that defines a name is used") {
+    AssembleOptions o;
+    o.libraries = {lib_module("a.a66", "MUL32"), lib_module("b.a66", "MUL32")};
+    auto r = link({kCaller}, o);
+    REQUIRE(r.ok());
+    CHECK(r.modules == std::vector<std::string>{"main.a66", "a.a66"});
+}
+
+TEST_CASE("errors in library modules that are not linked do not count") {
+    AssembleOptions o;
+    o.libraries = {{"bad.a66", " PUBLIC X\nX EQU 1\n NOT AN INSTRUCTION\n END\n"}, lib_module("mul.a66", "MUL32")};
+    auto r = link({kCaller}, o);
+    CHECK(r.ok());
+    // An external that no library module defines is still OC15.
+    r = link({kCaller}, AssembleOptions{});
+    CHECK(diags(r) == "main.a66:1:OC15E");
+}
+
+TEST_CASE("a single source can use library modules") {
+    AssembleOptions o;
+    o.file_name = "main.a66";
+    o.libraries = {lib_module("mul.a66", "MUL32")};
+    auto r = assemble(kCaller.text, o);
+    REQUIRE(r.ok());
+    CHECK(r.modules == std::vector<std::string>{"main.a66", "mul.a66"});
+}
