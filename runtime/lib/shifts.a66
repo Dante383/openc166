@@ -1,5 +1,7 @@
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 SHIFTS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___ashlsi3                      ; -- Begin function __ashlsi3
 ___ashlsi3:                             ; @__ashlsi3

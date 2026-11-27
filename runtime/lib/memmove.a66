@@ -1,5 +1,7 @@
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 MEMMOVE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_memmove                        ; -- Begin function memmove
 _memmove:                               ; @memmove

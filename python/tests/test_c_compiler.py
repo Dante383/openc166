@@ -69,7 +69,7 @@ def compile_c(source, opt="-O2", name="test.c"):
 class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
-    def __init__(self, sources, opt="-O2", startup=False):
+    def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167"):
         modules = [("harness.a66", HARNESS)]
         if startup:
             with open(os.path.join(RUNTIME, "cstart.a66")) as f:
@@ -77,24 +77,33 @@ class Program:
         for i, src in enumerate(sources):
             modules.append((f"m{i}.a66", compile_c(src, opt, name=f"m{i}.c")))
         self.asm = modules
+        self.board = board
         self.result = openc166.assemble_many(
             modules,
-            classes={
-                "CPROGRAM": [ROM],
-                "CNEARROM": [ROM],
-                "CNEAR": [RAM],
-            },
+            classes=classes or {"CPROGRAM": [ROM], "CNEARROM": [ROM], "CNEAR": [RAM]},
             libraries=[os.path.join(RUNTIME, "lib")],
         )
         if not self.result.ok:
             listing = "\n".join(str(e) for e in self.result.errors)
             raise AssertionError("openc166 failed:\n" + listing + "\n" + modules[-1][1])
-        rom = bytearray(b"\xff" * 0x8000)
+        # Without an image, the program is the ROM; with one (a flash image),
+        # the program is loaded into RAM as a loader would.
+        rom = bytearray(image if image is not None else b"\xff" * 0x8000)
+        self.loaded = []
         for chunk in self.result.chunks:
-            assert chunk.end <= 0x8000, "only the ROM has bytes in the image"
-            rom[chunk.address : chunk.end] = chunk.data
+            if image is None:
+                assert chunk.end <= len(rom), "only the ROM has bytes in the image"
+                rom[chunk.address : chunk.end] = chunk.data
+            else:
+                self.loaded.append(chunk)
         self.rom = bytes(rom)
         self.sections = self.result.sections
+
+    def simulator(self):
+        s = sim.Simulator(self.rom, board=self.board)
+        for chunk in self.loaded:
+            s.write(chunk.address, chunk.data)
+        return s
 
     def address(self, name):
         return self.result.symbol(name).value
@@ -106,9 +115,10 @@ class Program:
         init = self.sections.get("C166_DATA_INIT")
         if data and data.size:
             s.write(data.address, self.rom[init.address : init.address + data.size])
-        bss = self.sections.get("C166_BSS")
-        if bss and bss.size:
-            s.write(bss.address, bytes(bss.size))
+        for name in ("C166_BSS", "C166_BITWORD"):
+            sec = self.sections.get(name)
+            if sec and sec.size:
+                s.write(sec.address, bytes(sec.size))
 
     def call(self, name, *args, max_instructions=200000):
         """Calls a C function with 16-bit arguments, placed as TASKING
@@ -117,7 +127,7 @@ class Program:
         return self.call_placed(name, regs, stack, max_instructions)
 
     def call_placed(self, name, regs, stack, max_instructions=200000):
-        s = sim.Simulator(self.rom, board="c167")
+        s = self.simulator()
         self.init_variables(s)
         for reg, v in zip((12, 13, 14, 15), regs):
             s.r[reg] = v & 0xFFFF
@@ -264,7 +274,7 @@ int pressure(int a, int b, int c, int d) {
         # R6-R9 belong to the caller: a function that uses them must give
         # them back.
         p = Program([CompiledCodeTest.SOURCE])
-        s = sim.Simulator(p.rom, board="c167")
+        s = p.simulator()
         p.init_variables(s)
         for reg, v in ((6, 0x6666), (7, 0x7777), (8, 0x8888), (9, 0x9999)):
             s.r[reg] = v
@@ -388,7 +398,7 @@ class StartupTest(unittest.TestCase):
             startup=True,
         )
         # RAM starts out as garbage; __cstart must set up every variable.
-        s = sim.Simulator(p.rom, board="c167")
+        s = p.simulator()
         s.write(RAM[0], b"\xA5" * (RAM[1] - RAM[0] + 1))
         sp = s.sfr["SP"] - 2
         s.sfr["SP"] = sp
@@ -413,6 +423,184 @@ class StartupTest(unittest.TestCase):
         )
         self.assertIn("_memcpy", p.result.symbols)
         self.assertEqual(p.call("__cstart")[0], 77)
+
+
+def crc16(data):
+    """CRC-16 with polynomial 0A001H, as the 5WY19 boot block computes it."""
+    crc = 0xFFFF
+    for b in data:
+        crc ^= b
+        for _ in range(8):
+            crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
+    return crc
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class TaskingExtensionsTest(unittest.TestCase):
+    """The TASKING keywords and intrinsics: SFRs and their bits by name,
+    _bitword and _atbit, _at(), _interrupt() with its vector and frame."""
+
+    def test_sfrs_bits_and_fixed_addresses(self):
+        p = Program(
+            [
+                r"""
+#include <reg167.h>
+#include <c166.h>
+_bitword flags;
+_bit ready _atbit(flags, 2);
+_sfrbit P2_13 _atbit(P2, 13);
+const int magic[2] _at(0x6000) = {0x1234, 0x5678};
+int fixedvar _at(0xFA80);
+
+int test(int v) {
+  DP2 = 0x00FF;
+  P2 = v;
+  _putbit(1, P2, 12);
+  P2_13 = 1;
+  _bfld(P2, 0x0F00, 0x0500);
+  ready = 1;
+  fixedvar = magic[1];
+  int r = _getbit(P2, 12) + 2 * P2_13 + 4 * ready;
+  if (_testset(ready))
+    r += 1000;
+  if (!_testclear(ready))
+    r += 2000;
+  return r + 8 * _getbit(flags, 2);
+}
+"""
+            ]
+        )
+        lo, _, s = p.call("test", 0x0003)
+        self.assertEqual(lo, 1 + 2 + 4 + 1000)  # _testclear saw it set; now clear
+        self.assertEqual(s.sfr["DP2"], 0x00FF)
+        self.assertEqual(s.sfr["P2"], 0x3503)  # bits 12, 13 set; 8..11 = 5
+        self.assertEqual(s.read16(0xFA80), 0x5678)
+        self.assertEqual(p.address("_magic"), 0x6000)
+        self.assertTrue(0xFD00 <= p.address("_flags") < 0xFE00)
+        self.assertEqual(s.read16(p.address("_flags")), 0)
+
+    def test_interrupt_function(self):
+        p = Program(
+            [
+                r"""
+#include <c166.h>
+volatile int ticks;
+int seen;
+void _interrupt(0x22) isr(void) {
+  ticks += 3;
+  seen = ticks * 7 / 5;
+}
+int test(int a, int b) {
+  int x = a * b;
+  _int166(0x22);
+  _int166(0x22);
+  return x + a + b + ticks + seen;
+}
+"""
+            ]
+        )
+        # The vector: JMPS to the function at 4 * 22H.
+        vector = p.rom[0x88:0x8C]
+        self.assertEqual(vector[0], 0xFA)
+        self.assertEqual(vector[2] | vector[3] << 8, p.address("_isr"))
+        lo, _, s = p.call("test", 3, 4)
+        self.assertEqual(lo, 12 + 3 + 4 + 6 + 8)
+        asm = p.asm[-1][1]
+        self.assertIn("RETI", asm)
+        self.assertIn("SCXT\tMDC, #0010H", asm)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class Payload5WY19Test(unittest.TestCase):
+    """A MiniMon-style payload in C, loaded into the internal RAM of the
+    simulated 5WY19: it sets up ASC0 (the K-line), answers commands from the
+    host and returns to its caller. 'C' addr len: CRC-16 of the flash
+    range, as the boot block computes it. 'Q': return."""
+
+    PAYLOAD = r"""
+#include <reg167.h>
+#include <c166.h>
+
+static unsigned char get(void) {
+  while (!S0RIR)
+    _srvwdt();
+  S0RIR = 0;
+  return S0RBUF;
+}
+
+static void put(unsigned char c) {
+  S0TIR = 0;
+  S0TBUF = c;
+  while (!S0TIR)
+    _srvwdt();
+}
+
+static unsigned get16(void) {
+  unsigned lo = get();
+  return lo | (unsigned)get() << 8;
+}
+
+static unsigned crc16(const unsigned char *p, unsigned n) {
+  unsigned crc = 0xFFFF;
+  while (n--) {
+    crc ^= *p++;
+    for (int i = 0; i < 8; i++)
+      crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : crc >> 1;
+    _srvwdt();
+  }
+  return crc;
+}
+
+int main(void) {
+  P3 |= 0x0400;          /* TXD0 high */
+  DP3 |= 0x0400;         /* TXD0 output */
+  DP3 &= ~0x0800;        /* RXD0 input */
+  S0BG = 77;             /* 9600 baud at 24 MHz */
+  S0CON = 0x8011;        /* 8 data bits, receiver on, running */
+  for (;;) {
+    unsigned char cmd = get();
+    if (cmd == 'Q')
+      return 0x1234;
+    if (cmd == 'C') {
+      const unsigned char *start = (const unsigned char *)get16();
+      unsigned crc = crc16(start, get16());
+      put(crc);
+      put(crc >> 8);
+    }
+  }
+}
+"""
+
+    def test_crc_over_the_serial_line(self):
+        image = bytes((i * 37 + (i >> 8)) & 0xFF for i in range(0x80000))
+        p = Program(
+            [self.PAYLOAD],
+            startup=True,
+            image=image,
+            board="5wy19",
+            classes={
+                "CPROGRAM": [(0xF200, 0xF8FF)],
+                "CNEARROM": [(0xF200, 0xF8FF)],
+                "CNEAR": [(0xF900, 0xFBBF)],
+            },
+        )
+        s = p.simulator()
+        s.serial_echo = False
+        sp = s.sfr["SP"] - 2
+        s.sfr["SP"] = sp
+        s.write16(sp, HALT)
+        s.break_at(HALT)
+        s.pc = p.address("__cstart")
+        s.run_for(0.002)
+        for start, length in ((0x1000, 64), (0x2345, 300)):
+            s.serial_send(b"C" + start.to_bytes(2, "little") + length.to_bytes(2, "little"))
+            s.run_for(0.02)
+            got = s.serial_receive()
+            self.assertEqual(got, crc16(image[start : start + length]).to_bytes(2, "little"))
+        s.serial_send(b"Q")
+        stop = s.run_for(0.01)
+        self.assertEqual(s.pc, HALT, stop)
+        self.assertEqual(s.r[4], 0x1234)
 
 
 if __name__ == "__main__":

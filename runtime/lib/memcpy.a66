@@ -1,5 +1,7 @@
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 MEMCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_memcpy                         ; -- Begin function memcpy
 _memcpy:                                ; @memcpy

@@ -1,5 +1,7 @@
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 UDIVSI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___udivsi3                      ; -- Begin function __udivsi3
 ___udivsi3:                             ; @__udivsi3

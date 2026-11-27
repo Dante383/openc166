@@ -1,5 +1,7 @@
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 MEMSET_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_memset                         ; -- Begin function memset
 _memset:                                ; @memset

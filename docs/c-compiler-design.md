@@ -1,6 +1,6 @@
 # openc166 — C Compiler: Design
 
-Status: written 2026-11-27 as the design. Milestones 1-3 are done (2026-11-27)
+Status: written 2026-11-27 as the design. Milestones 1-4 are done (2026-11-27); [c-compiler.md](c-compiler.md) is the user guide
 in a local llvm-project fork, `openc166-llvm`, branch `c166`, based on LLVM
 23.1.6; its `C166.md` says how to build it.
 
@@ -371,6 +371,33 @@ modules (`--lib`) so only what a program uses is pulled in:
    `_interrupt`/`_using`, `_at`, intrinsics, the register header. A
    flash-driver or MiniMon-style payload in C runs in the simulated 5WY19.
    **First usable release.**
+   *Done.* A MiniMon-style payload in C (ASC0 set up from C, commands over
+   the K-line, CRC-16 of flash ranges, watchdog serviced) runs from the
+   5WY19's internal RAM in the simulator and returns to its caller.
+   Decided on the way:
+   - **The keywords are macros Clang predefines**, built on what Clang
+     already has: `_sfr` is an `extern volatile unsigned int` in section
+     `.c166.sfr`, `_sfrbit` a `_Bool` in `.c166.bit`, `_atbit(P2, 3)` the
+     asm label `P2.3`, `_at()` and `_interrupt()` sections. The back end
+     reads these marks (`C166Globals.h`). Clang itself only gained the
+     macros, the headers and the C166 target info, so rebases stay cheap.
+   - **SFRs and SFR bits are used by name**, as Classic does: the compiler
+     writes `P2`, `IEN`, `P2.3` and openc166 takes the addresses from
+     `REG167.INC`, which every module includes (`$MOD167`,
+     `$INCLUDE(REG167.INC)`). `<reg167.h>` is generated from that file
+     (`tools/reg_h.py`), so the two cannot disagree.
+   - **Interrupt frames push** (Classic's `_using(push)`): used registers on
+     the user stack of the interrupted code, MDC/MDH/MDL on the system stack
+     when needed, `RETI` inside `PROC TASK`, a `JMPS` vector at 4 x n.
+     Register bank switching is not done yet.
+   - **Intrinsics are a header** (`<c166.h>`): inline assembly and Clang's
+     generic builtins, no new Clang builtins. Inline assembly takes `"r"`
+     and `"i"(&var)` operands; the latter prints a variable's A166 name.
+   - `_bit` variables are bytes (`_Bool`), not bits in the bit-addressable
+     RAM; `_sfrbit`/`_atbit` bits are real bits.
+   - LLVM gives large initialised globals 16-byte alignment on its own;
+     A166 has only `EVEN`, and the C166 never needs more, so any alignment
+     above 2 prints `EVEN`.
 5. **Code quality.** Short forms, post-increment addressing, bit
    instructions, branch shortening, comparison against TASKING output on
    real code.
