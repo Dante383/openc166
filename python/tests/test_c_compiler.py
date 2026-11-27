@@ -56,7 +56,7 @@ def compile_c(source, opt="-O2", name="test.c"):
         with open(c_path, "w") as f:
             f.write(source)
         out = subprocess.run(
-            [CLANG, "--target=c166", opt, "-S", "-o", "-", name],
+            [CLANG, "--target=c166", *opt.split(), "-S", "-o", "-", name],
             capture_output=True,
             text=True,
             cwd=tmp,
@@ -419,6 +419,56 @@ int test(void) {
 
     def test_Os(self):
         self.check("-Os")
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class FloatTest(unittest.TestCase):
+    """Soft float and soft double, from LLVM compiler-rt compiled for the
+    C166 (runtime/lib). double is 64 bits, or 32 with -mdouble=32."""
+
+    SOURCE = r"""
+volatile float fa = 1.5f, fb = -2.25f, fq = 0.25f;
+volatile double da = 1e10, db = 3.0, tiny = 1e-10;
+volatile int i = -37;
+volatile long l = 100000;
+float fmul(float x, float y) { return x * y; }
+int test(void) {
+  int fail = 0;
+  if (fmul(fa, fb) != -3.375f) fail |= 1 << 0;
+  if (fa + fb != -0.75f) fail |= 1 << 1;
+  if (fa / fq != 6.0f) fail |= 1 << 2;
+  if (fa - fb != 3.75f) fail |= 1 << 3;
+  if ((int)(fb * 10) != -22) fail |= 1 << 4;
+  if ((long)(fa * 100000) != 150000) fail |= 1 << 5;
+  if ((float)i != -37.0f) fail |= 1 << 6;
+  if ((float)l / 4 != 25000.0f) fail |= 1 << 7;
+  if (!(fb < fa) || fa < fb || fa == fb) fail |= 1 << 8;
+  if (da * db != 3e10) fail |= 1 << 9;
+  if ((long)(da / 1e5) != 100000) fail |= 1 << 10;
+  if ((double)fa != 1.5) fail |= 1 << 11;
+  if ((float)(db / 4) != 0.75f) fail |= 1 << 12;
+#ifdef _DOUBLE_FP
+  if (sizeof(double) != 8 || 1.0 + tiny == 1.0) fail |= 1 << 13;
+  if ((long long)(da * db) != 30000000000LL) fail |= 1 << 14;
+#else
+  if (sizeof(double) != 4 || 1.0 + tiny != 1.0) fail |= 1 << 13;
+#endif
+  return fail;
+}
+"""
+
+    def check(self, opt):
+        p = Program([self.SOURCE], opt)
+        self.assertEqual(p.call("test", max_instructions=5000000)[0], 0)
+
+    def test_double_O0(self):
+        self.check("-O0")
+
+    def test_double_Os(self):
+        self.check("-Os")
+
+    def test_single_Os(self):
+        self.check("-Os -mdouble=32")
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

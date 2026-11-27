@@ -439,6 +439,17 @@ modules (`--lib`) so only what a program uses is pulled in:
    `CALLS`/`RETS`, segmented memory models, `long long`, soft-float
    (single precision and `-mdouble=32` first, then 64-bit `double` as the
    default), libc.
+   *In progress.* Done so far:
+   - `long long`: LLVM splits it into words; `__muldi3`, `__divdi3`,
+     `__udivdi3`, `__moddi3`, `__umoddi3` are in the runtime.
+   - `float` and `double`: LLVM's compiler-rt float and double builtins,
+     compiled for the C166 by `runtime/build.py` (they handle a 16-bit
+     `int`). 64-bit `double` is the default, as planned; `-mdouble=32` makes
+     it `float`, with `_SINGLE_FP`/`_DOUBLE_FP` as in TASKING. Both came at
+     once, since compiler-rt has both. A `double` result comes back through
+     a hidden pointer in R12, not TASKING's block on the user stack.
+   - Aliases (`x EQU y` in A166) for the builtins that define several names.
+
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.
 

@@ -7,7 +7,7 @@ assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
-Status: small memory model, integers up to 64 bits, TASKING keywords and
+Status: small memory model, integers up to 64 bits, `float` and `double`, TASKING keywords and
 intrinsics for payloads and drivers. Checked by running compiled C in the
 simulator (`python/tests/test_c_compiler.py`), including a MiniMon-style
 payload on the simulated 5WY19.
@@ -33,6 +33,9 @@ clang --target=c166 -Os main.c util.c -o prog.hex \
   where `OPENC166_RUNTIME` points.
 - `-Wl,` passes options to openc166: `--class` for the memory map,
   `--section`, `-l` for a listing, `-g` for debug information.
+- `double` is 64 bits; `-mdouble=32` (TASKING's `-F`) makes it the same
+  as `float`, smaller and faster. Modules built with different settings do
+  not mix. Floating point is in software (LLVM compiler-rt).
 - `-g` puts C line markers into the assembly, so openc166's debug
   information and ELF output, and so the debugger and Ghidra, show C lines.
 
@@ -111,7 +114,6 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 - Far, huge and shuge pointers, and the medium, large and huge memory
   models (`EXTP`/`EXTS`, `CALLS`/`RETS`).
-- `float` and `double`.
 - Structs passed by value (an error). Structs returned by value work, but
   through a hidden pointer argument, not TASKING's block on the user stack,
   so such functions cannot be called from TASKING-built code.

@@ -14,13 +14,19 @@ or wherever `OPENC166_RUNTIME` points.
   or the watchdog.
 - `lib/*.a66`: helpers the compiler calls (32- and 64-bit division and
   remainder, 64-bit multiplication, 32-bit shifts by a variable amount,
-  `memcpy`, `memmove`, `memset`).
+  `memcpy`, `memmove`, `memset`, and soft float and double).
   Library modules: openc166 links one only when the program needs a name
   it defines (`--lib`), so they cost nothing otherwise. Not linked with
   `-nodefaultlibs` or `-nostdlib`.
 - `src/*.c`: the helpers' source. `build.py` compiles them to `lib/` with
   the C166 clang; the results are committed, so using the compiler does not
   need that step.
+- The floating-point helpers (`addsf3.a66`, `muldf3.a66`, `comparesf2.a66`,
+  ...) are LLVM's compiler-rt builtins compiled for the C166 by `build.py`
+  from the openc166-llvm fork (`OPENC166_LLVM` names it). They are under
+  the Apache License v2.0 with LLVM Exceptions
+  (https://llvm.org/LICENSE.txt), as the comment at the top of each says;
+  the rest of openc166 is MIT.
 
 ## Memory classes
 
