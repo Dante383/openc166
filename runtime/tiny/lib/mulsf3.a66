@@ -252,10 +252,8 @@ ___mulsf3:                              ; @__mulsf3
 	OR	R7, R2
 	JB	R4.0, ?LBB0_42
 ; %bb.39:                               ; %if.end112.thread.i
-	MOV	R4, #0
-	MOV	R5, #1
-	ADD	R12, R5
-	ADDC	R7, R4
+	ADD	R12, #1
+	ADDC	R7, #0
 	JMP	cc_UC, ?LBB0_44
 ?LBB0_40:                               ; %if.end106.i
 	JNB	R9.15, ?LBB0_36

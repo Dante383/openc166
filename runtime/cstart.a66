@@ -1,11 +1,13 @@
-; C startup code for openc166's C166 compiler, small memory model (TASKING's:
-; far code, near data). runtime/tiny/cstart.a66 is the tiny model's.
+; C startup code for openc166's C166 compiler, small and large memory models
+; (TASKING's: far code, and near or far data). runtime/tiny/cstart.a66 is the
+; tiny model's, runtime/medium/cstart.a66 the medium model's.
 ;
 ; __cstart sets up the user stack, copies the initial values of initialised
 ; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the
 ; zero-initialised ones (C166_BSS) and the _bitword variables
 ; (C166_BITWORD, in the bit-addressable RAM), does the same for _huge and
-; _far variables (C166_HDATA, C166_FDATA from their _INIT sections;
+; _far variables, which in the large model are all unqualified ones
+; (C166_HDATA, C166_FDATA from their _INIT sections;
 ; C166_HBSS, C166_FBSS cleared), calls main and returns
 ; main's result in R4. It keeps the caller's R0 and R6-R9, so a loader or
 ; existing firmware can call a C program (CALLS: __cstart is a far
@@ -13,7 +15,8 @@
 ;
 ; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
 ; watchdog: a program that starts from reset must set those up first.
-; The DPPs must map the near data (default: DPPn = n, the first 64 KB).
+; The DPPs must map the near data and the user stack (default: DPPn = n,
+; the first 64 KB).
 
 $NOMACRO
 $CASE

@@ -1,0 +1,150 @@
+; Compiled from LLVM compiler-rt, lib/builtins/floatunsidf.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOATUNSIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___floatunsidf                  ; -- Begin function __floatunsidf
+___floatunsidf:                         ; @__floatunsidf
+; %bb.0:                                ; %entry
+	SUB	R0, #16
+	MOV	R4, R13
+	OR	R4, R14
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %if.end
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_4
+; %bb.2:                                ; %if.end
+	MOV	R4, R13
+	SHR	R4, #1
+	OR	R4, R13
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R1, R5
+	SHR	R1, #4
+	ADD	R1, R5
+	AND	R1, #3855
+	MOV	R4, R1
+	SHR	R4, #8
+	ADD	R4, R1
+	AND	R4, #31
+	ADD	R4, #16
+	JMP	cc_UC, ?LBB0_5
+?LBB0_3:
+	MOV	R2, #0
+	MOV	R3, R2
+	MOV	R1, R2
+	MOV	R10, R2
+	JMP	cc_UC, ?LBB0_6
+?LBB0_4:
+	MOV	R4, R14
+	SHR	R4, #1
+	OR	R4, R14
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R1, R5
+	SHR	R1, #4
+	ADD	R1, R5
+	AND	R1, #3855
+	MOV	R4, R1
+	SHR	R4, #8
+	ADD	R4, R1
+	AND	R4, #31
+?LBB0_5:                                ; %if.end
+	MOV	R5, R4
+	XOR	R5, #31
+	MOV	R1, #52
+	SUB	R1, R5
+	MOV	R5, #0
+	MOV	[R0+#14], R5
+	MOV	[R0+#12], R5
+	MOV	[R0+#8], R13
+	MOV	[R0+#6], R5
+	MOV	[R0+#4], R5
+	MOV	[R0+#2], R5
+	MOV	[R0], R5
+	MOV	[R0+#10], R14
+	MOV	R11, R1
+	AND	R11, #15
+	SHR	R1, #3
+	AND	R1, #6
+	MOV	R13, R0
+	ADD	R13, #8
+	SUB	R13, R1
+	MOV	R1, [R13+#2]
+	MOV	R10, R1
+	SHL	R10, R11
+	MOV	R14, R11
+	XOR	R14, #15
+	MOV	R2, [R13]
+	MOV	R3, R2
+	SHR	R3, #1
+	SHR	R3, R14
+	OR	R3, R10
+	MOV	R10, [R13+#4]
+	MOV	R15, R10
+	SHL	R15, R11
+	SHR	R1, #1
+	SHR	R1, R14
+	OR	R1, R15
+	MOV	R13, [R13+#6]
+	SHL	R13, R11
+	SHR	R10, #1
+	SHR	R10, R14
+	OR	R10, R13
+	SHL	R2, R11
+	XOR	R10, #16
+	MOV	R11, #1054
+	SUB	R11, R4
+	SHL	R11, #4
+	ADD	R1, R5
+	ADDC	R10, R11
+?LBB0_6:                                ; %cleanup
+	MOV	[R12], R2
+	MOV	[R12+#2], R3
+	MOV	[R12+#4], R1
+	MOV	[R12+#6], R10
+	ADD	R0, #16
+	RET
+                                        ; -- End function
+FLOATUNSIDF_PR	ENDS
+	END

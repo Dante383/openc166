@@ -1,0 +1,36 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMSET_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memset                         ; -- Begin function memset
+_memset:                                ; @memset
+; %bb.0:                                ; %entry
+	MOV	R1, R14
+	MOV	R5, R13
+	MOV	R4, R12
+	CMP	R15, #0
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %while.body.lr.ph
+	MOV	R2, R4
+	MOV	R10, R5
+	MOV	R3, R2
+	MOV	R11, R10
+?LBB0_2:                                ; %while.body
+                                        ; =>This Inner Loop Header: Depth=1
+	SUB	R15, #1
+	ADD	R3, #1
+	ADDC	R11, #0
+	EXTS	R10, #1
+	MOVB	[R2], RL1
+	MOV	R2, R3
+	MOV	R10, R11
+	CMP	R15, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_3:                                ; %while.end
+	RET
+                                        ; -- End function
+MEMSET_PR	ENDS
+	END

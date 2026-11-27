@@ -19,65 +19,62 @@ ___addsf3:                              ; @__addsf3
 	MOV	R8, [R0+#24]
 	MOV	R4, R12
 	AND	R4, #32767
-	MOV	R1, #32896
-	MOV	R2, #0
-	MOV	R11, R8
+	MOV	R3, R8
 	MOV	R5, R4
-	ADD	R11, R2
-	ADDC	R5, R1
-	MOV	R3, #1
-	MOV	R10, R3
+	ADD	R5, #32896
+	MOV	R10, #0
+	MOV	R1, #1
+	MOV	R2, R1
 	CMP	R5, #32896
 	JMP	cc_ULT, ?LBB0_2
 ; %bb.1:                                ; %entry
-	MOV	R10, R2
+	MOV	R2, R10
 ?LBB0_2:                                ; %entry
-	CMP	R11, #0
+	CMP	R3, #0
 	JMP	cc_EQ, ?LBB0_4
 ; %bb.3:                                ; %entry
-	MOV	R3, R2
+	MOV	R1, R10
 ?LBB0_4:                                ; %entry
 	MOV	R15, [R0+#30]
 	MOV	R14, [R0+#28]
 	CMP	R5, #32896
 	JMP	cc_EQ, ?LBB0_6
 ; %bb.5:                                ; %entry
-	MOV	R3, R10
+	MOV	R1, R2
 ?LBB0_6:                                ; %entry
 	MOV	R5, R15
 	AND	R5, #32767
-	JNB	R3.0, ?LBB0_7
+	JNB	R1.0, ?LBB0_7
 	JMP	cc_UC, ?LBB0_30
 ?LBB0_7:                                ; %entry
 	MOV	R11, R14
-	MOV	R3, R5
-	ADD	R11, R2
-	ADDC	R3, R1
+	MOV	R1, R5
+	ADD	R1, #32896
 	MOV	R10, #0
-	MOV	R2, #1
-	MOV	R1, R2
+	MOV	R3, #1
+	MOV	R2, R3
 	CMP	R11, #0
 	JMP	cc_EQ, ?LBB0_11
 ; %bb.8:                                ; %entry
-	CMP	R3, #32896
+	CMP	R1, #32896
 	JMP	cc_ULE, ?LBB0_12
 ?LBB0_9:                                ; %entry
-	CMP	R3, #32896
+	CMP	R1, #32896
 	JMP	cc_NE, ?LBB0_13
 ?LBB0_10:                               ; %entry
-	JB	R1.0, ?LBB0_14
+	JB	R2.0, ?LBB0_14
 	JMP	cc_UC, ?LBB0_30
 ?LBB0_11:                               ; %entry
-	MOV	R1, R10
-	CMP	R3, #32896
+	MOV	R2, R10
+	CMP	R1, #32896
 	JMP	cc_UGT, ?LBB0_9
 ?LBB0_12:                               ; %entry
-	MOV	R2, R10
-	CMP	R3, #32896
+	MOV	R3, R10
+	CMP	R1, #32896
 	JMP	cc_EQ, ?LBB0_10
 ?LBB0_13:                               ; %entry
-	MOV	R1, R2
-	JNB	R1.0, ?LBB0_30
+	MOV	R2, R3
+	JNB	R2.0, ?LBB0_30
 ?LBB0_14:                               ; %if.end38.i
 	MOV	R3, #0
 	MOV	R2, #1

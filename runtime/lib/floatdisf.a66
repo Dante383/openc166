@@ -215,9 +215,8 @@ ___floatdisf?F	PROC	FAR
 	OR	R12, R4
 	JMP	cc_NE, ?LBB0_22
 ; %bb.21:                               ; %if.end.i
-	MOV	R1, #32
-	ADD	R11, R1
-	ADDC	R5, R5
+	ADD	R11, #32
+	ADDC	R5, #0
 	MOV	R1, R11
 ?LBB0_22:                               ; %if.end.i
 	ASHR	R15, #15
@@ -371,12 +370,13 @@ ___floatdisf?F	PROC	FAR
 	SHR	R4, #2
 	AND	R4, #1
 	OR	R4, R13
-	MOV	R2, #0
-	MOV	R3, #1
-	ADD	R4, R3
-	ADDC	R11, R2
+	ADD	R4, #1
+	ADDC	R11, #0
 	MOV	R10, R4
 	OR	R10, R11
+	MOV	R2, #0
+	MOV	R3, #1
+	CMP	R10, #0
 	JMP	cc_EQ, ?LBB0_35
 ; %bb.34:                               ; %if.end18.i
 	MOV	R3, R2

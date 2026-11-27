@@ -21,6 +21,13 @@ or wherever `OPENC166_RUNTIME` points.
 - `src/*.c`: the helpers' source. `build.py` compiles them to `lib/` with
   the C166 clang; the results are committed, so using the compiler does not
   need that step.
+- One runtime per memory model, which the driver picks by `-mabi=`: `lib/`
+  for small, `tiny/lib/`, `medium/lib/` and `large/lib/` for the others
+  (calls, returns and pointer sizes differ, so they do not mix). `tiny/`
+  and `medium/` have their own `cstart.a66` (near `__cstart`, `CALL main`);
+  large uses `cstart.a66`, as small does. `lib/icall.a66` (calls through
+  far function pointers) is hand-written; `build.py` copies it to
+  `large/lib/`.
 - The floating-point helpers (`addsf3.a66`, `muldf3.a66`, `comparesf2.a66`,
   ...) are LLVM's compiler-rt builtins compiled for the C166 by `build.py`
   from the openc166-llvm fork (`OPENC166_LLVM` names it). They are under

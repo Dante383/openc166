@@ -187,10 +187,8 @@ ___divsf3?F	PROC	FAR
 	SHL	R1, #1
 	SHR	R4, #15
 	OR	R4, R1
-	MOV	R1, #65535
-	MOV	R2, #65524
-	ADD	R4, R2
-	ADDC	R5, R1
+	ADD	R4, #65524
+	ADDC	R5, #65535
 	MOV	R8, [R0+#20]                    ; 2-byte Folded Reload
 	MOV	R1, R8
 	SHR	R1, #15

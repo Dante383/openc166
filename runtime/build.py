@@ -19,15 +19,23 @@ builtins, and every module is checked for calls to the names it defines.
 import glob
 import os
 import re
+import shutil
 import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FLAGS = ["--target=c166", "-Os", "-ffreestanding", "-fno-builtin", "-S"]
-# One runtime per memory model: lib/ for small (far code), tiny/lib/ for
-# tiny. Calls and returns differ (CALLS/RETS against CALL/RET), so they do
-# not mix. lib/icall.a66 is hand-written and stays as it is.
-MODELS = [("small", "lib"), ("tiny", os.path.join("tiny", "lib"))]
+# One runtime per memory model: lib/ for small, <model>/lib/ for the
+# others. Calls and returns (CALLS/RETS against CALL/RET) and pointers (16
+# or 32 bits) differ, so they do not mix. lib/icall.a66, for calls through
+# far function pointers, is hand-written; the large model gets a copy.
+MODELS = [
+    ("small", "lib"),
+    ("tiny", os.path.join("tiny", "lib")),
+    ("medium", os.path.join("medium", "lib")),
+    ("large", os.path.join("large", "lib")),
+]
+FAR_CODE = {"small", "large"}
 
 # compiler-rt/lib/builtins: what LLVM calls for float and double.
 COMPILER_RT = [
@@ -52,6 +60,7 @@ def check(out):
         text = f.read()
     defined = set(re.findall(r"^\s*PUBLIC\s+(\S+)", text, re.M))
     called = set(re.findall(r"^\s*CALL\s+(\S+)", text, re.M))
+    called |= set(re.findall(r"^\s*CALLS\s+SEG\s+(\S+),", text, re.M))
     if defined & called:
         sys.exit(f"{out}: calls itself: {sorted(defined & called)}")
 
@@ -68,6 +77,9 @@ def main():
 def build(clang, fork, model, libdir):
     flags = FLAGS + ["-mabi=" + model]
     os.makedirs(libdir, exist_ok=True)
+    if model in FAR_CODE and libdir != os.path.join(HERE, "lib"):
+        shutil.copyfile(os.path.join(HERE, "lib", "icall.a66"),
+                        os.path.join(libdir, "icall.a66"))
     for src in sorted(glob.glob(os.path.join(HERE, "src", "*.c"))):
         name = os.path.splitext(os.path.basename(src))[0]
         out = os.path.join(libdir, name + ".a66")

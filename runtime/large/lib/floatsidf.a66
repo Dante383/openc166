@@ -1,0 +1,166 @@
+; Compiled from LLVM compiler-rt, lib/builtins/floatsidf.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOATSIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___floatsidf                    ; -- Begin function __floatsidf
+___floatsidf:                           ; @__floatsidf
+___floatsidf?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	R4, R13
+	OR	R4, R14
+	JMP	cc_EQ, ?LBB0_7
+; %bb.1:                                ; %if.end
+	MOV	R4, #0
+	MOV	R1, R4
+	MOV	R5, R4
+	SUB	R1, R13
+	SUBC	R5, R14
+	JB	R14.15, ?LBB0_3
+; %bb.2:                                ; %if.end
+	MOV	R5, R14
+?LBB0_3:                                ; %if.end
+	JB	R14.15, ?LBB0_5
+; %bb.4:                                ; %if.end
+	MOV	R1, R13
+?LBB0_5:                                ; %if.end
+	AND	R14, #32768
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_8
+; %bb.6:                                ; %if.end
+	MOV	R2, R1
+	SHR	R2, #1
+	OR	R2, R1
+	MOV	R3, R2
+	SHR	R3, #2
+	OR	R3, R2
+	MOV	R2, R3
+	SHR	R2, #4
+	OR	R2, R3
+	MOV	R3, R2
+	SHR	R3, #8
+	OR	R3, R2
+	CPL	R3
+	MOV	R2, R3
+	SHR	R2, #1
+	AND	R2, #21845
+	SUB	R3, R2
+	MOV	R2, R3
+	AND	R2, #13107
+	SHR	R3, #2
+	AND	R3, #13107
+	ADD	R3, R2
+	MOV	R10, R3
+	SHR	R10, #4
+	ADD	R10, R3
+	AND	R10, #3855
+	MOV	R2, R10
+	SHR	R2, #8
+	ADD	R2, R10
+	AND	R2, #31
+	ADD	R2, #16
+	JMP	cc_UC, ?LBB0_9
+?LBB0_7:
+	MOV	R1, #0
+	MOV	R3, R1
+	MOV	R5, R1
+	MOV	R10, R1
+	JMP	cc_UC, ?LBB0_10
+?LBB0_8:
+	MOV	R2, R5
+	SHR	R2, #1
+	OR	R2, R5
+	MOV	R3, R2
+	SHR	R3, #2
+	OR	R3, R2
+	MOV	R2, R3
+	SHR	R2, #4
+	OR	R2, R3
+	MOV	R3, R2
+	SHR	R3, #8
+	OR	R3, R2
+	CPL	R3
+	MOV	R2, R3
+	SHR	R2, #1
+	AND	R2, #21845
+	SUB	R3, R2
+	MOV	R2, R3
+	AND	R2, #13107
+	SHR	R3, #2
+	AND	R3, #13107
+	ADD	R3, R2
+	MOV	R10, R3
+	SHR	R10, #4
+	ADD	R10, R3
+	AND	R10, #3855
+	MOV	R2, R10
+	SHR	R2, #8
+	ADD	R2, R10
+	AND	R2, #31
+?LBB0_9:                                ; %if.end
+	MOV	R3, R2
+	ADD	R3, #21
+	MOV	[R0+#14], R4
+	MOV	[R0+#12], R4
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R4
+	MOV	[R0], R4
+	MOV	[R0+#8], R1
+	MOV	[R0+#10], R5
+	MOV	R11, R3
+	AND	R11, #15
+	SHR	R3, #3
+	AND	R3, #6
+	MOV	R13, R0
+	ADD	R13, #8
+	SUB	R13, R3
+	MOV	R5, [R13+#2]
+	MOV	R10, R5
+	SHL	R10, R11
+	MOV	R15, R11
+	XOR	R15, #15
+	MOV	R1, [R13]
+	MOV	R3, R1
+	SHR	R3, #1
+	SHR	R3, R15
+	OR	R3, R10
+	MOV	R10, [R13+#4]
+	MOV	R6, R10
+	SHL	R6, R11
+	SHR	R5, #1
+	SHR	R5, R15
+	OR	R5, R6
+	MOV	R13, [R13+#6]
+	SHL	R13, R11
+	SHR	R10, #1
+	SHR	R10, R15
+	OR	R10, R13
+	SHL	R1, R11
+	XOR	R10, #16
+	MOV	R11, #1054
+	SUB	R11, R2
+	SHL	R11, #4
+	ADD	R5, R4
+	ADDC	R10, R11
+	OR	R10, R14
+?LBB0_10:                               ; %cleanup
+	MOV	[R12], R1
+	MOV	[R12+#2], R3
+	MOV	[R12+#4], R5
+	MOV	[R12+#6], R10
+	ADD	R0, #16
+	MOV	R6, [R0+]
+	RETS
+___floatsidf?F	ENDP
+                                        ; -- End function
+FLOATSIDF_PR	ENDS
+	END

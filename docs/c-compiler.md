@@ -7,7 +7,8 @@ assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
-Status: TASKING's small and tiny memory models, integers up to 64 bits,
+Status: TASKING's tiny, small, medium and large memory models, integers up
+to 64 bits,
 `float` and `double`, TASKING keywords and
 intrinsics for payloads and drivers. Checked by running compiled C in the
 simulator (`python/tests/test_c_compiler.py`), including a MiniMon-style
@@ -43,8 +44,8 @@ clang --target=c166 -Os main.c util.c -o prog.hex \
 The entry point is `__cstart`. It sets up the user stack, initialises the
 variables, calls `main` and returns `main`'s result in R4, keeping the
 caller's R0 and R6-R9: a loader or existing firmware can call a C program
-and get control back (with `CALLS` in the small model, `CALLA` in the
-tiny one). A program that starts from reset must first set up
+and get control back (with `CALLS` in the small and large models, `CALLA`
+in the tiny and medium ones). A program that starts from reset must first set up
 SYSCON, BUSCON, the system stack and the watchdog itself.
 
 ## Memory models
@@ -55,6 +56,8 @@ SYSCON, BUSCON, the system stack and the watchdog itself.
 |---|---|---|---|
 | `small` (default) | far: anywhere in 16 MB, `CALLS`/`RETS` | near, first 64 KB (DPPn = n) | 32 bits |
 | `tiny` | near: first 64 KB, `CALL`/`RET` | near, first 64 KB | 16 bits |
+| `medium` | near: one segment, `CALL`/`RET` | far: anywhere in 16 MB | 16 bits |
+| `large` | far, as in small | far, as in medium | 32 bits |
 
 In the small model every function is far, as in TASKING, except:
 
@@ -66,12 +69,34 @@ In the small model every function is far, as in TASKING, except:
 
 A call through a function pointer goes through `__c166_icall` in the
 runtime (`PUSH R5`, `PUSH R4`, `RETS`, as the stock 5WY19 firmware does at
-2000H). The output is `$SEGMENTED`, so openc166 places code above 64 KB;
-near data references are written as `SOF name` (their address in the first
-64 KB) and SFRs through `ASSUME DPP3:SYSTEM`. Each model has its own
-runtime (`runtime/` and `runtime/tiny/`), which the driver picks; modules
-of different models do not mix. Medium, large and huge need far data by
-default and are not done yet.
+2000H). The output is `$SEGMENTED` in every model but tiny, so openc166
+places code and data above 64 KB; near data references are written as
+`SOF name` (their address in the first 64 KB) and SFRs through
+`ASSUME DPP3:SYSTEM`. Each model has its own runtime (`runtime/lib` for
+small, `runtime/<model>/lib` for the others, and `runtime/tiny/` and
+`runtime/medium/` have their own `cstart.a66`), which the driver picks;
+modules of different models do not mix.
+
+In the medium and large models data is far:
+
+- an unqualified pointer is 32 bits, in the `_huge` layout (segment
+  offset, segment), and is accessed with `EXTS`; pointer arithmetic is
+  32-bit. `size_t` stays 16 bits and `ptrdiff_t` is `long`, as in TASKING;
+- unqualified variables and constants (string literals too) go into the
+  `_huge` sections, `CHUGE` and `CHUGEROM` (see below), anywhere in the
+  16 MB. TASKING puts them in its `_far` sections; with `_far` pointers in
+  the `_huge` layout here, the `_huge` ones fit;
+- locals stay on the user stack, which is near. Reading and writing a
+  local is near, even through a pointer the compiler can follow; a pointer
+  to a local that is passed on is made far through the DPP that maps it
+  (the DPPn register at 0FE00H + 2n), so the user stack (`CNEAR`) must lie
+  in the pages the DPPs select;
+- SFRs, `_sfrbit`, `_bitword`, `_system`, `_iram` and `_bita` data are near
+  in every model, and a `_near` variable goes into the near sections.
+
+Medium's functions are near, all in one segment, and its function pointers
+are 16 bits (`CALLI`), so code that calls through them has no
+`__c166_icall`. The huge model is not done.
 
 ## Memory map
 
@@ -144,8 +169,9 @@ arithmetic, and LLVM folds pointer arithmetic freely, so here `_far`
 pointers have the `_huge` layout. A `_far` pointer passed to or from
 TASKING-built code is therefore not the same bits; `_huge` pointers are.
 
-`_far` and `_huge` variables (small model only, as in TASKING) can lie
-anywhere; give their classes address ranges:
+`_far` and `_huge` variables (not in the tiny model, as in TASKING), and in
+the medium and large models every unqualified variable, can lie anywhere;
+give their classes address ranges:
 
 | Class | What | Section type |
 |---|---|---|
@@ -174,9 +200,9 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 ## Not yet
 
-- The medium, large and huge memory models (far data by default).
+- The huge memory model.
 - `_near` function pointers (all function pointers are far in the small
-  model), and register bank switching.
+  and large models, near in tiny and medium).
 - Structs passed by value (an error). Structs returned by value work, but
   through a hidden pointer argument, not TASKING's block on the user stack,
   so such functions cannot be called from TASKING-built code.

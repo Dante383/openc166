@@ -58,10 +58,8 @@ ___truncdfsf2:                          ; @__truncdfsf2
 	OR	R2, R5
 	JB	R12.0, ?LBB0_14
 ; %bb.8:                                ; %if.then12.i
-	MOV	R4, #0
-	MOV	R5, #1
-	ADD	R3, R5
-	ADDC	R2, R4
+	ADD	R3, #1
+	ADDC	R2, #0
 	JMP	cc_UC, ?LBB0_16
 ?LBB0_9:                                ; %if.else24.i
 	MOV	R4, R10
@@ -291,10 +289,8 @@ ___truncdfsf2:                          ; @__truncdfsf2
 	OR	R3, R2
 	JB	R11.0, ?LBB0_44
 ; %bb.43:                               ; %if.then65.i
-	MOV	R5, #0
-	MOV	R2, #1
-	ADD	R4, R2
-	ADDC	R3, R5
+	ADD	R4, #1
+	ADDC	R3, #0
 	JMP	cc_UC, ?LBB0_46
 ?LBB0_44:                               ; %if.else67.i
 	XOR	R10, #4096

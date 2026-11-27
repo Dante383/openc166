@@ -1,0 +1,100 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMMOVE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memmove                        ; -- Begin function memmove
+_memmove:                               ; @memmove
+_memmove?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R3, #0
+	MOV	R2, #1
+	MOV	R1, R2
+	CMP	R5, R15
+	JMP	cc_ULT, ?LBB0_8
+; %bb.1:                                ; %entry
+	CMP	R4, R14
+	JMP	cc_ULT, ?LBB0_9
+?LBB0_2:                                ; %entry
+	CMP	R5, R15
+	JMP	cc_EQ, ?LBB0_4
+?LBB0_3:                                ; %entry
+	MOV	R2, R1
+?LBB0_4:                                ; %entry
+	MOV	R1, [R0+#2]
+	JB	R2.0, ?LBB0_10
+; %bb.5:                                ; %while.cond.preheader
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_13
+; %bb.6:                                ; %while.body.preheader
+	MOV	R3, R4
+	MOV	R12, R5
+	MOV	R2, R14
+	MOV	R10, R15
+	MOV	R11, R3
+	MOV	R13, R12
+?LBB0_7:                                ; %while.body
+                                        ; =>This Inner Loop Header: Depth=1
+	SUB	R1, #1
+	ADD	R2, #1
+	ADDC	R10, #0
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	ADD	R11, #1
+	ADDC	R13, #0
+	EXTS	R12, #1
+	MOVB	[R3], RL6
+	MOV	R14, R2
+	MOV	R15, R10
+	MOV	R3, R11
+	MOV	R12, R13
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_7
+	JMP	cc_UC, ?LBB0_13
+?LBB0_8:                                ; %entry
+	MOV	R1, R3
+	CMP	R4, R14
+	JMP	cc_UGE, ?LBB0_2
+?LBB0_9:                                ; %entry
+	MOV	R2, R3
+	CMP	R5, R15
+	JMP	cc_NE, ?LBB0_3
+	JMP	cc_UC, ?LBB0_4
+?LBB0_10:                               ; %if.else
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_13
+; %bb.11:                               ; %while.body7.preheader
+	MOV	R10, #0
+	ADD	R14, R1
+	ADDC	R15, R10
+	MOV	R2, R4
+	MOV	R3, R5
+	ADD	R2, R1
+	ADDC	R3, R10
+?LBB0_12:                               ; %while.body7
+                                        ; =>This Inner Loop Header: Depth=1
+	SUB	R1, #1
+	ADD	R14, #65535
+	ADDC	R15, #65535
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	ADD	R2, #65535
+	ADDC	R3, #65535
+	EXTS	R3, #1
+	MOVB	[R2], RL6
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_12
+?LBB0_13:                               ; %if.end
+	MOV	R6, [R0+]
+	RETS
+_memmove?F	ENDP
+                                        ; -- End function
+MEMMOVE_PR	ENDS
+	END

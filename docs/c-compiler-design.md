@@ -481,6 +481,28 @@ modules (`--lib`) so only what a program uses is pulled in:
      caught exactly that). And A166 reads `SEG x+2` as `(SEG x)+2`, so the
      operand of `SOF`/`SEG`/`POF`/`PAG` is put in parentheses. Checked in
      the 5WY19's external RAM at 90000H.
+   - The medium and large models (far data): unqualified pointers are 32
+     bits in the `_huge` layout (`p:32:16` in the data layout), variables go
+     into the `_huge` sections, and a new near address space 4 (16 bits)
+     holds the stack (LLVM's alloca address space, `A4`), SFRs, bits,
+     `_bitword` and `_system`/`_iram` data. Clang makes a local's address far
+     as soon as it is taken; LLVM's InferAddressSpaces pass, run before
+     instruction selection with address space 0 as the generic one, turns
+     the accesses it can follow back into near ones, and a small pass does
+     the same for `va_start`/`va_arg`/`va_end` (and expands `va_arg`, which
+     the SelectionDAG would build with 32-bit nodes after legalisation).
+     Medium's functions are near, in address space 4 (`P4`); large's are
+     far, as in small. Whether a load or store is far now goes by the width
+     of its pointer, not its address space (the stack's memory operands say
+     address space 0). Found on the way: shift amounts and compare results
+     followed the default pointer width (now always 16 bits), and zeros in
+     an initial value or constant were written as `DSB`, which only
+     reserves space, so ROM kept FF there; zero runs in ROM sections are now
+     `DB 0,...` (a fix for every model). 32-bit add and subtract of a
+     constant became `ADD #n`/`ADDC #m`. Checked in medium and large on the
+     5WY19 with data at 90000H, at `-O0` and `-Os`. Cost against TASKING:
+     its large-model pointers are `_far` (14-bit page offset, no carry), so
+     its pointer arithmetic is 16-bit where ours is 32-bit.
 
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.

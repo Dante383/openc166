@@ -70,17 +70,25 @@ class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
     def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167",
-                 sections=None, tiny=False):
-        # The harness module matches the model: $SEGMENTED for far code.
-        harness = HARNESS if tiny else HARNESS.replace("$CASE\n", "$CASE\n$SEGMENTED\n", 1)
-        modules = [("harness.a66", harness)]
-        runtime = os.path.join(RUNTIME, "tiny") if tiny else RUNTIME
-        if startup:
-            with open(os.path.join(runtime, "cstart.a66")) as f:
-                modules.append(("cstart.a66", f.read()))
-        self.tiny = tiny
+                 sections=None, tiny=False, model="small"):
         if tiny:
-            opt += " -mabi=tiny"
+            model = "tiny"
+        # The harness module matches the model: $SEGMENTED but in tiny.
+        harness = HARNESS if model == "tiny" else HARNESS.replace("$CASE\n", "$CASE\n$SEGMENTED\n", 1)
+        modules = [("harness.a66", harness)]
+        # The runtime of the model (as the driver picks it): <model>/lib and
+        # <model>/cstart.a66, or small's.
+        runtime = RUNTIME if model == "small" else os.path.join(RUNTIME, model)
+        if startup:
+            start = os.path.join(runtime, "cstart.a66")
+            if not os.path.exists(start):
+                start = os.path.join(RUNTIME, "cstart.a66")
+            with open(start) as f:
+                modules.append(("cstart.a66", f.read()))
+        self.tiny = model == "tiny"
+        self.far_code = model in ("small", "large")
+        if model != "small":
+            opt += " -mabi=" + model
         for i, src in enumerate(sources):
             modules.append((f"m{i}.a66", compile_c(src, opt, name=f"m{i}.c")))
         self.asm = modules
@@ -144,7 +152,7 @@ class Program:
         for i, v in enumerate(stack):
             s.write16(r0 + 2 * i, v & 0xFFFF)
         s.r[0] = r0
-        push_return(s, far=not self.tiny)
+        push_return(s, far=self.far_code)
         s.break_at(HALT)
         s.pc = self.address(name if name.startswith("_") else "_" + name)
         stop = s.cont(max_instructions)
@@ -800,6 +808,117 @@ const fn ops[2] = { square, negate };
         self.assertEqual(p.call("fib", 10)[0], 55)
         self.assertEqual(p.call("call_five")[0], 10010)
         self.assertNotIn("RETS", p.asm[-1][1])
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class FarDataModelsTest(unittest.TestCase):
+    """The medium and large memory models (TASKING's): data is far.
+    Unqualified pointers are 32-bit and variables go into the huge
+    sections, here in the 5WY19's external RAM at 90000H; locals stay on
+    the near user stack, and their addresses are made far through the DPPs.
+    Medium's code is near, large's far."""
+
+    SOURCE = r"""
+#include <stdarg.h>
+struct rec { int a; long b; char name[6]; };
+struct rec recs[3] = {{1, 100000, "one"}, {2, -5, "two"}};
+struct rec copy;
+int zeros[40];
+const char text[] = "far text";
+_near int nearvar = 77;
+_system int sysvar;
+int *gp = &zeros[5];
+static int twice(int x) { return 2 * x; }
+int (*fp)(int) = twice;
+volatile int three = 3;
+
+int sum(int n, ...) {
+  va_list ap;
+  va_start(ap, n);
+  int t = 0;
+  while (n--)
+    t += va_arg(ap, int);
+  va_end(ap);
+  return t;
+}
+long lsum(int n, ...) {
+  va_list ap;
+  va_start(ap, n);
+  long t = 0;
+  while (n--)
+    t += va_arg(ap, long);
+  va_end(ap);
+  return t;
+}
+int count(const char *s, char c) { int n = 0; while (*s) n += *s++ == c; return n; }
+void fill(int *p, int n, int v) { while (n--) *p++ = v; }
+
+int main(void) {
+  int fail = 0;
+  int local[8];
+  if (recs[0].b != 100000 || recs[1].b != -5 || recs[2].a != 0) fail |= 1;
+  copy = recs[1];
+  if (copy.a != 2 || copy.name[1] != 'w') fail |= 2;
+  if (count(text, 'a') != 1 || count(text, 't') != 2 || text[three] != ' ') fail |= 4;
+  fill(local, 8, 9);                  /* a local through a far pointer */
+  fill(zeros + three, 2, 5);
+  if (local[7] != 9 || zeros[4] != 5 || zeros[5] != 0 || *gp != 0) fail |= 8;
+  if (sum(3, 1, 2, 3) != 6 || lsum(2, 70000L, 5L) != 70005) fail |= 16;
+  if (fp(21) != 42 || nearvar != 77) fail |= 32;
+  sysvar += 5;
+  if (sysvar != 5) fail |= 64;
+  if (sizeof(int *) != 4 || sizeof(fp) != (_MODEL == 'm' ? 2 : 4)) fail |= 128;
+  return fail;
+}
+"""
+
+    def run_model(self, model, opt):
+        image = bytes(0x80000 * [0xFF])
+        code = (0x1000, 0x7FFF) if model == "medium" else (0x10000, 0x1FFFF)
+        p = Program(
+            [self.SOURCE],
+            opt,
+            startup=True,
+            image=image,
+            board="5wy19",
+            model=model,
+            classes={
+                "CPROGRAM": [code],
+                "CNEARROM": [(0x8000, 0xBFFF)],
+                "CNEAR": [(0xF600, 0xF9FF)],
+                "CHUGE": [(0x90000, 0x93FFF)],
+                "CHUGEROM": [(0x20000, 0x2FFFF)],
+            },
+        )
+        self.assertEqual(p.address("_recs") >> 16, 9)
+        self.assertEqual(p.address("_text") >> 16, 2)
+        self.assertEqual(p.address("_nearvar") >> 16, 0)
+        s = p.simulator()
+        s.sfr["ADDRSEL2"] = 0x0904  # 64 KB at 90000H
+        s.sfr["BUSCON2"] = 0x0480  # BUSACT2, 16-bit demultiplexed
+        s.write(0x90000, b"\xA5" * 0x8000)  # RAM starts out as garbage
+        push_return(s, far=p.far_code)
+        s.r[0] = USER_STACK
+        s.break_at(HALT)
+        s.pc = p.address("__cstart")
+        stop = s.cont(2000000)
+        self.assertEqual(s.pc, HALT, stop)
+        self.assertEqual(s.r[4], 0)  # a bit per failed check
+        self.assertEqual(s.read16(p.address("_copy")), 2)
+        return p
+
+    def test_medium(self):
+        for opt in ("-O0", "-Os"):
+            with self.subTest(opt=opt):
+                asm = self.run_model("medium", opt).asm[-1][1]
+                self.assertIn("CALL\t_sum", asm)
+                self.assertNotIn("CALLS", asm)
+
+    def test_large(self):
+        for opt in ("-O0", "-Os"):
+            with self.subTest(opt=opt):
+                asm = self.run_model("large", opt).asm[-1][1]
+                self.assertIn("CALLS\tSEG _sum, SOF _sum", asm)
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
