@@ -378,6 +378,50 @@ unsigned long sum_table(void) { return sum(table, 3); }
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class LongLongTest(unittest.TestCase):
+    """64-bit integers: word arithmetic inline, multiplication and division
+    in the runtime. The C code checks itself (inputs are volatile, so the
+    compiler cannot work the answers out) and returns a bit per failure."""
+
+    SOURCE = r"""
+typedef long long s64;
+typedef unsigned long long u64;
+volatile s64 a = 123456789012345LL, b = -987654321LL, c = 7;
+volatile u64 ua = 0xFEDCBA9876543210ULL, ub = 0x12345ULL;
+volatile int n = 37;
+s64 add(s64 x, s64 y) { return x + y; }
+int test(void) {
+  int fail = 0;
+  if (add(a, b) != 123455801358024LL) fail |= 1 << 0;
+  if (a - b != 123457776666666LL) fail |= 1 << 1;
+  if (a * c != 864197523086415LL) fail |= 1 << 2;
+  if (b * b != 975461057789971041LL) fail |= 1 << 3;
+  if (a / b != -124999LL) fail |= 1 << 4;
+  if (a % b != 986541666LL) fail |= 1 << 5;
+  if (ua / ub != 0xE0004FA01C4DULL) fail |= 1 << 6;
+  if (ua % ub != 0x10A4FULL) fail |= 1 << 7;
+  if ((ua >> n) != 0x7F6E5D4ULL) fail |= 1 << 8;
+  if ((a << n) != (s64)0xC1BBEF2000000000ULL) fail |= 1 << 9;
+  if ((b >> 3) != -123456791LL) fail |= 1 << 10;
+  if (!(b < a) || a < b) fail |= 1 << 11;
+  if (!(ub < ua)) fail |= 1 << 12;
+  if ((s64)(long)b * 3 != -2962962963LL) fail |= 1 << 13;
+  return fail;
+}
+"""
+
+    def check(self, opt):
+        p = Program([self.SOURCE], opt)
+        self.assertEqual(p.call("test", max_instructions=2000000)[0], 0)
+
+    def test_O0(self):
+        self.check("-O0")
+
+    def test_Os(self):
+        self.check("-Os")
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
 class StartupTest(unittest.TestCase):
     """runtime/cstart.a66: initialised variables get their values, the
     others are cleared, main's result comes back in R4, and the caller's

@@ -12,8 +12,9 @@ or wherever `OPENC166_RUNTIME` points.
   the caller's R0 and R6-R9, so a loader or existing firmware can call a
   C program. It does not set up SYSCON, BUSCON, the DPPs, the system stack
   or the watchdog.
-- `lib/*.a66`: helpers the compiler calls (32-bit division and remainder,
-  32-bit shifts by a variable amount, `memcpy`, `memmove`, `memset`).
+- `lib/*.a66`: helpers the compiler calls (32- and 64-bit division and
+  remainder, 64-bit multiplication, 32-bit shifts by a variable amount,
+  `memcpy`, `memmove`, `memset`).
   Library modules: openc166 links one only when the program needs a name
   it defines (`--lib`), so they cost nothing otherwise. Not linked with
   `-nodefaultlibs` or `-nostdlib`.

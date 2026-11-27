@@ -7,7 +7,7 @@ assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
-Status: small memory model, integers up to 32 bits, TASKING keywords and
+Status: small memory model, integers up to 64 bits, TASKING keywords and
 intrinsics for payloads and drivers. Checked by running compiled C in the
 simulator (`python/tests/test_c_compiler.py`), including a MiniMon-style
 payload on the simulated 5WY19.
@@ -111,7 +111,7 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 - Far, huge and shuge pointers, and the medium, large and huge memory
   models (`EXTP`/`EXTS`, `CALLS`/`RETS`).
-- `long long`, `float` and `double`.
+- `float` and `double`.
 - Structs passed by value (an error). Structs returned by value work, but
   through a hidden pointer argument, not TASKING's block on the user stack,
   so such functions cannot be called from TASKING-built code.
