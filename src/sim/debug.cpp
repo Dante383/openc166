@@ -218,6 +218,51 @@ StopInfo Debugger::step_over(std::uint64_t max_instructions) {
     return r;
 }
 
+StopInfo Debugger::step_range(const std::vector<std::pair<Addr, Addr>>& ranges, bool over_calls,
+                              std::uint64_t max_instructions) {
+    hit_ = {};
+    auto inside = [&](Addr pc) {
+        return std::any_of(ranges.begin(), ranges.end(), [pc](const auto& r) { return r.first <= pc && pc < r.second; });
+    };
+    const std::uint64_t end = max_instructions ? m_.instructions() + max_instructions : ~std::uint64_t{0};
+    auto stopped = [&](Stop s) {
+        StopInfo r = hit_;
+        r.reason = s;
+        return r;
+    };
+    bool first = true;
+    while (m_.instructions() < end) {
+        auto insn = m_.decode_at(m_.pc());
+        if (over_calls && insn && is_call(*insn)) {
+            // Run to the return address with the stack back where it is.
+            const Addr ret = (m_.pc() & 0xFF0000) | ((m_.ip() + insn->size) & 0xFFFF);
+            const std::uint16_t sp = m_.sfr_get(reg::SP);
+            const int id = add_breakpoint(ret, [sp](Machine& mm) { return mm.sfr_get(reg::SP) >= sp; });
+            breakpoints_.at(id).temporary = true;
+            Stop s = Stop::None;
+            for (bool f = first; s == Stop::None && m_.instructions() < end; f = false) s = raw_step(true, f);
+            remove_breakpoint(id);
+            if (s == Stop::Breakpoint && hit_.id == id) {
+                hit_ = {};
+                if (!inside(m_.pc())) return {};
+                // The next step checks the user's breakpoints at the return
+                // address.
+                first = false;
+                continue;
+            }
+            if (s != Stop::None) return stopped(s);
+            return {};
+        }
+        Stop s = raw_step(true, first);
+        // EXT and ATOMIC sequences step as one unit.
+        while (s == Stop::None && m_.ext().left > 0) s = raw_step(true, true);
+        first = false;
+        if (s != Stop::None) return stopped(s);
+        if (!inside(m_.pc())) return {};
+    }
+    return {};
+}
+
 StopInfo Debugger::step_out(std::uint64_t max_instructions) {
     hit_ = {};
     const std::uint16_t sp = m_.sfr_get(reg::SP);

@@ -130,6 +130,91 @@ class DisassemblerTest(unittest.TestCase):
                 self.assertEqual(again.image(base=img.base).data[: len(img.data)], img.data)
 
 
+C_PROGRAM = """$MOD167
+CODE0   SECTION CODE AT 0
+# 1 "main.c"
+START:  MOV     R4, #0
+# 2
+LOOP:   ADD     R4, #1
+        CALLR   SUBR
+        CMP     R4, #3
+# 3
+        JMPR    cc_NE, LOOP
+# 4
+DONE:   JMPR    cc_UC, DONE
+# 10
+SUBR:   MOV     R5, #1
+        MOV     R6, #2
+# 11
+        RET
+# 0
+NOLINE: NOP
+CODE0   ENDS
+        END
+"""
+
+
+class LineStepTest(unittest.TestCase):
+    def setUp(self):
+        r = openc166.assemble(C_PROGRAM, file_name="prog.a66")
+        self.assertTrue(r.ok, r.errors)
+        self.s = sim.Simulator.from_result(r)
+        self.addr = {n: r.symbol(n).value for n in ("START", "LOOP", "SUBR", "DONE", "NOLINE")}
+
+    def tearDown(self):
+        self.s.close()
+
+    def where(self):
+        line = self.s.symbols.line_at(self.s.pc)
+        return (line.file, line.line)
+
+    def test_next_steps_over_calls_and_lines(self):
+        s = self.s
+        self.assertEqual(self.where(), ("main.c", 1))
+        self.assertEqual(s.step_line(over=True).reason, "none")
+        self.assertEqual((self.where(), s.pc), (("main.c", 2), self.addr["LOOP"]))
+        s.step_line(over=True)  # ADD, CALLR (over SUBR), CMP
+        self.assertEqual(self.where(), ("main.c", 3))
+        self.assertEqual(s.r[5], 1)
+        s.step_line(over=True)  # the jump back
+        self.assertEqual(s.pc, self.addr["LOOP"])
+
+    def test_step_in_and_return_to_the_next_line(self):
+        s = self.s
+        s.step_line()
+        s.step_line()  # ADD, then into SUBR
+        self.assertEqual((self.where(), s.pc), (("main.c", 10), self.addr["SUBR"]))
+        s.step_line()
+        self.assertEqual(self.where(), ("main.c", 11))
+        # RET lands on CMP, in the middle of line 2: the rest of it runs.
+        s.step_line()
+        self.assertEqual(self.where(), ("main.c", 3))
+
+    def test_a_breakpoint_inside_the_line_stops_it(self):
+        s = self.s
+        s.step_line(over=True)
+        cmp = self.addr["LOOP"] + 4  # ADD R4, #1 (2), CALLR (2)
+        s.break_at(cmp)
+        stop = s.step_line(over=True)
+        self.assertEqual((stop.reason, s.pc), ("breakpoint", cmp))
+        # So does one in the routine that a step over runs.
+        s.break_at("SUBR")
+        s.r[4] = 0
+        s.pc = self.addr["LOOP"]
+        self.assertEqual(s.step_line(over=True).reason, "breakpoint")
+        self.assertEqual(s.pc, self.addr["SUBR"])
+
+    def test_lines_of_assembly_and_no_lines(self):
+        s = self.s
+        s.pc = self.addr["NOLINE"]
+        self.assertEqual(self.where(), ("prog.a66", 19))  # after # 0: the assembly line
+        s.step_line()
+        self.assertEqual(s.pc, self.addr["NOLINE"] + 2)
+        # Past the last line: one instruction.
+        s.step_line()
+        self.assertEqual(s.pc, self.addr["NOLINE"] + 4)
+
+
 class SimulatorTest(unittest.TestCase):
     def setUp(self):
         r = openc166.assemble(PROGRAM, file_name="prog.a66")

@@ -210,6 +210,15 @@ int oc166_sim_step_over(oc166_sim* s, uint64_t max, oc166_stop* out) {
 int oc166_sim_step_out(oc166_sim* s, uint64_t max, oc166_stop* out) {
     return guarded([&] { return s ? fill_stop(s->debugger->step_out(max), out) : -1; });
 }
+int oc166_sim_step_range(oc166_sim* s, const uint32_t* ranges, size_t count, int over_calls, uint64_t max,
+                         oc166_stop* out) {
+    if (!s || (!ranges && count)) return -1;
+    return guarded([&] {
+        std::vector<std::pair<oc166::sim::Addr, oc166::sim::Addr>> r;
+        for (size_t i = 0; i < count; ++i) r.emplace_back(ranges[2 * i], ranges[2 * i + 1]);
+        return fill_stop(s->debugger->step_range(r, over_calls != 0, max), out);
+    });
+}
 int oc166_sim_reverse_step(oc166_sim* s, oc166_stop* out) {
     return guarded([&] { return s ? fill_stop(s->debugger->reverse_step(), out) : -1; });
 }

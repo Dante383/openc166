@@ -30,7 +30,21 @@ from openc166 import sim
 r = openc166.assemble_file("payload.a66")
 s = sim.Simulator.from_result(r, board="c167")
 s.break_at("payload.a66:42", condition=lambda m: m.r[4] > 3)
+s.cont()
+s.step_line(over=True)        # the next source line, over calls ("next")
+s.step_line()                 # the next source line, into calls ("step")
 ```
+
+`step_line()` steps until the PC leaves the code of the current source
+line: the C line of a [line marker](compatibility.md#line-markers)
+(`# 42 "main.c"`) when the code has one, else the assembly line. A C
+line may be many instructions in several places; all of them count as the
+line. A breakpoint, watchpoint or `request_stop()` ends the step early.
+When a step returns into the middle of a caller's line, the rest of that
+line runs too, so the step ends at the start of a line, as in gdb. Without
+line information it steps one instruction. The core of it is
+`oc166_sim_step_range()`, which steps while the PC stays in given address
+ranges.
 
 Command line:
 
@@ -51,8 +65,9 @@ see [ghidra.md](ghidra.md).
 
 Editors: `python -m openc166.dap` is a Debug Adapter Protocol server;
 [editors/vscode](../editors/vscode/README.md) registers it with VS Code
-and shows a launch configuration. Step back and reverse continue work
-from the toolbar.
+and shows a launch configuration. Step over and step into go by source
+line (`step_line()`), or by instruction in the disassembly view. Step back
+and reverse continue work from the toolbar; step back goes by instruction.
 
 Ghidra symbols: run `tools/ghidra/ExportOpenc166Symbols.py` in Ghidra's
 Script Manager; load the JSON with `Symbols.load_ghidra()` or the

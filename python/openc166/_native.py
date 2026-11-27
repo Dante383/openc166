@@ -201,6 +201,7 @@ for _name in ("oc166_sim_step", "oc166_sim_reverse_step", "oc166_sim_reverse_con
     _declare(_name, _int, _p, ctypes.POINTER(Stop))
 for _name in ("oc166_sim_continue", "oc166_sim_step_over", "oc166_sim_step_out"):
     _declare(_name, _int, _p, _u64, ctypes.POINTER(Stop))
+_declare("oc166_sim_step_range", _int, _p, ctypes.POINTER(_u32), _size, _int, _u64, ctypes.POINTER(Stop))
 _declare("oc166_sim_goto", _int, _p, _u64)
 _declare("oc166_sim_request_stop", None, _p)
 _declare("oc166_sim_set_history", None, _p, _u64, _size)

@@ -330,13 +330,22 @@ class Server:
         self.respond(req, {"allThreadsContinued": True})
         self.run_async(lambda: self.s.cont())
 
+    # Steps go by source line (the C line of a line marker, else the
+    # assembly line), or by instruction when the client asks for that, as
+    # the disassembly view does.
     def on_next(self, req, args):
         self.respond(req)
-        self.run_async(lambda: self.s.step_over(), "step")
+        if args.get("granularity") == "instruction":
+            self.run_async(lambda: self.s.step_over(), "step")
+        else:
+            self.run_async(lambda: self.s.step_line(over=True), "step")
 
     def on_stepIn(self, req, args):
         self.respond(req)
-        self.run_async(lambda: self.s.step(), "step")
+        if args.get("granularity") == "instruction":
+            self.run_async(lambda: self.s.step(), "step")
+        else:
+            self.run_async(lambda: self.s.step_line(), "step")
 
     def on_stepOut(self, req, args):
         self.respond(req)

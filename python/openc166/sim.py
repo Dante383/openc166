@@ -263,6 +263,20 @@ class Symbols:
             return self.lines[i]
         return None
 
+    def line_ranges(self, line: SourceLine) -> List[Tuple[int, int]]:
+        """The code of the source line that 'line' shows (its file and
+        line), as sorted [start, end) address ranges, adjacent ones merged:
+        a C line made of many assembly lines, or found in several places."""
+        runs: List[Tuple[int, int]] = []
+        for l in self.lines:
+            if l.line != line.line or l.file != line.file:
+                continue
+            if runs and runs[-1][1] == l.address:
+                runs[-1] = (runs[-1][0], l.address + l.size)
+            else:
+                runs.append((l.address, l.address + l.size))
+        return runs
+
     def address_of_line(self, file: str, line: int) -> Optional[int]:
         for key in ((os.path.normcase(os.path.abspath(file)), line), (os.path.normcase(os.path.basename(file)), line)):
             if key in self._line_index:
@@ -474,6 +488,32 @@ class Simulator:
 
     def step_over(self, max_instructions: Optional[int] = None) -> Stop:
         return self._stop(_lib.oc166_sim_step_over, max_instructions or 0)
+
+    def step_line(self, over: bool = False, max_instructions: Optional[int] = None) -> Stop:
+        """One source line: steps until the PC leaves the code of the line
+        it is in (the C line of a line marker, else the assembly line). With
+        'over', calls run until they return; without, a call stops at the
+        first instruction of the routine. Returning into the middle of a
+        caller's line finishes that line too, so the stop is at the start of
+        a line. Without line information, steps one instruction (over
+        calls with 'over')."""
+        line = self.symbols.line_at(self.pc)
+        if line is None:
+            return self.step_over(max_instructions) if over else self.step()
+        sp = self.sfr["SP"]
+        stop = self._step_range(self.symbols.line_ranges(line), over, max_instructions)
+        if stop.reason != "none":
+            return stop
+        new = self.symbols.line_at(self.pc)
+        if new is not None and self.sfr["SP"] > sp:
+            ranges = self.symbols.line_ranges(new)
+            if all(start != self.pc for start, _ in ranges):
+                stop = self._step_range(ranges, over, max_instructions)
+        return stop
+
+    def _step_range(self, ranges: List[Tuple[int, int]], over: bool, max_instructions: Optional[int]) -> Stop:
+        flat = (_native._u32 * (2 * len(ranges)))(*(a for r in ranges for a in r))
+        return self._stop(_lib.oc166_sim_step_range, flat, len(ranges), int(over), max_instructions or 0)
 
     def step_out(self, max_instructions: Optional[int] = None) -> Stop:
         return self._stop(_lib.oc166_sim_step_out, max_instructions or 0)

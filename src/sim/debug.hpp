@@ -77,6 +77,12 @@ public:
     // Runs until the current routine returns (RET, RETS, RETP or RETI that
     // leaves the stack above where it is now).
     StopInfo step_out(std::uint64_t max_instructions = 0);
+    // Steps while the PC is inside 'ranges' ([first, last) each), such as
+    // the code of one source line, and stops at the first instruction
+    // outside them (or at a breakpoint or other stop). With 'over_calls', a
+    // call made inside the ranges runs until it returns, as step_over does.
+    StopInfo step_range(const std::vector<std::pair<Addr, Addr>>& ranges, bool over_calls,
+                        std::uint64_t max_instructions = 0);
 
     // ---- Reverse execution
     // Back one instruction (one step()).

@@ -108,6 +108,37 @@ TEST_CASE("debug: step, step over, step out") {
     CHECK(p.m->pc() == p.at("AFTER"));
 }
 
+TEST_CASE("debug: step through a range of addresses") {
+    auto p = load(kLoop);
+    Debugger d(*p.m);
+    const int loop = d.add_breakpoint(p.at("LOOP"));
+    d.cont();
+    d.remove_breakpoint(loop);
+    // LOOP..AFTER+4 (ADD, MOV, CALLR, CMP): over the call, out at JMPR.
+    const std::vector<std::pair<Addr, Addr>> line = {{p.at("LOOP"), p.at("AFTER") + 4}};
+    StopInfo s = d.step_range(line, true);
+    CHECK(s.reason == Stop::None);
+    CHECK(p.m->pc() == p.at("AFTER") + 4);
+    // Into the call instead.
+    p.m->set_ip(static_cast<std::uint16_t>(p.at("LOOP")));
+    s = d.step_range(line, false);
+    CHECK(s.reason == Stop::None);
+    CHECK(p.m->pc() == p.at("SUB1"));
+    // A breakpoint at the return address of a call stepped over stops it.
+    p.m->set_ip(static_cast<std::uint16_t>(p.at("LOOP")));
+    const int after = d.add_breakpoint(p.at("AFTER"));
+    s = d.step_range(line, true);
+    CHECK(s.reason == Stop::Breakpoint);
+    CHECK(s.id == after);
+    CHECK(p.m->pc() == p.at("AFTER"));
+    // The instruction limit.
+    d.remove_breakpoint(after);
+    p.m->set_ip(static_cast<std::uint16_t>(p.at("LOOP")));
+    s = d.step_range({{0, 0x10000}}, false, 3);  // ADD, MOV, CALLR
+    CHECK(s.reason == Stop::None);
+    CHECK(p.m->pc() == p.at("SUB1"));
+}
+
 TEST_CASE("debug: an EXT sequence is one step") {
     auto p = load("EXTP #3, #2\nMOV R4, 3C40H\nMOV R5, 3C42H\nNOP\n");
     Debugger d(*p.m);

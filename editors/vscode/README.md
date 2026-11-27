@@ -26,7 +26,10 @@ Example `.vscode/launch.json`:
 }
 ```
 
-Step back and reverse continue work from the debug toolbar. Data
+Step over and step into go by source line: by C line in code that a
+compiler marked with line markers (`# 42 "main.c"`), else by assembly
+line; in the disassembly view they go by instruction. Step back and
+reverse continue work from the debug toolbar. Data
 breakpoints: add an expression such as `0xFC40`, `S0TBUF` or `PSW.Z` to the
 Watch view and choose "Break on Value Change". The Debug Console takes
 register and SFR names, symbols, `[address]`, or Python with `s` bound to

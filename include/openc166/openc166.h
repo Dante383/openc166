@@ -414,6 +414,13 @@ OC166_API int oc166_sim_step(oc166_sim *s, oc166_stop *out);
 OC166_API int oc166_sim_continue(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
 OC166_API int oc166_sim_step_over(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
 OC166_API int oc166_sim_step_out(oc166_sim *s, uint64_t max_instructions, oc166_stop *out);
+/* Steps while the PC lies in one of 'count' ranges, ranges[2i] up to (not
+ * including) ranges[2i+1], such as the code of one source line, and stops
+ * at the first instruction outside them. With 'over_calls' nonzero, calls
+ * made inside the ranges run until they return. Breakpoints, watchpoints
+ * and oc166_sim_request_stop() stop it as they stop oc166_sim_continue(). */
+OC166_API int oc166_sim_step_range(oc166_sim *s, const uint32_t *ranges, size_t count, int over_calls,
+                                   uint64_t max_instructions, oc166_stop *out);
 OC166_API int oc166_sim_reverse_step(oc166_sim *s, oc166_stop *out);
 OC166_API int oc166_sim_reverse_continue(oc166_sim *s, oc166_stop *out);
 /* Goes to the state after 'instructions' instructions. Returns 0, or -1 if
