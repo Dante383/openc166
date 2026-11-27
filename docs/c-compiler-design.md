@@ -270,7 +270,7 @@ modules (`--lib`) so only what a program uses is pulled in:
   what the current milestone supports.
 - **ABI**: call stock-firmware routines from C in the simulated 5WY19, and
   call C from hand-written TASKING-convention assembly.
-- **Differential**, if a TASKING C166 compiler is available: compile the same
+- **Differential**, if a TASKING Classic C166 compiler is available: compile the same
   sources with both and compare behaviour in the simulator (not bytes).
 - **Keil C166 as a behavioural oracle.** Keil C166 V7.57 (eval) runs under
   Wine. Its dialect and calling convention differ from TASKING's (arguments
@@ -331,11 +331,19 @@ modules (`--lib`) so only what a program uses is pulled in:
   products are now legacy, and neither has a public download:
   - *C166/ST10 Classic* (v8.x and earlier): the compiler that built the
     stock firmware, and the one whose convention and output we match. Only
-    through TASKING's support portal or sales.
-  - *VX-toolset for C166* (v2.1–v4.0r1, 2006–2015): a newer compiler.
-    Release notes and user guides are public on tasking.com; installers ran
-    as a 15-day trial without a licence. Its calling convention must be
-    checked against Classic's before its output is used as a reference.
+    through TASKING's support portal or sales; still wanted, to settle the
+    open calling-convention details and to compare code.
+  - *VX-toolset for C166* (v3.1r2, 15-day trial, installed under Wine on
+    2026-11-27): **not a reference for the ABI.** Its user guide (§21.6.4)
+    says its calling convention is "completely different" from Classic's,
+    and that it cannot call Classic-compiled code in ROM or flash. Checked:
+    VX passes arguments in `R2`–`R5`, then `R11`–`R14` (a 32-bit argument
+    starts at an even register), returns in `R2`/`R2:R3`, and keeps the user
+    stack in `R15`; Classic uses `R12`–`R15`, `R4`/`R4:R5` and `R0`. VX also
+    spells the extensions with two underscores (`__huge`) and writes a
+    different assembly syntax (`.section`, `movw`).
 
-  The plan is to ask TASKING for a Classic licence or evaluation. The VX
-  manuals serve as the dialect reference in the meantime.
+  VX is still useful: its user guide's migration chapter (§21.6.2–21.6.7)
+  lists every Classic keyword, pragma, memory model and option with its
+  meaning, which is the best dialect reference available, and VX works as a
+  behavioural oracle for portable C, like Keil.
