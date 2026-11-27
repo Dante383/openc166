@@ -291,3 +291,101 @@ TEST_CASE("include file names ignore case on the file system") {
     CHECK(symbol(r, "R") == 42);
     fs::remove_all(dir);
 }
+
+using oc166::flat_image;
+using oc166::Source;
+using oc166::Symbol;
+using oc166::SymbolKind;
+using oc166::VType;
+
+// The include cache: a file of nothing but definitions, such as a register
+// file, is read once and its definitions made again in later passes and
+// other modules. Nothing about the result may change.
+namespace {
+
+const char* const kRegs = "R_A DEFR 0FF40H ; a register\nB_A BIT R_A.3\nK1 EQU 1234H\nK2 EQU K1 + 1\n\nPSW DEFR 0FF10H\n";
+
+std::string user(const char* name) {
+    return std::string("$MOD167\n$INCLUDE(regs.inc)\n") + "CS SECTION CODE PUBLIC\n" + name +
+           " PROC NEAR\n MOV R4, R_A\n BSET B_A\n MOV R5, #K2\n RET\n" + name + " ENDP\nCS ENDS\n END\n";
+}
+
+const Symbol* symbol_in(const AssemblyResult& r, const std::string& name, int module) {
+    for (const auto& s : r.symbols)
+        if (s.name == name && s.module == module) return &s;
+    return nullptr;
+}
+
+}  // namespace
+
+TEST_CASE("a register file read by several modules gives each the same symbols and listing") {
+    Files f;
+    f.files["regs.inc"] = kRegs;
+    auto o = f.options();
+    auto r = assemble(std::vector<Source>{{"a.a66", user("PA")}, {"b.a66", user("PB")}, {"c.a66", user("PC")}}, o);
+    REQUIRE(r.ok());
+    // MOV R4, R_A; BSET B_A; MOV R5, #K2; RET, three times.
+    CHECK(test::hex(flat_image(r).bytes) == "F2F440FF3FA0E6F53512CB00F2F440FF3FA0E6F53512CB00F2F440FF3FA0E6F53512CB00");
+    for (int m = 0; m < 3; ++m) {
+        CAPTURE(m);
+        REQUIRE(symbol_in(r, "K2", m));
+        CHECK(symbol_in(r, "K2", m)->value.num == 0x1235);
+        CHECK(symbol_in(r, "R_A", m)->value.type == VType::Sfr);
+        CHECK(symbol_in(r, "B_A", m)->kind == SymbolKind::Bit);
+        CHECK(!symbol_in(r, "PSW", m));  // a repeat of the predefined PSW
+        // The definition is on the line of the include file, counted as
+        // Keil counts lines: line 3 of the module.
+        CHECK(symbol_in(r, "R_A", m)->line == 3);
+        // Each module lists the include file's lines, with their values.
+        std::vector<const oc166::ListingLine*> inc;
+        for (const auto& l : r.listing)
+            if (l.module == m && l.file == "regs.inc") inc.push_back(&l);
+        REQUIRE(inc.size() == 6);
+        CHECK(inc[0]->source == "R_A DEFR 0FF40H ; a register");
+        CHECK(inc[0]->line == 3);
+        CHECK(inc[0]->file_line == 1);
+        CHECK(inc[0]->level == 1);
+        REQUIRE(inc[3]->value);
+        CHECK(inc[3]->value->num == 0x1235);
+        CHECK(inc[4]->source.empty());
+    }
+}
+
+TEST_CASE("an include file that uses symbols from outside it is read in each module") {
+    Files f;
+    f.files["k.inc"] = "X2 EQU OUT1 + 1\n";
+    auto o = f.options();
+    auto r = assemble(std::vector<Source>{{"a.a66", "OUT1 EQU 5\n$INCLUDE(k.inc)\n END\n"},
+                                          {"b.a66", "OUT1 EQU 7\n$INCLUDE(k.inc)\n END\n"}},
+                      o);
+    REQUIRE(r.ok());
+    CHECK(symbol_in(r, "X2", 0)->value.num == 6);
+    CHECK(symbol_in(r, "X2", 1)->value.num == 8);
+}
+
+TEST_CASE("the include cache respects what changes an include file's meaning") {
+    Files f;
+    f.files["regs.inc"] = kRegs;
+    auto o = f.options();
+    // $CASE keeps the case of names; $NOLIST hides the file's lines.
+    auto r = assemble(std::vector<Source>{{"a.a66", user("PA")},
+                                          {"c.a66", "$CASE\n" + user("PC")},
+                                          {"d.a66", "$NOLIST\n" + user("PD")}},
+                      o);
+    REQUIRE(r.ok());
+    CHECK(symbol_in(r, "R_A", 1));
+    for (const auto& l : r.listing)
+        if (l.file == "regs.inc") CHECK(l.hidden == (l.module == 2));
+    // A LIT replaces names in the file's lines.
+    f.files["k.inc"] = "K1 EQU 1234H\nK2 EQU K1 + 1\n";
+    r = assemble(std::vector<Source>{{"a.a66", "$INCLUDE(k.inc)\n END\n"},
+                                     {"b.a66", "K9 EQU 5\nK1 LIT 'K9'\n$INCLUDE(k.inc)\n END\n"}},
+                 o);
+    CHECK(symbol_in(r, "K2", 0)->value.num == 0x1235);
+    CHECK(symbol_in(r, "K2", 1)->value.num == 6);
+    // Defining a name of the file before including it is still an error.
+    r = assemble(std::vector<Source>{{"a.a66", user("PA")}, {"b.a66", "K1 EQU 1\n" + user("PB")}}, o);
+    bool a25 = false;
+    for (const auto& d : r.diagnostics) a25 = a25 || (d.code == "A25" && d.file == "regs.inc");
+    CHECK(a25);
+}

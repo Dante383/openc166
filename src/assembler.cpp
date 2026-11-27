@@ -769,9 +769,37 @@ constexpr std::size_t kLinkerModule = static_cast<std::size_t>(-1);
 // What the modules of a program know about each other: the PUBLIC and
 // GLOBAL symbols defined in the previous pass, by the name the linker
 // matches (upper case unless the module uses $CASE).
+// What an include file of nothing but definitions (a register file such as
+// REG167.INC) did, so that later passes and other modules can define the
+// same symbols without reading it again. See Assembler::include_cached().
+struct CachedInclude {
+    // The state it was read in: what can change what its lines mean.
+    bool case_sensitive = false;
+    isa::Cpu cpu = isa::Cpu::C166;
+    bool sys166 = false;
+    int tabs = 8;
+    struct Line {
+        std::string source;  // as listed
+        std::optional<Value> value;
+    };
+    std::vector<Line> lines;
+    // Each define() call, with the index of its line.
+    struct Def {
+        std::string name;
+        SymbolKind kind;
+        Value value;
+        bool same_ok;
+        std::size_t line;
+        bool repeat = false;  // it repeated a predefined symbol, so it defined nothing
+    };
+    std::vector<Def> defs;
+};
+
 struct LinkState {
     std::map<std::string, PublicDef> publics;
     std::vector<std::string> modules;  // file names
+    // By file name and text; shared by all modules of the program.
+    mutable std::map<std::pair<std::string, std::string>, std::vector<CachedInclude>> includes;
 };
 
 // Types of EXTERN symbols.
@@ -845,6 +873,7 @@ private:
         std::string text;
         std::vector<std::string_view> lines;
         bool newline_at_end = true;
+        int definitions_only = -1;  // see only_definitions(); -1 until known
     };
     // The lines of a macro call or of a REPT, IRP or IRPC block.
     struct Expansion {
@@ -907,6 +936,19 @@ private:
         int line = 0;
     };
     std::map<int, LineMarker> markers_;
+    // An include file being read for the include cache (include_cached()).
+    struct Recording {
+        std::size_t file = 0;
+        int level = 0;
+        bool ok = true;
+        CachedInclude entry;
+        std::set<std::string> keys;  // of the names it defined so far
+    };
+    std::optional<Recording> recording_;
+    bool recording_line() const { return recording_ && file_ == recording_->file && level_ == recording_->level; }
+    bool only_definitions(SourceFile& f) const;
+    bool include_cached(std::size_t file, int level, std::size_t mpl_next);
+    void finish_recording();
     void line_marker(std::string_view text, int column, Reporter& rep);
     int macro_line_ = 0;
     bool gen_ = false;  // $GEN: list the lines of expansions
@@ -1113,6 +1155,10 @@ private:
 std::optional<Value> Assembler::lookup(std::string_view name) {
     if (auto p = predef(name)) return p;
     auto it = symbols_.find(key(name));
+    // A cached include may use only predefined symbols and its own.
+    if (recording_line() &&
+        (it == symbols_.end() || it->second.pass != pass_ || !recording_->keys.count(it->first)))
+        recording_->ok = false;
     if (it == symbols_.end()) {
         if (auto v = section_value(name)) return v;
         return group_value(name);
@@ -1136,12 +1182,22 @@ std::optional<Value> Assembler::lookup(std::string_view name) {
 // same_ok: DEFR and BIT may repeat a register or bit definition (predefined or
 // not) with the same address, as Keil's own register files do.
 void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool same_ok) {
+    if (recording_line()) {
+        Recording& r = *recording_;
+        r.entry.defs.push_back({std::string(name.text), kind, v, same_ok, r.entry.lines.size()});
+        r.keys.insert(key(name.text));
+        // Only plain values: nothing that depends on where it is.
+        if (!v.known || v.rel == Rel::Addr || v.movable || v.section || v.external()) r.ok = false;
+    }
     std::string u = upper(name.text);
     if (isa::is_mnemonic(u) || is_operator_keyword(u) || contains(kKeywords, u))
         throw AsmError("A4", "illegal use of a reserved word", name.column);
     auto repeat = [&](const Value& old) { return same_ok && v.known && old.known && same_value(old, v); };
     if (auto p = predef(name.text)) {
-        if (repeat(*p)) return;
+        if (repeat(*p)) {
+            if (recording_line()) recording_->entry.defs.back().repeat = true;
+            return;
+        }
         throw AsmError("A25", "symbol redefinition", name.column);
     }
     if (auto i = find_section(key(name.text)))
@@ -1169,6 +1225,7 @@ void Assembler::define(const Token& name, SymbolKind kind, const Value& v, bool 
 // Drops a symbol that an earlier pass defined on this line, for definitions
 // that Keil leaves undefined when they fail.
 void Assembler::undefine(const Token& name) {
+    if (recording_line()) recording_->ok = false;
     auto it = symbols_.find(key(name.text));
     if (it == symbols_.end() || it->second.sym.line != line_no_) return;
     symbols_.erase(it);
@@ -1436,6 +1493,13 @@ void Assembler::run_lines() {
                 stack_.pop_back();
                 continue;
             }
+            // The first line of an include file that the cache may know.
+            if (const MplLine& n = (*mpl_lines_)[f.next];
+                n.level > 0 && n.line == 1 && (f.next == 0 || (*mpl_lines_)[f.next - 1].level < n.level) &&
+                carry.empty() && include_cached(n.file, n.level, f.next)) {
+                f.next += files_[n.file]->lines.size();
+                continue;
+            }
             const MplLine& l = (*mpl_lines_)[f.next++];
             file_ = l.file;
             file_line_ = l.line;
@@ -1478,6 +1542,10 @@ void Assembler::run_lines() {
             text = expand_tabs(std::move(carry) + line, tabs_);
         } else {
             Frame& f = stack_.back();
+            if (f.next == 0 && f.level > 0 && carry.empty() && include_cached(f.file, f.level, 0)) {
+                stack_.pop_back();
+                continue;
+            }
             const SourceFile& file = *files_[f.file];
             if (f.next == file.lines.size()) {
                 stack_.pop_back();
@@ -1518,11 +1586,135 @@ void Assembler::run_lines() {
             if (blank && (l.calls || m166_skipped_)) m166_source_ = text;
             text = std::move(l.text);
         }
+        if (recording_ && !recording_line() && level_ <= recording_->level) finish_recording();
         process_line(text);
         if (stop) fatal_ = true;
         if (include_) stack_.push_back(Frame{*include_, 0, level_ + 1, nullptr});
         if (expansion_) stack_.push_back(Frame{0, 0, 0, std::move(expansion_)});
     }
+    if (recording_) finish_recording();
+}
+
+// Whether every line of an include file is a plain definition (name DEFR,
+// DEFA, DEFB, BIT or EQU, then an expression), a comment or blank, as in a
+// register file. Such a file may go through the include cache. Lines with
+// '$', '%', '#', quotes or other directives keep it out, and so does a last
+// line without a newline, which Keil joins to the next line.
+bool Assembler::only_definitions(SourceFile& f) const {
+    if (f.definitions_only >= 0) return f.definitions_only != 0;
+    auto check = [&] {
+        if (!f.newline_at_end || f.lines.empty()) return false;
+        for (std::string_view line : f.lines) {
+            line = line.substr(0, std::min(line.find(';'), line.size()));
+            if (line.find_first_of("$%#'\"\\") != std::string_view::npos) return false;
+            std::size_t i = line.find_first_not_of(" \t");
+            if (i == std::string_view::npos) continue;
+            if (!ident_start(line[i])) return false;
+            std::size_t e = i;
+            while (e < line.size() && word_char(line[e])) ++e;
+            i = line.find_first_not_of(" \t", e);
+            if (i == std::string_view::npos || i == e) return false;
+            e = i;
+            while (e < line.size() && word_char(line[e])) ++e;
+            const std::string dir = upper(line.substr(i, e - i));
+            if (dir != "DEFR" && dir != "DEFA" && dir != "DEFB" && dir != "BIT" && dir != "EQU") return false;
+        }
+        return true;
+    };
+    f.definitions_only = check() ? 1 : 0;
+    return f.definitions_only != 0;
+}
+
+// The include cache. A register file is read by every module, in every
+// pass, and is nothing but definitions. The first time it is read in a
+// given state, the definitions are recorded (recording_); after that, in
+// later passes and other modules, they are made again from the recording
+// without reading the file, when nothing can have changed what its lines
+// mean. Called at the first line of an include file (at level 'level'); with
+// MPL, 'mpl_next' is the index of that line in mpl_lines_. Returns true if
+// the file's lines were replaced from the cache and must be skipped.
+bool Assembler::include_cached(std::size_t file, int level, std::size_t mpl_next) {
+    SourceFile& f = *files_[file];
+    // What can change the meaning of the lines: LITs, TASKING's m166, $XREF
+    // (which records where symbols are used), false IF blocks, END.
+    if (recording_ || tasking_ || lits_ || listing_options_.xref || !active() || ended_ || fatal_ ||
+        !only_definitions(f))
+        return false;
+    if (from_mpl_) {
+        // MPL's lines for the file must be the file's lines, untouched.
+        if (mpl_next + f.lines.size() > mpl_lines_->size()) return false;
+        for (std::size_t k = 0; k < f.lines.size(); ++k) {
+            const MplLine& l = (*mpl_lines_)[mpl_next + k];
+            if (l.file != file || l.level != level || l.line != static_cast<int>(k) + 1 || l.text != f.lines[k] ||
+                !l.diagnostics.empty() || !l.joined.empty() || l.fatal)
+                return false;
+        }
+    }
+    auto& entries = link_.includes[{f.name, f.text}];
+    for (const CachedInclude& c : entries) {
+        if (c.case_sensitive != case_ || c.cpu != cpu_ || c.sys166 != sys166_ || c.tabs != tabs_) continue;
+        // A name defined in this pass already, or a macro or section of
+        // that name, would make its line mean something else.
+        for (const CachedInclude::Def& d : c.defs) {
+            const std::string k = key(d.name);
+            if (auto it = symbols_.find(k); it != symbols_.end() && it->second.pass == pass_) return false;
+            if (macros_.count(k) || find_section(k) || find_group(k, false)) return false;
+        }
+        if (line_no_ + static_cast<int>(c.lines.size()) > kMaxLines) return false;
+        const int first = line_no_;
+        std::size_t d = 0;
+        for (std::size_t i = 0; i < c.lines.size(); ++i) {
+            line_no_ = first + static_cast<int>(i) + 1;
+            file_ = file;
+            file_line_ = static_cast<int>(i) + 1;
+            level_ = level;
+            macro_level_ = 0;
+            // As define() would, without its checks: the recording passed
+            // them, and nothing that they look at has changed.
+            for (; d < c.defs.size() && c.defs[d].line == i; ++d) {
+                const CachedInclude::Def& def = c.defs[d];
+                if (def.repeat) continue;
+                auto [it, inserted] = symbols_.try_emplace(key(def.name));
+                Entry& e = it->second;
+                if (def.kind != SymbolKind::Set && (inserted || !same_value(e.sym.value, def.value))) changed_ = true;
+                e.sym = Symbol{};
+                e.sym.name = def.name;
+                e.sym.kind = def.kind;
+                e.sym.value = def.value;
+                e.sym.line = line_no_;
+                e.sym.listed = symlist_;
+                e.pass = pass_;
+            }
+            if (final_) {
+                ListingLine lst;
+                lst.line = line_no_;
+                lst.file = f.name;
+                lst.file_line = file_line_;
+                lst.level = level;
+                lst.source = c.lines[i].source;
+                lst.value = c.lines[i].value;
+                lst.hidden = !list_;
+                res_.listing.push_back(std::move(lst));
+            }
+        }
+        return true;
+    }
+    recording_ = Recording{file, level, true, {}, {}};
+    recording_->entry.case_sensitive = case_;
+    recording_->entry.cpu = cpu_;
+    recording_->entry.sys166 = sys166_;
+    recording_->entry.tabs = tabs_;
+    return false;
+}
+
+// The end of an include file read for the cache: keep what it did, if it
+// may be made again.
+void Assembler::finish_recording() {
+    Recording r = std::move(*recording_);
+    recording_.reset();
+    const SourceFile& f = *files_[r.file];
+    if (!r.ok || r.entry.lines.size() != f.lines.size()) return;
+    link_.includes[{f.name, f.text}].push_back(std::move(r.entry));
 }
 
 // Runs MPL over the source, and the include files from command-line
@@ -1671,6 +1863,7 @@ void Assembler::process_line(std::string_view text) {
     lst.source = m166_source_.empty() ? std::string(text) : m166_source_;
     // Keil lists the lines after END but does nothing else with them.
     if (ended_) {
+        if (recording_line()) recording_->ok = false;
         lst.hidden = !list_;
         pre_rep_ = Reporter{};
         if (final_) res_.listing.push_back(std::move(lst));
@@ -1707,6 +1900,11 @@ void Assembler::process_line(std::string_view text) {
     // Like Keil, no new page for an $EJECT that $NOLIST hides.
     lst.eject = std::exchange(eject_, false) && list_;
     rep_ = nullptr;
+    if (recording_line()) {
+        Recording& r = *recording_;
+        r.entry.lines.push_back({lst.source, lst.value});
+        if (!rep.items().empty() || macro_level_ > 0 || lst.skipped || lst.has_address || lst.eject) r.ok = false;
+    }
     if (!final_) return;
     for (auto& d : rep.items()) {
         d.file = file;

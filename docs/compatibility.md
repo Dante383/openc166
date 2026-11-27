@@ -219,6 +219,17 @@ its line: `$INCLUDE(x) MOD167` is A171 and includes nothing, and
 for `$INCDIR`: Keil ignores it when it is not the first control on its
 line, and openc166 warns with OC7.
 
+**Register files are read once.** Every module reads its register file in
+every pass. When a file holds nothing but definitions (`DEFR`, `DEFA`,
+`DEFB`, `BIT` and `EQU` lines, comments and blank lines), openc166 reads it
+once and makes the same definitions again in later passes and in other
+modules, without reading its lines. The result is exactly what reading it
+would give: the cache is not used where something could change what the
+lines mean (a LIT, a macro or symbol of the same name, `$XREF`, a different
+`$CASE`, CPU, `$MOD166` or `$TABS`, or a definition that uses a symbol from
+outside the file). With 100 modules that include `REG167.INC`, this makes
+the whole assembly about 2.5 times faster.
+
 ## Controls
 
 Keil has two kinds of `$` controls:
