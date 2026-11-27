@@ -1085,6 +1085,17 @@ Forward jumps start long and are shortened in later passes, using the
 target address of the previous pass. That is why a forward jump that would
 reach exactly +254 bytes once shortened stays long, as in Keil.
 
+Keil measures that distance from where the jump is in the current pass, so
+each jump also counts the code before it that this pass already shortened,
+and a long section takes a pass for every few hundred bytes of shortened
+jumps. openc166 measures from where the jump was in the previous pass, which
+settles in a few passes and gives the same code wherever shortening code
+can only bring targets closer. Where it can push one away (an alignment of
+more than 2 bytes, such as the padding before `DD`, or an `ORG`, in code;
+or a jump to a number or to another section), the two can end in different
+code, and there openc166 measures as Keil does, with as many passes as that
+takes.
+
 Warnings: A74 for a jump or call to a data label (BYTE, WORD or DWORD), A84
 for a near jump or call to a FAR label, A134 for an odd target. Like Keil,
 openc166 does not check the alignment of a target that the linker places (a

@@ -939,6 +939,11 @@ private:
     std::unordered_map<std::string, Entry> symbols_;
     bool lits_ = false;  // some pass defined a LIT, so lines need expand_lits()
     std::vector<int> sizes_;  // instruction sizes of the previous pass
+    std::vector<std::int64_t> pcs_;  // instruction addresses of the previous pass (-1: none yet)
+    // See branch(): whether this pass measures forward jumps exactly as Keil
+    // does, and whether this pass met code that needs it in the next one.
+    bool keil_relax_ = true;
+    bool needs_keil_relax_ = false;
     std::set<int> misaligned_;  // lines that were misaligned in some pass
 
     int pass_ = 0;
@@ -1038,7 +1043,7 @@ private:
                          ListingLine& lst);
     void directive(const std::string& kw, const Token& tok, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void instruction(const std::string& mnemonic, TokenCursor& cur, Reporter& rep, ListingLine& lst);
-    void branch(std::string& mnemonic, std::vector<Operand>& ops, std::int64_t pc, Reporter& rep);
+    void branch(std::string& mnemonic, std::vector<Operand>& ops, std::int64_t from, Reporter& rep);
     void check_branch_target(const std::string& mnemonic, const std::vector<Operand>& ops, Reporter& rep) const;
     void data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
     void pointer_data(const std::string& dir, TokenCursor& cur, Reporter& rep, ListingLine& lst);
@@ -1086,6 +1091,8 @@ private:
     void check_alignment(int need, const Token& name, Reporter& rep);
     void check_byte_section(int need, int column, bool label = false);
     Section& section() { return sections_[cur_]; }
+    // A CODE section, or code outside sections.
+    bool holds_code() const { return cur_ == 0 || (!sections_[cur_].bits && sections_[cur_].type == "CODE"); }
     // The location counter of a BIT section counts bits.
     int unit() const { return sections_[cur_].bits ? 8 : 1; }
     void mark_address(ListingLine& lst) const {
@@ -1263,6 +1270,8 @@ void Assembler::advance(std::int64_t n) {
 // Aligns the location counter to n bytes (n * 8 bits in a BIT section).
 void Assembler::align(int n) {
     if (n <= 0) return;
+    // Padding that can grow when the code before it shrinks.
+    if (n > 2 && holds_code()) needs_keil_relax_ = true;
     const std::int64_t step = std::int64_t{n} * unit();
     if (std::int64_t r = align_offset() % step) advance(step - r);
 }
@@ -1331,6 +1340,8 @@ void Assembler::begin_pass(int pass, bool final) {
     pass_ = pass;
     final_ = final;
     changed_ = false;
+    keil_relax_ = pass <= 1 || needs_keil_relax_;
+    needs_keil_relax_ = false;
     if (final) res_ = AssemblyResult{};
 }
 
@@ -3180,6 +3191,8 @@ void Assembler::named_directive(const Token& name, const std::string& dir, Token
 void Assembler::directive(const std::string& kw, const Token& tok, TokenCursor& cur, Reporter& rep,
                           ListingLine& lst) {
     if (kw == "ORG") {
+        // Code after it stays put when the code before it shrinks.
+        if (holds_code()) needs_keil_relax_ = true;
         int column = cur.peek().column;
         std::int64_t v = absolute(cur, "ORG", true);
         expect_end(cur);
@@ -4205,16 +4218,22 @@ void Assembler::pec_channels(TokenCursor& cur) {
 void Assembler::instruction(const std::string& mnemonic, TokenCursor& cur, Reporter& rep, ListingLine& lst) {
     const std::size_t index = insn_++;
     if (index >= sizes_.size()) sizes_.resize(index + 1, 0);
+    if (index >= pcs_.size()) pcs_.resize(index + 1, -1);
     if (section().bits) throw AsmError("A45", "keyword not allowed in current context: a BIT section holds no code");
     const std::int64_t pc = location();
+    // A forward target has its address from the previous pass, so its
+    // distance counts from where this instruction was in that pass too.
+    const std::int64_t prev_pc = std::exchange(pcs_[index], pc);
     lst.has_address = true;
     lst.address = pc;
     try {
+        const unsigned forward_before = forward_count_;
         auto ops = parse_operands(cur, *this);
+        const bool forward = forward_count_ != forward_before && prev_pc >= 0;
 
         // Keil translates RET according to the enclosing procedure.
         std::string m = mnemonic;
-        if (isa::is_branch(m)) branch(m, ops, pc, rep);
+        if (isa::is_branch(m)) branch(m, ops, forward && !keil_relax_ ? prev_pc : pc, rep);
         check_branch_target(m, ops, rep);
         if (m == "RETV") {
             // TASKING's virtual return: no code.
@@ -4267,8 +4286,17 @@ bool in_jmpr_range(std::int64_t disp) { return !(disp & 1) && disp >= -256 && di
 //   anything else                        JMPA / CALLA
 // A forward reference starts out absolute; later passes shrink it to the
 // relative form once the target is known to be close. Like Keil, the range
-// check uses the target address from the previous pass.
-void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t pc, Reporter& rep) {
+// check uses the target address from the previous pass, measured from
+// 'from'. Keil measures from where the jump is now, so every jump also
+// counts the code before it that shrank in this pass, and a long section
+// settles only after a pass for every few hundred bytes of shortened jumps.
+// Where shrinking code can only bring targets closer, measuring from where
+// the jump was in the previous pass ends in the same code, in a few passes:
+// both shorten exactly the jumps of the smallest settled layout. So
+// openc166 does that unless the previous pass met code where shrinking can
+// push a target away (keil_relax_): an alignment above 2 bytes or an ORG
+// in code, or a branch to a number or to another section.
+void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t from, Reporter& rep) {
     const bool call = m == "CALL";
     if (ops.size() != 1 && ops.size() != 2) throw AsmError("A73", "number of operands does not match instruction");
     Operand cc;
@@ -4317,7 +4345,10 @@ void Assembler::branch(std::string& m, std::vector<Operand>& ops, std::int64_t p
         // Keil only measures the distance when it does not depend on the
         // linker: numbers, the same section, or two sections with AT addresses.
         bool measurable = v.rel != Rel::Addr || v.section == cur_ || (v.fixed && location_fixed());
-        relative = measurable && in_jmpr_range(v.num - (pc + 2));
+        relative = measurable && in_jmpr_range(v.num - (from + 2));
+        // A target that does not move with this code: a number, or a label
+        // in another section.
+        if (measurable && !(v.rel == Rel::Addr && v.section == cur_)) needs_keil_relax_ = true;
     }
     if (call && !unconditional) relative = false;
     if (relative) {

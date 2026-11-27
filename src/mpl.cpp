@@ -348,9 +348,12 @@ void Processor::scan(Input& in, std::string* out, const Scope* scope) {
         if (disabled_ || in.s[in.i] != meta_) {
             // Plain text up to the metacharacter (or, in a file, the end of
             // the line, to keep track of line numbers).
-            std::size_t j = disabled_ ? in.s.size() : in.s.find(meta_, in.i);
-            if (j == std::string_view::npos) j = in.s.size();
-            if (in.file) j = std::min(j, std::min(in.s.find('\n', in.i), in.s.size() - 1) + 1);
+            // In a file, look for it only up to the end of the line, so
+            // that a long file without it is not searched to its end for
+            // every line.
+            const std::size_t end = in.file ? std::min(in.s.find('\n', in.i), in.s.size() - 1) + 1 : in.s.size();
+            std::size_t j = disabled_ ? end : in.s.substr(0, end).find(meta_, in.i);
+            if (j == std::string_view::npos) j = end;
             put(out, in.s.substr(in.i, j - in.i));
             in.i = j;
             continue;
