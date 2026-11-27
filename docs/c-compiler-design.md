@@ -1,6 +1,8 @@
 # openc166 — C Compiler: Design
 
-Status: written 2026-11-27 as the design. Nothing is implemented yet.
+Status: written 2026-11-27 as the design. Milestone 1 is done (2026-11-27)
+in a local llvm-project fork, `openc166-llvm`, branch `c166`, based on LLVM
+23.1.6; its `C166.md` says how to build it.
 
 Scope: a C compiler for the C166/C167 family, built as an LLVM backend with a
 Clang front end, that writes assembly for openc166 to assemble and link. The
@@ -296,6 +298,19 @@ modules (`--lib`) so only what a program uses is pulled in:
    llvm-project, add an empty C166 target and Clang target info with the data
    layout; `clang --target=c166 -S` on an empty function prints a `RET` that
    openc166 assembles.
+   *Done.* Beyond the empty function, register arguments, results in `R4`,
+   16-bit moves, constants and `ADD`/`SUB`/`AND`/`OR`/`XOR` work; compiled
+   functions give the right results in the simulator. Settled on the way:
+   - Output starts with `$NOMACRO` (as Keil C166's does: LLVM's comments
+     contain `%`, which would start an MPL call) and `$CASE`.
+   - Sections are named as TASKING names them, from the source file:
+     `main.c` → `MAIN_PR SECTION CODE WORD PUBLIC 'CPROGRAM'`.
+   - C names get a leading underscore (`add` → `_add`), as in TASKING;
+     compiler-made labels start with `?L`.
+   - The only change to LLVM's shared code is a hook in `MCAsmInfo` for
+     printing alignment (A166 has `EVEN`, not `.p2align`).
+   - `-O0` does not compile yet: unoptimised code keeps arguments in stack
+     slots, and stack frames are milestone 2.
 2. **Integer core, small model.** 8/16-bit arithmetic, loads and stores,
    branches, calls, locals on the user stack, the TASKING convention, line
    markers. The driver runs openc166. First execution tests pass.
