@@ -7,4 +7,10 @@ if(SKBUILD)
     install(TARGETS openc166_cli RUNTIME DESTINATION ${SKBUILD_SCRIPTS_DIR})
 else()
     install(TARGETS openc166_cli RUNTIME DESTINATION bin)
+    # The C runtime, where the C166 clang looks for it: next to bin/.
+    install(FILES ${PROJECT_SOURCE_DIR}/runtime/cstart.a66
+            DESTINATION share/openc166/runtime)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/lib/
+            DESTINATION share/openc166/runtime/lib
+            FILES_MATCHING PATTERN "*.a66")
 endif()

@@ -20,6 +20,7 @@ import openc166
 from openc166 import sim
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+RUNTIME = os.path.join(ROOT, "runtime")
 
 
 def _find_clang():
@@ -35,8 +36,8 @@ CLANG = _find_clang()
 # Code and constants in the ROM image; data, the user stack and the system
 # stack in the C167's internal RAM (0F600H..0FDFFH, register bank at 0FC00H).
 ROM = (0x1000, 0x7FFF)
-RAM = (0xF600, 0xF7FF)
-USER_STACK = 0xFA00
+RAM = (0xF600, 0xF9FF)
+USER_STACK = 0xFB00
 HALT = 0x0100
 
 HARNESS = """$CASE
@@ -68,8 +69,11 @@ def compile_c(source, opt="-O2", name="test.c"):
 class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
-    def __init__(self, sources, opt="-O2"):
+    def __init__(self, sources, opt="-O2", startup=False):
         modules = [("harness.a66", HARNESS)]
+        if startup:
+            with open(os.path.join(RUNTIME, "cstart.a66")) as f:
+                modules.append(("cstart.a66", f.read()))
         for i, src in enumerate(sources):
             modules.append((f"m{i}.a66", compile_c(src, opt, name=f"m{i}.c")))
         self.asm = modules
@@ -79,46 +83,53 @@ class Program:
                 "CPROGRAM": [ROM],
                 "CNEARROM": [ROM],
                 "CNEAR": [RAM],
-                "CINITIRAM": [RAM],
             },
+            libraries=[os.path.join(RUNTIME, "lib")],
         )
         if not self.result.ok:
             listing = "\n".join(str(e) for e in self.result.errors)
             raise AssertionError("openc166 failed:\n" + listing + "\n" + modules[-1][1])
         rom = bytearray(b"\xff" * 0x8000)
-        self.ram_chunks = []
         for chunk in self.result.chunks:
-            if chunk.address < 0x8000:
-                rom[chunk.address : chunk.end] = chunk.data
-            else:
-                self.ram_chunks.append(chunk)
+            assert chunk.end <= 0x8000, "only the ROM has bytes in the image"
+            rom[chunk.address : chunk.end] = chunk.data
         self.rom = bytes(rom)
+        self.sections = self.result.sections
 
     def address(self, name):
         return self.result.symbol(name).value
 
+    def init_variables(self, s):
+        """What cstart.a66 does before main: initial values from ROM to RAM,
+        zero for the rest."""
+        data = self.sections.get("C166_DATA")
+        init = self.sections.get("C166_DATA_INIT")
+        if data and data.size:
+            s.write(data.address, self.rom[init.address : init.address + data.size])
+        bss = self.sections.get("C166_BSS")
+        if bss and bss.size:
+            s.write(bss.address, bytes(bss.size))
+
     def call(self, name, *args, max_instructions=200000):
-        """Calls a C function with 16-bit arguments; returns R4, R5 and the
-        simulator."""
+        """Calls a C function with 16-bit arguments, placed as TASKING
+        places them (see place()); returns R4, R5 and the simulator."""
+        regs, stack = place([[a] for a in args])
+        return self.call_placed(name, regs, stack, max_instructions)
+
+    def call_placed(self, name, regs, stack, max_instructions=200000):
         s = sim.Simulator(self.rom, board="c167")
-        for chunk in self.ram_chunks:
-            s.write(chunk.address, chunk.data)
-        stack = []
-        regs = [12, 13, 14, 15]
-        for a in args:
-            if regs:
-                s.r[regs.pop(0)] = a & 0xFFFF
-            else:
-                stack.append(a & 0xFFFF)
+        self.init_variables(s)
+        for reg, v in zip((12, 13, 14, 15), regs):
+            s.r[reg] = v & 0xFFFF
         r0 = USER_STACK - 2 * len(stack)
         for i, v in enumerate(stack):
-            s.write16(r0 + 2 * i, v)
+            s.write16(r0 + 2 * i, v & 0xFFFF)
         s.r[0] = r0
         sp = s.sfr["SP"] - 2
         s.sfr["SP"] = sp
         s.write16(sp, HALT)
         s.break_at(HALT)
-        s.pc = self.address("_" + name)
+        s.pc = self.address(name if name.startswith("_") else "_" + name)
         stop = s.cont(max_instructions)
         if s.pc != HALT:
             raise AssertionError(f"{name} did not return: {stop}, pc={s.pc:06X}")
@@ -127,8 +138,25 @@ class Program:
         return s.r[4], s.r[5], s
 
 
+def place(args):
+    """TASKING C166 Classic: arguments (lists of words, low word first) go
+    in R12-R15 while they fit; one that does not fit goes on the stack, and
+    so does everything after it."""
+    regs, stack = [], []
+    for words in args:
+        if stack or len(regs) + len(words) > 4:
+            stack += words
+        else:
+            regs += words
+    return regs, stack
+
+
 def signed16(v):
     return v - 0x10000 if v & 0x8000 else v
+
+
+def signed32(v):
+    return v - 0x100000000 if v & 0x80000000 else v
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
@@ -237,8 +265,7 @@ int pressure(int a, int b, int c, int d) {
         # them back.
         p = Program([CompiledCodeTest.SOURCE])
         s = sim.Simulator(p.rom, board="c167")
-        for chunk in p.ram_chunks:
-            s.write(chunk.address, chunk.data)
+        p.init_variables(s)
         for reg, v in ((6, 0x6666), (7, 0x7777), (8, 0x8888), (9, 0x9999)):
             s.r[reg] = v
         s.r[0] = USER_STACK
@@ -265,6 +292,127 @@ int pressure(int a, int b, int c, int d) {
             if "source" in l
         }
         self.assertEqual(sources, {("test.c", 3)})
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class LongTest(unittest.TestCase):
+    """32-bit arithmetic: inline ADD/ADDC and MUL, runtime division and
+    shifts. A long argument takes two registers, low word first; the
+    result is in R4 (low) and R5 (high)."""
+
+    SOURCE = r"""
+long add(long a, long b) { return a + b; }
+long sub(long a, long b) { return a - b; }
+long mul(long a, long b) { return a * b; }
+long sdiv(long a, long b) { return a / b; }
+long smod(long a, long b) { return a % b; }
+unsigned long udiv(unsigned long a, unsigned long b) { return a / b; }
+unsigned long umod(unsigned long a, unsigned long b) { return a % b; }
+long shl(long a, int n) { return a << n; }
+long sar(long a, int n) { return a >> n; }
+unsigned long shr(unsigned long a, int n) { return a >> n; }
+int lt(long a, long b) { return a < b; }
+int ult(unsigned long a, unsigned long b) { return a < b; }
+long widen(int a, unsigned b) { return (long)a * 1000 + b; }
+long after_three(int a, int b, int c, long l) { return l + c; }
+unsigned long sum(const unsigned long *p, int n) {
+  unsigned long s = 0;
+  while (n--) s += *p++;
+  return s;
+}
+const unsigned long table[3] = {100000, 200000, 4000000000u};
+unsigned long sum_table(void) { return sum(table, 3); }
+"""
+
+    def check(self, opt):
+        p = Program([self.SOURCE], opt)
+
+        def r(name, *args):
+            words = []
+            for a in args:
+                if isinstance(a, tuple):  # a long: (value,)
+                    v = a[0] & 0xFFFFFFFF
+                    words.append([v & 0xFFFF, v >> 16])
+                else:
+                    words.append([a])
+            lo, hi, _ = p.call_placed(name, *place(words))
+            return signed32(lo | hi << 16)
+
+        L = lambda v: (v,)
+        self.assertEqual(r("add", L(70000), L(70000)), 140000)
+        self.assertEqual(r("add", L(0xFFFF), L(1)), 0x10000)
+        self.assertEqual(r("sub", L(0x10000), L(1)), 0xFFFF)
+        self.assertEqual(r("sub", L(5), L(7)), -2)
+        self.assertEqual(r("mul", L(1234), L(5678)), 1234 * 5678)
+        self.assertEqual(r("mul", L(-300000), L(7)), -2100000)
+        self.assertEqual(r("sdiv", L(-1000000), L(7)), -142857)
+        self.assertEqual(r("smod", L(-1000000), L(7)), -1)
+        self.assertEqual(r("udiv", L(4000000000), L(3)) & 0xFFFFFFFF, 1333333333)
+        self.assertEqual(r("umod", L(4000000000), L(7)), 4000000000 % 7)
+        self.assertEqual(r("shl", L(3), 20), 3 << 20)
+        self.assertEqual(r("sar", L(-1000000), 9), -1000000 >> 9)
+        self.assertEqual(r("shr", L(0x80000000), 31), 1)
+        self.assertEqual(r("lt", L(-1), L(1)) & 0xFFFF, 1)
+        self.assertEqual(r("lt", L(0x10000), L(0xFFFF)) & 0xFFFF, 0)
+        self.assertEqual(r("ult", L(-1), L(1)) & 0xFFFF, 0)
+        self.assertEqual(r("widen", 0xFFFF, 7), -993)
+        # TASKING: a long that would start in R15 goes on the stack.
+        self.assertEqual(r("after_three", 1, 2, 3, L(100000)), 100003)
+        self.assertEqual(r("sum_table") & 0xFFFFFFFF, 4000300000)
+
+    def test_O0(self):
+        self.check("-O0")
+
+    def test_O2(self):
+        self.check("-O2")
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class StartupTest(unittest.TestCase):
+    """runtime/cstart.a66: initialised variables get their values, the
+    others are cleared, main's result comes back in R4, and the caller's
+    R0 is kept."""
+
+    def test_variables_are_set_up_before_main(self):
+        p = Program(
+            [
+                "int a = 1234; long big = 100000; char text[] = \"C166\";\n"
+                "int zero; int zeros[4];\n"
+                "int other(void);\n"
+                "int main(void) {\n"
+                "  if (zero || zeros[3]) return -1;\n"
+                "  return a + (int)(big / 1000) + text[3] + other();\n"
+                "}\n",
+                "static int b = 7; int other(void) { return b; }\n",
+            ],
+            startup=True,
+        )
+        # RAM starts out as garbage; __cstart must set up every variable.
+        s = sim.Simulator(p.rom, board="c167")
+        s.write(RAM[0], b"\xA5" * (RAM[1] - RAM[0] + 1))
+        sp = s.sfr["SP"] - 2
+        s.sfr["SP"] = sp
+        s.write16(sp, HALT)
+        s.r[0] = 0x1234
+        s.break_at(HALT)
+        s.pc = p.address("__cstart")
+        s.cont(200000)
+        self.assertEqual(s.pc, HALT)
+        self.assertEqual(s.r[4], 1234 + 100 + ord("6") + 7)
+        self.assertEqual(s.r[0], 0x1234)
+
+    def test_struct_copy_uses_memcpy(self):
+        p = Program(
+            [
+                "struct s { int v[20]; };\n"
+                "int f(struct s *a, const struct s *b) { *a = *b; return a->v[19]; }\n"
+                "struct s x, y = {{1, 2, 3, [19] = 77}};\n"
+                "int main(void) { return f(&x, &y); }\n"
+            ],
+            startup=True,
+        )
+        self.assertIn("_memcpy", p.result.symbols)
+        self.assertEqual(p.call("__cstart")[0], 77)
 
 
 if __name__ == "__main__":

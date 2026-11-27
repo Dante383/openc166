@@ -1,6 +1,6 @@
 # openc166 — C Compiler: Design
 
-Status: written 2026-11-27 as the design. Milestones 1 and 2 are done (2026-11-27)
+Status: written 2026-11-27 as the design. Milestones 1-3 are done (2026-11-27)
 in a local llvm-project fork, `openc166-llvm`, branch `c166`, based on LLVM
 23.1.6; its `C166.md` says how to build it.
 
@@ -236,13 +236,13 @@ use; the rest follows on demand.
 
 ## 5. Runtime and startup
 
-All in assembly in this repository, assembled by openc166, linked as library
+In this repository (`runtime/`), assembled by openc166, linked as library
 modules (`--lib`) so only what a program uses is pulled in:
 
-- **startup** (`cstart.a66`): `SYSCON`/`BUSCON` set-up as the board needs,
-  `DPP` set-up for the small model, system and user stack, copying
-  initialised data, zeroing `.bss`, calling `main`. Payloads that are
-  started by a loader can skip most of it.
+- **startup** (`cstart.a66`): user stack, copying initialised data,
+  zeroing `C166_BSS`, calling `main`, returning its result (so a loader or
+  firmware can call a C program). `SYSCON`/`BUSCON`/`DPP`/system stack
+  set-up for programs that start from reset is left to the board.
 - **helpers** for what the backend calls instead of inlining: 32-bit
   multiply, divide, modulo and shifts; later 64-bit integers and soft-float
   (single precision first, then double). Their register use follows
@@ -343,6 +343,30 @@ modules (`--lib`) so only what a program uses is pulled in:
      `?`.
 3. **32-bit integers and runtime helpers.** `long`, multiply/divide via
    `MDH`/`MDL`, the helper library, startup code. Torture-test subset passes.
+   *Done*, except the torture tests (the GCC test suite is not fetched
+   yet); `test_c_compiler.py` covers `long` arithmetic, the runtime and
+   the startup code in the simulator. Decided on the way:
+   - `ADD`+`ADDC` and `SUB`+`SUBC` are single pseudo instructions until
+     printing, like compare and branch: the carry is in the flags.
+   - 32-bit multiplication is inline (`MULU` for the low halves, `MUL` for
+     the cross products); division, remainder and variable shifts call
+     `__divsi3`, `__udivsi3`, `__modsi3`, `__umodsi3`, `__ashlsi3`,
+     `__lshrsi3`, `__ashrsi3` in the runtime, with the normal calling
+     convention.
+   - The runtime is C compiled by the C166 clang (`runtime/src`, built to
+     `runtime/lib` by `runtime/build.py` and committed), linked as library
+     modules. `runtime/cstart.a66` is the startup code. The driver links
+     both unless `-nostartfiles`/`-nodefaultlibs`/`-nostdlib`.
+   - Variables: all modules share `C166_DATA` (initialised, RAM),
+     `C166_DATA_INIT` (their values, ROM) and `C166_BSS` (cleared). openc166
+     combines same-named sections in module order, so `__cstart` copies
+     `C166_DATA_INIT` onto `C166_DATA` in one go using
+     `?SECTION_START?`/`?SECTION_SIZE?`. RAM sections hold only `DSB`, so
+     the image (and a HEX file) has no bytes at RAM addresses.
+   - No `DD`: A166 aligns it to 4 bytes, which would shift the ROM copy
+     against the RAM layout; 32-bit values are written as two `DW`.
+   - Not yet: `long long` (milestone 6). A packed struct with a word at an
+     odd offset would be padded by `DW`'s alignment.
 4. **TASKING extensions for payloads.** `_sfr`/`_sfrbit`, `_bit`,
    `_interrupt`/`_using`, `_at`, intrinsics, the register header. A
    flash-driver or MiniMon-style payload in C runs in the simulated 5WY19.
