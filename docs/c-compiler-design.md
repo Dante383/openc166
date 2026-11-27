@@ -470,6 +470,17 @@ modules (`--lib`) so only what a program uses is pulled in:
      space (a small change in ASTContext). The output is `$SEGMENTED` with
      near data written as `SOF x`; jump tables are off (JMPI stays in its
      segment). Checked with code in segments 1 and 3 of the 5WY19's flash.
+   - `_far` and `_huge` variables: `HDATA`/`HCONST` and `DATA`/`CONST`
+     sections with TASKING's classes (`CHUGE`, `CHUGEROM`, `CFAR`,
+     `CFARROM`), shared `C166_HDATA`/`_INIT`/`C166_HBSS` (and `F` for far)
+     that `__cstart` copies and clears with `EXTS`, named access with
+     `EXTS #SEG x, #1`. Decided on the way: `_far` pointers take the `_huge`
+     layout (segment offset, segment), not TASKING's page offset and page,
+     because LLVM folds arithmetic like `p - 4 + 2 * i` and a page:offset
+     pointer cannot carry across a page in 32-bit arithmetic (the test
+     caught exactly that). And A166 reads `SEG x+2` as `(SEG x)+2`, so the
+     operand of `SOF`/`SEG`/`POF`/`PAG` is put in parentheses. Checked in
+     the 5WY19's external RAM at 90000H.
 
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.

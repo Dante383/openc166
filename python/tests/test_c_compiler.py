@@ -675,6 +675,75 @@ int roundtrip(void) {
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class FarHugeVariablesTest(unittest.TestCase):
+    """_huge and _far variables in the 5WY19's external RAM (chip select 2
+    mapped at 90000H), their initial values and constants in flash, set up
+    by __cstart."""
+
+    SOURCE = r"""
+_huge int htab[4] = {11, 22, 33, 44};
+_huge long hzero[50];
+const _huge char hmsg[] = "huge";
+_far int fvar = 7;
+_far int fzero[3];
+const _far int fconst[2] = {10, 20};
+int _huge *hp = &htab[2];
+volatile int i = 3;
+int main(void) {
+  int fail = 0;
+  if (htab[1] != 22) fail |= 1;
+  if (hzero[49] != 0 || hzero[i] != 0) fail |= 2;
+  if (hmsg[i] != 'e') fail |= 4;
+  if (fvar != 7 || fzero[2] != 0) fail |= 8;
+  if (fconst[i - 2] != 20) fail |= 16;
+  if (*hp != 33) fail |= 32;
+  htab[i] = 99;
+  fzero[1] = 1234;
+  hzero[i] = 100000;
+  if (htab[3] != 99 || fzero[1] != 1234 || hzero[3] != 100000) fail |= 64;
+  return fail;
+}
+"""
+
+    def test_variables_above_64k(self):
+        image = bytes(0x80000 * [0xFF])
+        p = Program(
+            [self.SOURCE],
+            "-Os",
+            startup=True,
+            image=image,
+            board="5wy19",
+            classes={
+                "CPROGRAM": [(0x10000, 0x1FFFF)],
+                "CNEARROM": [(0x8000, 0xBFFF)],
+                "CNEAR": [(0xF600, 0xF9FF)],
+                "CHUGE": [(0x90000, 0x93FFF)],
+                "CFAR": [(0x94000, 0x97FFF)],
+                "CHUGEROM": [(0x20000, 0x2FFFF)],
+                "CFARROM": [(0x30000, 0x33FFF)],
+            },
+        )
+        self.assertEqual(p.address("_htab") >> 16, 9)
+        self.assertEqual(p.address("_fvar") >> 16, 9)
+        self.assertEqual(p.address("_hmsg") >> 16, 2)
+        s = p.simulator()
+        s.sfr["ADDRSEL2"] = 0x0904  # 64 KB at 90000H
+        s.sfr["BUSCON2"] = 0x0480  # BUSACT2, 16-bit demultiplexed
+        s.write(0x90000, b"\xA5" * 0x8000)  # RAM starts out as garbage
+        push_return(s)
+        s.r[0] = USER_STACK
+        s.break_at(HALT)
+        s.pc = p.address("__cstart")
+        s.cont(1000000)
+        self.assertEqual(s.pc, HALT)
+        self.assertEqual(s.r[4], 0)  # a bit per failed check
+        self.assertEqual(s.read16(p.address("_htab") + 6), 99)
+        asm = p.asm[-1][1]
+        self.assertIn("EXTS\t#SEG (_htab+2), #1", asm)
+        self.assertIn("EXTS\t#SEG _fvar, #1", asm)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
 class FarCodeTest(unittest.TestCase):
     """The small memory model (TASKING's): functions are far, called with
     CALLS and returning with RETS, and function pointers are segment offset

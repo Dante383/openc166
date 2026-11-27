@@ -122,22 +122,41 @@ openc166's `REG167.INC` by `tools/reg_h.py`.
 | `_using(...)` | accepted; interrupt functions push what they use (`_using(push)`) |
 | `_inline`, `_noinline` | inlining |
 | `_near`, `_system`, `_iram`, `_bita` | accepted (data is near) |
-| `_far`, `_huge`, `_shuge` | pointers (see below); variables not yet |
+| `_far`, `_huge`, `_shuge` | pointers and variables anywhere in 16 MB (see below) |
 | `_xnear` | an error |
 
-`_far` and `_huge` pointers are 32 bits, low word first: a `_huge`
-(and `_shuge`) pointer is segment offset and segment, read and written
-with `EXTS Rseg, #1`; a `_far` pointer is page offset and page number,
-with `EXTP Rpage, #1`. Arithmetic on them is 32-bit. A near pointer
-converts to either, implicitly, through the DPP that selects its page,
-and `_far` and `_huge` convert into each other; making one near is an
-error. `_mkhp(sof, seg)` and `_mkfp(pof, pag)` build one, `_sof`, `_seg`,
-`_pof` and `_pag` take one apart. So code in the small model can read
-and write all 16 MB, for example flash above 64 KB:
+`_far` and `_huge` pointers are 32 bits, low word first: segment offset
+and segment, a linear address, read and written with `EXTS Rseg, #1`.
+Arithmetic on them is 32-bit. A near pointer converts to either,
+implicitly, through the DPP that selects its page, and `_far` and `_huge`
+convert into each other; making one near is an error. `_mkhp(sof, seg)`
+and `_mkfp(pof, pag)` build one, `_sof`, `_seg`, `_pof` and `_pag` take one
+apart. So code can read and write all 16 MB, for example flash above
+64 KB:
 
 ```c
 const unsigned char _huge *flash = _mkhp(0x0000, 0x08); /* 80000H */
 ```
+
+TASKING keeps `_far` pointers as page offset and page number instead.
+That layout cannot carry from the offset into the page in 32-bit
+arithmetic, and LLVM folds pointer arithmetic freely, so here `_far`
+pointers have the `_huge` layout. A `_far` pointer passed to or from
+TASKING-built code is therefore not the same bits; `_huge` pointers are.
+
+`_far` and `_huge` variables (small model only, as in TASKING) can lie
+anywhere; give their classes address ranges:
+
+| Class | What | Section type |
+|---|---|---|
+| `CHUGE` | `_huge` variables (`C166_HDATA`, `C166_HBSS`) | `HDATA`, within one 64 KB segment |
+| `CHUGEROM` | `_huge const`, initial values (`C166_HDATA_INIT`) | `HCONST` |
+| `CFAR` | `_far` variables (`C166_FDATA`, `C166_FBSS`) | `DATA`, within one 16 KB page |
+| `CFARROM` | `_far const`, initial values (`C166_FDATA_INIT`) | `CONST` |
+
+`__cstart` fills and clears them as it does near variables. A named
+variable is read and written directly, `EXTS #SEG x, #1` then
+`MOV Rd, SOF x`.
 
 An interrupt function saves the registers it uses on the user stack it
 interrupted, and MDC/MDH/MDL when it multiplies, divides, calls a function
@@ -155,8 +174,7 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 ## Not yet
 
-- `_far`/`_huge` variables (their sections and initial values), and the
-  medium, large and huge memory models.
+- The medium, large and huge memory models (far data by default).
 - `_near` function pointers (all function pointers are far in the small
   model), and register bank switching.
 - Structs passed by value (an error). Structs returned by value work, but

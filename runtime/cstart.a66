@@ -4,7 +4,9 @@
 ; __cstart sets up the user stack, copies the initial values of initialised
 ; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the
 ; zero-initialised ones (C166_BSS) and the _bitword variables
-; (C166_BITWORD, in the bit-addressable RAM), calls main and returns
+; (C166_BITWORD, in the bit-addressable RAM), does the same for _huge and
+; _far variables (C166_HDATA, C166_FDATA from their _INIT sections;
+; C166_HBSS, C166_FBSS cleared), calls main and returns
 ; main's result in R4. It keeps the caller's R0 and R6-R9, so a loader or
 ; existing firmware can call a C program (CALLS: __cstart is a far
 ; function, as all C functions are here) and get control back.
@@ -29,6 +31,16 @@ $SEGMENTED
         EXTRN   ?SECTION_SIZE?C166_BSS : DATA16
         EXTRN   ?SECTION_START?C166_BITWORD : WORD
         EXTRN   ?SECTION_SIZE?C166_BITWORD : DATA16
+        EXTRN   ?SECTION_START?C166_HDATA : WORD
+        EXTRN   ?SECTION_SIZE?C166_HDATA : DATA16
+        EXTRN   ?SECTION_START?C166_HDATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_HBSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_HBSS : DATA16
+        EXTRN   ?SECTION_START?C166_FDATA : WORD
+        EXTRN   ?SECTION_SIZE?C166_FDATA : DATA16
+        EXTRN   ?SECTION_START?C166_FDATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_FBSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_FBSS : DATA16
 
 ; The sections the compiler puts variables in, so that they exist even when
 ; no module has any.
@@ -40,6 +52,19 @@ C166_BSS        SECTION DATA WORD PUBLIC 'CNEAR'
 C166_BSS        ENDS
 C166_BITWORD    SECTION DATA BITADDRESSABLE PUBLIC 'CBITWORDS'
 C166_BITWORD    ENDS
+; _huge and _far variables, anywhere in the 16 MB.
+C166_HDATA      SECTION HDATA WORD PUBLIC 'CHUGE'
+C166_HDATA      ENDS
+C166_HDATA_INIT SECTION HCONST WORD PUBLIC 'CHUGEROM'
+C166_HDATA_INIT ENDS
+C166_HBSS       SECTION HDATA WORD PUBLIC 'CHUGE'
+C166_HBSS       ENDS
+C166_FDATA      SECTION DATA WORD PUBLIC 'CFAR'
+C166_FDATA      ENDS
+C166_FDATA_INIT SECTION CONST WORD PUBLIC 'CFARROM'
+C166_FDATA_INIT ENDS
+C166_FBSS       SECTION DATA WORD PUBLIC 'CFAR'
+C166_FBSS       ENDS
 
 ; The user stack (R0), 512 bytes; it grows downwards.
 C166_USTACK     SECTION DATA WORD PUBLIC 'CNEAR'
@@ -83,9 +108,64 @@ __cstart        PROC    FAR
         SUB     R10, #1
         JMP     cc_UC, ?CLEARBW
 ?BWCLEARED:
+        ; _huge and _far variables: the same, with 24-bit addresses.
+        MOV     R1, #SOF ?SECTION_START?C166_HDATA_INIT
+        MOV     R2, #SEG ?SECTION_START?C166_HDATA_INIT
+        MOV     R3, #SOF ?SECTION_START?C166_HDATA
+        MOV     R4, #SEG ?SECTION_START?C166_HDATA
+        MOV     R10, #?SECTION_SIZE?C166_HDATA
+        CALL    ?FARCOPY
+        MOV     R1, #SOF ?SECTION_START?C166_FDATA_INIT
+        MOV     R2, #SEG ?SECTION_START?C166_FDATA_INIT
+        MOV     R3, #SOF ?SECTION_START?C166_FDATA
+        MOV     R4, #SEG ?SECTION_START?C166_FDATA
+        MOV     R10, #?SECTION_SIZE?C166_FDATA
+        CALL    ?FARCOPY
+        MOV     R3, #SOF ?SECTION_START?C166_HBSS
+        MOV     R4, #SEG ?SECTION_START?C166_HBSS
+        MOV     R10, #?SECTION_SIZE?C166_HBSS
+        CALL    ?FARCLEAR
+        MOV     R3, #SOF ?SECTION_START?C166_FBSS
+        MOV     R4, #SEG ?SECTION_START?C166_FBSS
+        MOV     R10, #?SECTION_SIZE?C166_FBSS
+        CALL    ?FARCLEAR
         CALLS   SEG _main, SOF _main
         POP     R0
         RETS
 __cstart        ENDP
+
+; Copy R10 bytes from R2:R1 to R4:R3 (segment:offset), a byte at a time.
+?FARCOPY        PROC    NEAR
+        CMP     R10, #0
+        JMP     cc_EQ, ?FCDONE
+        EXTS    R2, #1
+        MOVB    RL5, [R1]
+        EXTS    R4, #1
+        MOVB    [R3], RL5
+        ADD     R1, #1
+        ADDC    R2, #0
+        ADD     R3, #1
+        ADDC    R4, #0
+        SUB     R10, #1
+        JMP     cc_UC, ?FARCOPY
+?FCDONE:
+        RET
+?FARCOPY        ENDP
+
+; Clear R10 bytes at R4:R3.
+?FARCLEAR       PROC    NEAR
+        MOV     R5, #0
+?FCLOOP:
+        CMP     R10, #0
+        JMP     cc_EQ, ?FZDONE
+        EXTS    R4, #1
+        MOVB    [R3], RL5
+        ADD     R3, #1
+        ADDC    R4, #0
+        SUB     R10, #1
+        JMP     cc_UC, ?FCLOOP
+?FZDONE:
+        RET
+?FARCLEAR       ENDP
 C166_CSTART     ENDS
         END
