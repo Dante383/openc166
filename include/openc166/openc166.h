@@ -102,6 +102,20 @@ OC166_API int oc166_options_add_include_dir(oc166_options *opts, const char *dir
  * -1 for an empty name or an address outside 0..0FFFFFFH. */
 OC166_API int oc166_options_set_section_address(oc166_options *opts, const char *name, int64_t address);
 
+/* Adds the address range first..last (both inclusive) to the class
+ * 'class_name' (any case), like the CLASSES control of Keil's L166: a
+ * section of that class without an address of its own goes in the first of
+ * its class's ranges where it fits, in the order they were added, instead
+ * of anywhere from the origin on. Returns 0, or -1 for an empty name or a
+ * range that is empty or outside 0..0FFFFFFH. */
+OC166_API int oc166_options_add_class_range(oc166_options *opts, const char *class_name, int64_t first, int64_t last);
+
+/* Keeps the addresses first..last (both inclusive) free of every section
+ * that openc166 places, like the RESERVE control of Keil's L166. Sections
+ * with AT or an address of their own may still use them. Returns 0, or -1
+ * for a range that is empty or outside 0..0FFFFFFH. */
+OC166_API int oc166_options_add_reserved(oc166_options *opts, int64_t first, int64_t last);
+
 /* ---- Assembling -------------------------------------------------------- */
 
 typedef struct oc166_result oc166_result;

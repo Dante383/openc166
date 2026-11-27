@@ -43,6 +43,14 @@ options:
       --section NAME=ADDR
                       put section NAME, which has no AT, at ADDR (may be repeated);
                       the other sections without AT go to the first free place
+      --class NAME=RANGE[,RANGE...]
+                      put the sections of class NAME, which have no AT, in these
+                      address ranges, trying them in order, like L166's CLASSES;
+                      a RANGE is FIRST-LAST, e.g. --class NDATA=0C000h-0DFFFh
+                      (may be repeated)
+      --reserve RANGE[,RANGE...]
+                      keep these addresses free of the sections openc166 places,
+                      like L166's RESERVE (may be repeated)
       --base ADDR     bin: address of the first byte of the file (default: lowest address used)
       --fill BYTE     bin: value of unused bytes inside the file (default 0FFh)
       --record-size N hex, srec: data bytes per record (default 16)
@@ -79,6 +87,26 @@ std::int64_t parse_number(std::string_view s, const char* what) {
     if (t.empty() || used != t.size() || v < 0)
         throw UsageError(std::string("invalid ") + what + " '" + std::string(s) + "'");
     return v;
+}
+
+// FIRST-LAST[,FIRST-LAST...], both ends inclusive.
+std::vector<oc166::AssembleOptions::Range> parse_ranges(std::string_view s, const char* option) {
+    std::vector<oc166::AssembleOptions::Range> out;
+    for (std::size_t pos = 0; pos <= s.size();) {
+        std::size_t comma = s.find(',', pos);
+        if (comma == std::string_view::npos) comma = s.size();
+        std::string_view item = s.substr(pos, comma - pos);
+        std::size_t dash = item.find('-');
+        if (dash == std::string_view::npos)
+            throw UsageError(std::string(option) + " needs ranges FIRST-LAST, not '" + std::string(item) + "'");
+        std::int64_t first = parse_number(item.substr(0, dash), "range start");
+        std::int64_t last = parse_number(item.substr(dash + 1), "range end");
+        if (last > 0xFFFFFF) throw UsageError("range '" + std::string(item) + "' must end below 1000000h");
+        if (first > last) throw UsageError("range '" + std::string(item) + "' is empty");
+        out.push_back({first, last});
+        pos = comma + 1;
+    }
+    return out;
 }
 
 std::string read_file(const std::string& path) {
@@ -190,6 +218,15 @@ int run(int argc, char** argv) {
             std::int64_t address = parse_number(v.substr(eq + 1), "section address");
             if (address > 0xFFFFFF) throw UsageError("section address must be below 1000000h");
             opt.section_addresses.emplace_back(std::string(v.substr(0, eq)), address);
+        } else if (is("", "--class")) {
+            std::string_view v = value();
+            std::size_t eq = v.find('=');
+            if (eq == std::string_view::npos || eq == 0)
+                throw UsageError("--class needs NAME=FIRST-LAST, not '" + std::string(v) + "'");
+            for (const auto& r : parse_ranges(v.substr(eq + 1), "--class"))
+                opt.class_ranges.emplace_back(std::string(v.substr(0, eq)), r);
+        } else if (is("", "--reserve")) {
+            for (const auto& r : parse_ranges(value(), "--reserve")) opt.reserved.push_back(r);
         } else if (is("", "--base")) {
             base = parse_number(value(), "base address");
         } else if (is("-I", "--incdir")) {

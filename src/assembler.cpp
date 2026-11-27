@@ -4468,8 +4468,10 @@ std::vector<Program::Unit> Program::units() {
 // first), each at the lowest suitably aligned address from the origin on
 // where it fits between the sections and code placed so far, without
 // crossing the page or segment boundary its type forbids. Sections with an
-// address in AssembleOptions::section_addresses go there first. The next
-// pass assembles with these addresses. Like L166, a BIT section takes only
+// address in AssembleOptions::section_addresses go there first. A section
+// whose class has address ranges (AssembleOptions::class_ranges) goes in the
+// first of them where it fits, and no section goes in a reserved range
+// (AssembleOptions::reserved). The next pass assembles with these addresses. Like L166, a BIT section takes only
 // the bits it needs, so two of them may share a byte, but no other section
 // uses a byte that a BIT section touches.
 void Program::locate(bool final) {
@@ -4530,6 +4532,44 @@ void Program::locate(bool final) {
                              "an address is given for section '" + name + "', which does not exist");
     }
 
+    // Like L166's RESERVE, reserved addresses are kept free of every section
+    // that openc166 places.
+    for (const auto& r : opt_.reserved) used.emplace_back(r.first, r.last + 1);
+    std::set<std::string> unknown_classes;
+    for (const auto& [name, range] : opt_.class_ranges) {
+        bool found = false;
+        for (const Unit& u : all) found = found || upper(u.parts[0].section().class_name) == upper(name);
+        if (!found && unknown_classes.insert(upper(name)).second)
+            mods_[0]->report(Severity::Warning, "OC35",
+                             "address ranges are given for class '" + name + "', which no section has");
+    }
+    // The class of a unit if address ranges are given for it, else "".
+    auto ranged_class = [&](const Unit& u) -> std::string {
+        const std::string cls = upper(u.parts[0].section().class_name);
+        if (cls.empty()) return {};
+        for (const auto& [name, range] : opt_.class_ranges)
+            if (upper(name) == cls) return u.parts[0].section().class_name;
+        return {};
+    };
+    // Where a unit may go, in its own unit (bits or bytes), as windows to try
+    // in order: the ranges of its class inside [low, high), or else
+    // [from, high), where 'from' is the default lowest address.
+    auto windows = [&](const Unit& u, std::int64_t low, std::int64_t from, std::int64_t high) {
+        const std::int64_t k = u.bits ? 8 : 1;
+        Ranges w;
+        if (ranged_class(u).empty()) {
+            if (from < high) w.emplace_back(from, high);
+            return w;
+        }
+        const std::string cls = upper(u.parts[0].section().class_name);
+        for (const auto& [name, r] : opt_.class_ranges) {
+            if (upper(name) != cls) continue;
+            const std::int64_t a = std::max(low, r.first * k), b = std::min(high, (r.last + 1) * k);
+            if (a < b) w.emplace_back(a, b);
+        }
+        return w;
+    };
+
     // The lowest address in [from, to) from which u fits between the ranges
     // in 'occupied', suitably aligned and without crossing a multiple of
     // 'boundary' (0: none).
@@ -4547,6 +4587,13 @@ void Program::locate(bool final) {
             if (clash == occupied.end()) return a;
             a = align_up(clash->second, u.align);
         }
+        return std::nullopt;
+    };
+    // The first window in which u fits.
+    auto fit_in = [&](const Unit& u, const Ranges& w, std::int64_t boundary,
+                      const Ranges& occupied) -> std::optional<std::int64_t> {
+        for (const auto& [from, to] : w)
+            if (auto a = first_fit(u, from, to, boundary, occupied)) return a;
         return std::nullopt;
     };
     std::vector<bool> done(all.size());
@@ -4645,7 +4692,14 @@ void Program::locate(bool final) {
                     break;
                 }
             const std::int64_t top = top_of(m);
-            for (std::int64_t page = pinned ? *pinned : opt_.origin / region * region;
+            // The search starts at the origin, or lower if the class of a
+            // member allows it.
+            std::int64_t start = opt_.origin;
+            for (std::size_t u : g.members) {
+                const Ranges w = windows(all[u], all[u].bit ? kBitAreaStart : 0, start, top);
+                if (!done[u] && !w.empty()) start = std::min(start, w.front().first);
+            }
+            for (std::int64_t page = pinned ? *pinned : start / region * region;
                  page < top && (!pinned || page == *pinned) && !g.placed; page += region) {
                 Ranges trial = taken(false), added;
                 std::vector<std::pair<std::size_t, std::int64_t>> bases;
@@ -4654,9 +4708,10 @@ void Program::locate(bool final) {
                 for (std::size_t u : order) {
                     if (done[u]) continue;
                     const Unit& un = all[u];
+                    const std::int64_t low = std::max(page, un.bit ? kBitAreaStart : 0);
                     const std::int64_t from = std::max(page, un.bit ? kBitAreaStart : opt_.origin);
                     const std::int64_t to = std::min(page + region, un.bit ? kBitAreaEnd : top);
-                    std::optional<std::int64_t> a = first_fit(un, from, to, 0, trial);
+                    std::optional<std::int64_t> a = fit_in(un, windows(un, low, from, to), 0, trial);
                     if (!a && pinned) {
                         // Like L166 (L112), a member without room in the page
                         // or segment the group is tied to is left out.
@@ -4695,28 +4750,36 @@ void Program::locate(bool final) {
         }
     }
 
-    // Like L166, BITADDRESSABLE sections go first, then the others.
-    for (const bool first_round : {true, false})
+    // Like L166, BITADDRESSABLE sections go first, then those whose class
+    // has address ranges, then the others.
+    for (const int round : {0, 1, 2})
         for (std::size_t i = 0; i < all.size(); ++i) {
             Unit& u = all[i];
-            if (done[i] || u.bit != first_round) continue;
+            if (done[i] || round != (u.bit ? 0 : ranged_class(u).empty() ? 2 : 1)) continue;
             Assembler& m = *u.parts[0].m;
             const Section& s = u.parts[0].section();
             const std::int64_t unit = u.bits ? 8 : 1;
             const bool bit_area = u.bit || u.bits;
+            const std::int64_t low = bit_area ? kBitAreaStart * unit : 0;
             const std::int64_t from = bit_area ? kBitAreaStart * unit : opt_.origin;
             const std::int64_t to = bit_area ? kBitAreaEnd * unit : top_of(m);
+            const std::string cls = ranged_class(u);
+            // Ranges of the class that only $SEGMENTED makes usable.
+            const bool needs_segmented =
+                !cls.empty() && !m.segmented_ && windows(u, low, from, kAddressLimit * unit) != windows(u, low, from, to);
             const std::int64_t boundary = section_boundary(s.type);
             if (boundary == 0x4000 && u.size > boundary && final)
                 m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
                                     "section '" + s.name + "' (" + hex(u.size, 4) +
                                         "H bytes) does not fit in one 16 KB data page (L166 reports L129)");
-            std::optional<std::int64_t> a = first_fit(u, from, to, boundary, taken(u.bits));
+            std::optional<std::int64_t> a = fit_in(u, windows(u, low, from, to), boundary, taken(u.bits));
             if (!a) {
                 m.report(Severity::Error, "OC12",
                          "no room for section '" + s.name + "' (" +
                              (u.bits ? std::to_string(u.size) + " bits" : hex(u.size, 4) + "H bytes") +
-                             (bit_area ? " in FD00H..FDFFH)" : ")"));
+                             (bit_area ? " in FD00H..FDFFH" : "") +
+                             (cls.empty() ? "" : " in the address ranges of class '" + cls + "'") + ")" +
+                             (needs_segmented ? " (addresses from 10000H on need $SEGMENTED)" : ""));
                 a = s.base;
             } else {
                 occupy(u, *a);

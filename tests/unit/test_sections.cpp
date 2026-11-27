@@ -23,6 +23,12 @@ std::int64_t address(const AssemblyResult& r, const std::string& name) {
     return s ? s->address : -1;
 }
 
+std::string messages(const AssemblyResult& r) {
+    std::string out;
+    for (const auto& d : r.diagnostics) out += d.message + "\n";
+    return out;
+}
+
 bool has(const AssemblyResult& r, const std::string& code) {
     for (const auto& d : r.diagnostics)
         if (d.code == code) return true;
@@ -85,6 +91,114 @@ TEST_CASE("section addresses can be given") {
     CHECK(r.warning_count() == 2);
     CHECK(has(r, "OC13"));  // NONE does not exist, G is odd
     CHECK(address(r, "G") == 0x101);
+}
+
+// openc166's equivalent of L166's CLASSES and RESERVE controls.
+namespace {
+const char* const kClasses =
+    "$MOD167\n"
+    "FREE SECTION CONST\n DW 1\nFREE ENDS\n"
+    "C1 SECTION CODE 'NCODE'\nP PROC NEAR\n RET\nP ENDP\nC1 ENDS\n"
+    "D1 SECTION DATA 'NDATA'\n DS 10H\nD1 ENDS\n"
+    "D2 SECTION DATA 'ndata'\n DS 20H\nD2 ENDS\n"
+    " END\n";
+}  // namespace
+
+TEST_CASE("sections of a class with address ranges go in them") {
+    AssembleOptions o;
+    o.cpu = isa::Cpu::C167;
+    o.class_ranges = {{"ncode", {0x200, 0x7FFF}}, {"NDATA", {0xC000, 0xC01F}}, {"NDATA", {0xE000, 0xEFFF}}};
+    auto r = assemble(kClasses, o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "C1") == 0x200);
+    // Class names ignore case; D2 does not fit in the rest of the first range.
+    CHECK(address(r, "D1") == 0xC000);
+    CHECK(address(r, "D2") == 0xE000);
+    // A section without ranges for its class goes from the origin on.
+    CHECK(address(r, "FREE") == 0);
+    CHECK(find(r, "D1")->placement == SectionInfo::Placement::Located);
+
+    // An address of its own wins over the class.
+    o.section_addresses = {{"D1", 0xF600}};
+    r = assemble(kClasses, o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "D1") == 0xF600);
+    CHECK(address(r, "D2") == 0xC000);
+}
+
+TEST_CASE("sections with class ranges are placed before the others") {
+    // FREE comes first, but its first-fit place would be the start of the
+    // NCODE range.
+    AssembleOptions o;
+    o.cpu = isa::Cpu::C167;
+    o.class_ranges = {{"NCODE", {0, 1}}};
+    auto r = assemble(kClasses, o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "C1") == 0);
+    CHECK(address(r, "FREE") == 2);
+}
+
+TEST_CASE("a section that does not fit in the ranges of its class") {
+    AssembleOptions o;
+    o.cpu = isa::Cpu::C167;
+    o.class_ranges = {{"NDATA", {0xC000, 0xC01F}}};
+    auto r = assemble(kClasses, o);
+    CHECK(has(r, "OC12"));
+    CHECK(messages(r).find("in the address ranges of class 'ndata'") != std::string::npos);
+    CHECK(messages(r).find("$SEGMENTED") == std::string::npos);
+
+    // Without $SEGMENTED, the first 64 KB only.
+    o.class_ranges = {{"NDATA", {0x10000, 0x1FFFF}}};
+    r = assemble(kClasses, o);
+    CHECK(has(r, "OC12"));
+    CHECK(messages(r).find("need $SEGMENTED") != std::string::npos);
+    o.controls = {"SEGMENTED"};
+    r = assemble(kClasses, o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "D1") == 0x10000);
+    CHECK(address(r, "D2") == 0x10010);
+}
+
+TEST_CASE("ranges for a class that no section has") {
+    AssembleOptions o;
+    o.class_ranges = {{"NOPE", {0, 0xFF}}, {"nope", {0x100, 0x1FF}}};
+    auto r = assemble(kClasses, o);
+    CHECK(r.ok());
+    CHECK(r.warning_count() == 1);
+    CHECK(has(r, "OC35"));
+}
+
+TEST_CASE("reserved addresses are kept free") {
+    AssembleOptions o;
+    o.cpu = isa::Cpu::C167;
+    o.reserved = {{0, 0x1FF}};
+    o.class_ranges = {{"NDATA", {0x100, 0x2FF}}};
+    auto r = assemble(kClasses, o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "D1") == 0x200);
+    CHECK(address(r, "D2") == 0x210);
+    CHECK(address(r, "FREE") == 0x230);
+    CHECK(address(r, "C1") == 0x232);
+
+    // AT sections and given addresses may still use them.
+    o.class_ranges.clear();
+    o.section_addresses = {{"D1", 0x10}};
+    r = assemble("$MOD167\nVEC SECTION CODE AT 0\n NOP\nVEC ENDS\nD1 SECTION DATA\n DW 1\nD1 ENDS\n END\n", o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "D1") == 0x10);
+}
+
+TEST_CASE("a group goes in the class ranges of its members") {
+    AssembleOptions o;
+    o.cpu = isa::Cpu::C167;
+    o.origin = 0x8000;
+    o.class_ranges = {{"NDATA", {0x1000, 0x1FFF}}};
+    auto r = assemble("$MOD167\nD1 SECTION DATA 'NDATA'\n DS 10H\nD1 ENDS\n"
+                      "D2 SECTION DATA 'NDATA'\n DS 20H\nD2 ENDS\nDG DGROUP D1, D2\n END\n",
+                      o);
+    REQUIRE(r.ok());
+    CHECK(address(r, "D2") == 0x1000);  // largest first
+    CHECK(address(r, "D1") == 0x1020);
 }
 
 TEST_CASE("sections that do not fit") {

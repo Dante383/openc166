@@ -374,6 +374,24 @@ class SectionTest(unittest.TestCase):
         self.assertEqual((prog.bit, prog.bit_size), (0, 16))
         self.assertEqual(result.chunks[0].data.hex(), "3f01")
 
+    def test_classes_and_reserve(self):
+        source = self.SOURCE.replace("Vars   SECTION DATA", "Vars   SECTION DATA 'NDATA'")
+        result = openc166.assemble(source, origin=0x8000, classes={"ndata": [(0xC000, 0xDFFF)]})
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.sections["Vars"].address, 0xC000)
+        result = openc166.assemble(
+            source, origin=0x8000, classes={"NDATA": (0xC000, 0xDFFF)}, reserve=[(0xC000, 0xC0FF)]
+        )
+        self.assertTrue(result.ok, result.diagnostics)
+        self.assertEqual(result.sections["Vars"].address, 0xC100)
+        result = openc166.assemble(source, classes={"NONE": (0, 1)})
+        self.assertEqual([d.code for d in result.warnings], ["OC35"])
+        for bad in ((2, 1), (-1, 5), (0, 0x1000000), "x", [(1, 2, 3)]):
+            with self.assertRaises(ValueError):
+                openc166.assemble(source, classes={"NDATA": bad})
+            with self.assertRaises(ValueError):
+                openc166.assemble(source, reserve=bad)
+
     def test_given_problems(self):
         result = openc166.assemble(self.SOURCE, sections={"FIXED": 0x100, "NONE": 0x200})
         self.assertEqual([d.code for d in result.errors], ["OC14"])

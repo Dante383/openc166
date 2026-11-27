@@ -50,6 +50,19 @@ struct AssembleOptions {
     // the origin on that suits its alignment and type, as L166 does. Names
     // ignore case; if one appears more than once, the last address counts.
     std::vector<std::pair<std::string, std::int64_t>> section_addresses;
+    // An address range [first, last] (both inclusive).
+    struct Range {
+        std::int64_t first = 0;
+        std::int64_t last = 0;
+    };
+    // Address ranges for the sections of a class, like L166's CLASSES
+    // control: a section without AT and without an address of its own whose
+    // class (ignoring case) is listed goes in the first of its ranges where it
+    // fits, instead of anywhere from the origin on. Ranges of the same class
+    // given more than once add up, in order.
+    std::vector<std::pair<std::string, Range>> class_ranges;
+    // Addresses no section without AT may use, like L166's RESERVE control.
+    std::vector<Range> reserved;
     // Directories searched by $INCLUDE. The order is: the current directory,
     // the directory of file_name, these directories, then the directories
     // given by $INCDIR in the source. A bare file name that is found nowhere

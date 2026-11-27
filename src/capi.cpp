@@ -206,6 +206,26 @@ int oc166_options_set_section_address(oc166_options* opts, const char* name, int
     }
 }
 
+int oc166_options_add_class_range(oc166_options* opts, const char* class_name, int64_t first, int64_t last) {
+    if (!opts || !class_name || !*class_name || first < 0 || first > last || last > 0xFFFFFF) return -1;
+    try {
+        opts->opt.class_ranges.emplace_back(class_name, oc166::AssembleOptions::Range{first, last});
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
+int oc166_options_add_reserved(oc166_options* opts, int64_t first, int64_t last) {
+    if (!opts || first < 0 || first > last || last > 0xFFFFFF) return -1;
+    try {
+        opts->opt.reserved.push_back({first, last});
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
+
 oc166_result* oc166_assemble(const oc166_options* opts, const char* source, size_t length, const char* file_name) {
     if (!source && length != 0) return nullptr;
     try {

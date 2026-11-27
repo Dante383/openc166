@@ -57,6 +57,7 @@ __version__: str = _lib.oc166_version().decode("ascii")
 
 PathLike = Union[str, "os.PathLike[str]"]
 SourceText = Union[str, bytes]
+Ranges = Union[Tuple[int, int], Iterable[Tuple[int, int]]]
 
 
 def _text(b: Optional[bytes]) -> str:
@@ -426,6 +427,8 @@ def assemble(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    classes: Optional[Mapping[str, Ranges]] = None,
+    reserve: Ranges = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -444,6 +447,14 @@ def assemble(
                   like the SECTIONS control of Keil's L166:
                   {"MYDATA": 0xF600}. The other sections go in order of
                   appearance to the first free place from the origin on.
+    classes       address ranges for the sections of a class, by class
+                  name (any case), like the CLASSES control of L166:
+                  {"NDATA": [(0xC000, 0xDFFF)], "NCODE": (0x0, 0x7FFF)}.
+                  Both ends are inclusive. A section of that class without
+                  AT or an address in 'sections' goes in the first of the
+                  ranges where it fits.
+    reserve       address ranges (first, last), inclusive, that no section
+                  placed by openc166 may use, like L166's RESERVE.
     dialect       "keil" (the default) for Keil A166 sources, or "tasking"
                   for TASKING a166 sources, which first pass through
                   openc166's m166 preprocessor (@SET, @IF, ...). TASKING
@@ -459,6 +470,8 @@ def assemble(
         origin,
         include_dirs,
         sections,
+        classes,
+        reserve,
         dialect,
         controls,
     )
@@ -472,7 +485,23 @@ def _source_bytes(source: SourceText) -> bytes:
     return bytes(source)
 
 
-def _run(call, cpu, origin, include_dirs, sections, dialect, controls) -> Result:
+def _ranges(ranges, what):
+    """A (first, last) pair or a list of them, checked."""
+    if len(ranges) == 2 and all(isinstance(v, int) for v in ranges):
+        ranges = [ranges]
+    out = []
+    for r in ranges:
+        try:
+            first, last = r
+        except (TypeError, ValueError):
+            raise ValueError("bad range {!r} for {} (use (first, last))".format(r, what)) from None
+        if not (isinstance(first, int) and isinstance(last, int) and 0 <= first <= last <= 0xFFFFFF):
+            raise ValueError("bad range {!r} for {} (use 0 <= first <= last <= 0FFFFFFH)".format(r, what))
+        out.append((first, last))
+    return out
+
+
+def _run(call, cpu, origin, include_dirs, sections, classes, reserve, dialect, controls) -> Result:
     """Makes the options, calls call(options) and wraps the result."""
     opts = _lib.oc166_options_new()
     if not opts:
@@ -498,6 +527,12 @@ def _run(call, cpu, origin, include_dirs, sections, dialect, controls) -> Result
                 )
             if _lib.oc166_options_set_section_address(opts, str(sec_name).encode("utf-8"), address) != 0:
                 raise ValueError("bad section name {!r}".format(sec_name))
+        for class_name, ranges in (classes or {}).items():
+            for first, last in _ranges(ranges, "class {!r}".format(class_name)):
+                if _lib.oc166_options_add_class_range(opts, str(class_name).encode("utf-8"), first, last) != 0:
+                    raise ValueError("bad class name {!r}".format(class_name))
+        for first, last in _ranges(reserve, "reserve"):
+            _lib.oc166_options_add_reserved(opts, first, last)
         handle = call(opts)
     finally:
         _lib.oc166_options_free(opts)
@@ -513,6 +548,8 @@ def assemble_file(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    classes: Optional[Mapping[str, Ranges]] = None,
+    reserve: Ranges = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -526,6 +563,8 @@ def assemble_file(
         origin=origin,
         include_dirs=include_dirs,
         sections=sections,
+        classes=classes,
+        reserve=reserve,
         dialect=dialect,
         controls=controls,
     )
@@ -538,6 +577,8 @@ def assemble_many(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    classes: Optional[Mapping[str, Ranges]] = None,
+    reserve: Ranges = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -576,6 +617,8 @@ def assemble_many(
         origin,
         include_dirs,
         sections,
+        classes,
+        reserve,
         dialect,
         controls,
     )
@@ -588,6 +631,8 @@ def assemble_files(
     origin: int = 0,
     include_dirs: Iterable[PathLike] = (),
     sections: Optional[Mapping[str, int]] = None,
+    classes: Optional[Mapping[str, Ranges]] = None,
+    reserve: Ranges = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
 ) -> Result:
@@ -605,6 +650,8 @@ def assemble_files(
         origin=origin,
         include_dirs=include_dirs,
         sections=sections,
+        classes=classes,
+        reserve=reserve,
         dialect=dialect,
         controls=controls,
     )

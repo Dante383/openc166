@@ -566,6 +566,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC32 | warning | TASKING: a `STDNAMES` file that cannot be found; openc166's built-in `REG167.INC` is used instead |
 | OC33 | error | an MPL macro or `%WHILE` that never stops: calls nested more than 256 deep, or more than 20 million calls and loop rounds; the assembly stops (see [mpl.md](mpl.md)) |
 | OC34 | warning | MPL `%IN` or `%OUT`, which use the console in Keil |
+| OC35 | warning | `--class` ranges for a class that no section has |
 
 ## Sections
 
@@ -615,7 +616,8 @@ default:
 - [register banks](#register-banks-and-linker-directives) first, in
   `0FC00H..0FDFFH`; then `BITADDRESSABLE` sections in `0FD00H..0FDFFH`,
   and then `BIT` sections (see [BIT sections](#bit-sections));
-- the sections of [groups](#groups) first, then the others;
+- the sections of [groups](#groups) first, then those whose class has
+  address ranges (see below), then the others;
 - `DATA` and `CONST` sections inside one 16 KB data page, and `CODE`,
   `HDATA` and `HCONST` sections inside one 64 KB segment, unless they are
   bigger than that;
@@ -627,6 +629,32 @@ a given address instead, like L166's `SECTIONS` control. Only sections
 without `AT` can be placed this way (OC14). An address that does not suit
 the align type, or a name that matches no section, gives warning OC13. A
 section that fits nowhere gives OC12.
+
+**Memory map.** Like L166's `CLASSES` and `RESERVE` controls:
+
+- `--class NAME=FIRST-LAST[,FIRST-LAST...]` (Python:
+  `classes={"NDATA": [(0xC000, 0xDFFF)]}`) gives address ranges, both ends
+  inclusive, for the sections of class `NAME`. Each such section goes in
+  the first of the ranges where it fits, tried in the order given, instead
+  of anywhere from `--origin` on. Class names ignore case. Repeating
+  `--class` with the same name adds ranges. Sections of a class without
+  ranges, and sections without a class, are placed as before.
+- `--reserve FIRST-LAST[,FIRST-LAST...]` (Python: `reserve=[(0, 0x1FF)]`)
+  keeps addresses free of every section that openc166 places. Sections
+  with `AT` or `--section` may still use them, as in L166.
+
+```sh
+openc166 main.a66 lib.a66 --reserve 0-1FFh \
+    --class NCODE=0200h-7FFFh --class NCONST=8000h-0BFFFh \
+    --class NDATA=0C000h-0DFFFh,0F600h-0FDFFh -o prog.hex
+```
+
+A section with a class that has ranges is placed before the sections
+without, so that those do not take its room. A section of a group still
+stays in the group's page or segment, inside its class's ranges. Ranges
+from `10000H` on are only usable with `$SEGMENTED`. A section that fits
+in none of its ranges gives OC12, and ranges for a class that no section
+has give warning OC35.
 
 The listing ends with a table of every section: type, align type, address,
 size, whether the address came from `AT`, from `--section`, or from

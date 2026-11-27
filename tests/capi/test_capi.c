@@ -47,6 +47,17 @@ static void test_options(void) {
     CHECK(oc166_options_set_section_address(opts, NULL, 0x8000) == -1);
     CHECK(oc166_options_set_section_address(opts, "DATA1", -1) == -1);
     CHECK(oc166_options_set_section_address(opts, "DATA1", 0x1000000) == -1);
+    CHECK(oc166_options_add_class_range(opts, "NDATA", 0xC000, 0xDFFF) == 0);
+    CHECK(oc166_options_add_class_range(opts, "NDATA", 0xC000, 0xC000) == 0);
+    CHECK(oc166_options_add_class_range(opts, "", 0xC000, 0xDFFF) == -1);
+    CHECK(oc166_options_add_class_range(opts, NULL, 0xC000, 0xDFFF) == -1);
+    CHECK(oc166_options_add_class_range(opts, "NDATA", 0xD000, 0xC000) == -1);
+    CHECK(oc166_options_add_class_range(opts, "NDATA", -1, 0xC000) == -1);
+    CHECK(oc166_options_add_class_range(opts, "NDATA", 0, 0x1000000) == -1);
+    CHECK(oc166_options_add_reserved(opts, 0, 0x1FF) == 0);
+    CHECK(oc166_options_add_reserved(opts, 0x200, 0x1FF) == -1);
+    CHECK(oc166_options_add_reserved(opts, 0, 0x1000000) == -1);
+    CHECK(oc166_options_add_reserved(NULL, 0, 1) == -1);
     oc166_options_free(opts);
     oc166_options_free(NULL);
 }

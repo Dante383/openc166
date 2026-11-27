@@ -146,6 +146,8 @@ carry the address of every record, so they hold only the bytes used.
 | `-f, --format FMT` | `bin`, `hex` or `srec` (default: from the output extension) |
 | `--origin ADDR` | address of code outside sections, and the lowest address for sections without `AT` (default 0) |
 | `--section NAME=ADDR` | put section `NAME`, which has no `AT`, at `ADDR` (may be repeated) |
+| `--class NAME=FIRST-LAST[,...]` | put the sections of class `NAME` in these address ranges, like L166's `CLASSES` (may be repeated) |
+| `--reserve FIRST-LAST[,...]` | keep these addresses free of placed sections, like L166's `RESERVE` (may be repeated) |
 | `--base ADDR` | binary: address of the first byte of the file |
 | `--fill BYTE` | binary: value of gaps between pieces of code (default `0FFh`) |
 | `--record-size N` | HEX and S-records: data bytes per record (default 16) |
@@ -157,7 +159,9 @@ carry the address of every record, so they hold only the bytes used.
 Sections without `AT` go in order of first appearance to the first free,
 suitably aligned place from the origin on, as L166 places them by default.
 `--section` overrides that for chosen sections, like L166's `SECTIONS`
-control. The listing ends with a table of where each section went.
+control, and `--class` and `--reserve` give a memory map, like its
+`CLASSES` and `RESERVE` controls: code in flash, variables in RAM.
+The listing ends with a table of where each section went.
 [examples/sections.a66](https://github.com/Dante383/openc166/blob/main/examples/sections.a66) shows both.
 
 Intel HEX files use extended linear address records (type 04) for addresses
@@ -200,9 +204,11 @@ image.base                 # 0xE000, the address of image.data[0]
 image.data                 # b'\xe6\xf4\xef\xbe\xcb\x00'
 ```
 
-- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=(), sections=None, dialect="keil", controls=())`
+- `openc166.assemble(source, *, file_name=None, cpu=None, origin=0, include_dirs=(), sections=None, classes=None, reserve=(), dialect="keil", controls=())`
   assembles a `str` or `bytes`. `sections` gives addresses for sections
-  without `AT`, e.g. `{"VARS": 0xF600}`. `dialect="tasking"` reads TASKING
+  without `AT`, e.g. `{"VARS": 0xF600}`; `classes` gives address ranges
+  for the sections of a class, e.g. `{"NDATA": [(0xC000, 0xDFFF)]}`, and
+  `reserve` ranges that no placed section may use. `dialect="tasking"` reads TASKING
   source; `controls` is a list of controls read before the source, as with
   `-c`. `openc166.assemble_file(path, ...)`
   reads a file; `$INCLUDE` then also searches the file's directory.
