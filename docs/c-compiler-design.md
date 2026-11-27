@@ -1,6 +1,6 @@
 # openc166 — C Compiler: Design
 
-Status: written 2026-11-27 as the design. Milestones 1-4 are done (2026-11-27); [c-compiler.md](c-compiler.md) is the user guide
+Status: written 2026-11-27 as the design. Milestones 1-5 are done (2026-11-27); [c-compiler.md](c-compiler.md) is the user guide
 in a local llvm-project fork, `openc166-llvm`, branch `c166`, based on LLVM
 23.1.6; its `C166.md` says how to build it.
 
@@ -401,6 +401,40 @@ modules (`--lib`) so only what a program uses is pulled in:
 5. **Code quality.** Short forms, post-increment addressing, bit
    instructions, branch shortening, comparison against TASKING output on
    real code.
+   *Done.* Measured on C written to do what seven small functions of the
+   stock 5WY19 boot block (TASKING Classic output) do, code and constants
+   in bytes:
+
+   | | TASKING | `-Os` before | `-Os` after |
+   |---|---|---|---|
+   | seven boot-block functions | 226 | 178 | 164 |
+   | the 5WY19 payload of the tests | | 302 | 220 |
+   | test programs and runtime, all | | 1720 | 1630 |
+
+   Every function is now as small as TASKING's or smaller; the one that
+   was larger (toggling a bit of a byte, 14 against 8) matches it with
+   `XORB mem, RL4`. What changed:
+   - `JB`/`JNB` for tests of SFR bits, `_atbit` bits, register bits and
+     sign bits, in branches and selects. They reach only about 256 bytes,
+     so LLVM's branch relaxation pass runs, with an instruction size upper
+     bound for every instruction; one that cannot reach becomes the
+     opposite jump over a generic `JMP`.
+   - Read-modify-write straight on memory: `ADD mem, Rs` (and SUB, AND, OR,
+     XOR, word and byte), and on a bit-addressable word with one bit,
+     `BSET`, `BCLR`, `BMOVN`. The register header marks the bit-addressable
+     SFRs (FF00H-FFDFH, F100H-F1DFH) so the back end knows them by name.
+   - ALU instructions with a global or fixed address as operand
+     (`ADD Rd, mem`), and `MOVBZ`/`MOVBS Rd, mem`.
+   - No `CMP Rn, #0` after an instruction that has just set Z and N from
+     `Rn` (= and != 0, and < 0 / >= 0 as `cc_N`/`cc_NN`).
+   - Post-increment loads, `MOV Rd, [Rs+]` and `MOVB Rb, [Rs+]`.
+   - Short forms (`MOV Rn, #data4`, `[Rw]`) were already openc166's job:
+     it picks them from the generic mnemonics.
+
+   `-O2` is not for ROM-sized code: it turns a bitwise CRC loop into a
+   512-byte table, and it unrolls. `-Os` is the setting to use; TASKING's
+   default favours size too. Not done: byte compares (`CMPB`) on bytes that
+   are compared as words now, `CMPD1`/`CMPI1` for counting loops.
 6. **Full firmware.** Far/huge pointers and `EXTP`/`EXTS`, far code with
    `CALLS`/`RETS`, segmented memory models, `long long`, soft-float
    (single precision and `-mdouble=32` first, then 64-bit `double` as the

@@ -17,11 +17,13 @@ payload on the simulated 5WY19.
 Build the fork (only the C166 target; see its `C166.md`), then:
 
 ```sh
-clang --target=c166 -O2 main.c util.c -o prog.hex \
+clang --target=c166 -Os main.c util.c -o prog.hex \
   -Wl,--class,CPROGRAM=0F200h-0F8FFh,--class,CNEARROM=0F200h-0F8FFh \
   -Wl,--class,CNEAR=0F900h-0FBBFh
 ```
 
+- `-Os` is the optimisation to use for ROM: `-O2` trades much more size
+  for speed (it turns a bitwise CRC into a 512-byte table, and unrolls).
 - `clang -c` writes an A166 module (`main.o` is assembly text); linking runs
   openc166 on the modules, which must be on `PATH` or next to `clang`.
 - The startup code (`runtime/cstart.a66`) is linked first and the runtime

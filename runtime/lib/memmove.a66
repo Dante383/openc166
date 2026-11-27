@@ -17,8 +17,7 @@ _memmove:                               ; @memmove
 ?LBB0_3:                                ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
 	SUB	R14, #1
-	MOVB	RL1, [R13]
-	ADD	R13, #1
+	MOVB	RL1, [R13+]
 	MOVB	[R5], RL1
 	ADD	R5, #1
 	CMP	R14, #0

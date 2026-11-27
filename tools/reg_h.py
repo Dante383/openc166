@@ -6,6 +6,8 @@
 
 Each register (DEFR) becomes an _sfr declaration, or _esfr for the
 extended SFR area (F000H-F1FFH), and each named bit (BIT) an _sfrbit.
+Bit-addressable registers (FF00H-FFDFH, F100H-F1DFH) are declared with
+__C166_SFRBA, an _sfr the compiler knows it can use BSET/BCLR on.
 These are TASKING C166 declarations: they carry no addresses, because the
 compiler writes the names into its assembly and openc166 takes the
 addresses from the same register file, which the compiler's output
@@ -49,9 +51,20 @@ def main():
 #error "{name}.h is for the C166 target (--target=c166)"
 #endif
 
+/* An _sfr whose bits BSET and BCLR can address (P3 |= 0x0400 is BSET P3.10). */
+#ifndef __C166_SFRBA
+#define __C166_SFRBA \\
+  extern volatile unsigned int __attribute__((section(".c166.sfrba")))
+#endif
+
 """)
     for reg, address in regs:
-        kind = "_esfr" if 0xF000 <= address < 0xF200 else "_sfr"
+        if 0xFF00 <= address < 0xFFE0 or 0xF100 <= address < 0xF1E0:
+            kind = "__C166_SFRBA"
+        elif 0xF000 <= address < 0xF200:
+            kind = "_esfr"
+        else:
+            kind = "_sfr"
         out.write(f"{kind} {reg}; /* {address:04X}H */\n")
     out.write("\n")
     for bit, reg, n in bits:

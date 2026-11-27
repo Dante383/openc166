@@ -129,13 +129,11 @@ ___divsi3:                              ; @__divsi3
 	MOV	R13, R6
 	SUB	R12, R4
 	SUBC	R13, R7
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB3_2
+	JB	R7.15, ?LBB3_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R4
 ?LBB3_2:                                ; %entry
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB3_4
+	JB	R7.15, ?LBB3_4
 ; %bb.3:                                ; %entry
 	MOV	R13, R7
 ?LBB3_4:                                ; %entry
@@ -143,14 +141,12 @@ ___divsi3:                              ; @__divsi3
 	MOV	R5, R6
 	SUB	R4, R14
 	SUBC	R5, R15
-	CMP	R15, #0
-	JMP	cc_SLT, ?LBB3_6
+	JB	R15.15, ?LBB3_6
 ; %bb.5:                                ; %entry
 	MOV	R4, R14
 ?LBB3_6:                                ; %entry
 	XOR	R7, R15
-	CMP	R15, #0
-	JMP	cc_SLT, ?LBB3_8
+	JB	R15.15, ?LBB3_8
 ; %bb.7:                                ; %entry
 	MOV	R5, R15
 ?LBB3_8:                                ; %entry
@@ -164,13 +160,11 @@ ___divsi3:                              ; @__divsi3
 	MOV	R5, R6
 	SUB	R6, R4
 	SUBC	R5, R1
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB3_10
+	JB	R7.15, ?LBB3_10
 ; %bb.9:                                ; %entry
 	MOV	R6, R4
 ?LBB3_10:                               ; %entry
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB3_12
+	JB	R7.15, ?LBB3_12
 ; %bb.11:                               ; %entry
 	MOV	R5, R1
 ?LBB3_12:                               ; %entry
@@ -193,13 +187,11 @@ ___modsi3:                              ; @__modsi3
 	MOV	R13, R6
 	SUB	R12, R4
 	SUBC	R13, R7
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB4_2
+	JB	R7.15, ?LBB4_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R4
 ?LBB4_2:                                ; %entry
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB4_4
+	JB	R7.15, ?LBB4_4
 ; %bb.3:                                ; %entry
 	MOV	R13, R7
 ?LBB4_4:                                ; %entry
@@ -207,13 +199,11 @@ ___modsi3:                              ; @__modsi3
 	MOV	R5, R6
 	SUB	R4, R14
 	SUBC	R5, R15
-	CMP	R15, #0
-	JMP	cc_SLT, ?LBB4_6
+	JB	R15.15, ?LBB4_6
 ; %bb.5:                                ; %entry
 	MOV	R4, R14
 ?LBB4_6:                                ; %entry
-	CMP	R15, #0
-	JMP	cc_SLT, ?LBB4_8
+	JB	R15.15, ?LBB4_8
 ; %bb.7:                                ; %entry
 	MOV	R5, R15
 ?LBB4_8:                                ; %entry
@@ -228,13 +218,11 @@ ___modsi3:                              ; @__modsi3
 	MOV	R5, R6
 	SUB	R6, R1
 	SUBC	R5, R4
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB4_10
+	JB	R7.15, ?LBB4_10
 ; %bb.9:                                ; %entry
 	MOV	R6, R1
 ?LBB4_10:                               ; %entry
-	CMP	R7, #0
-	JMP	cc_SLT, ?LBB4_12
+	JB	R7.15, ?LBB4_12
 ; %bb.11:                               ; %entry
 	MOV	R5, R4
 ?LBB4_12:                               ; %entry
