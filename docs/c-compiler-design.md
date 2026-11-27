@@ -201,9 +201,9 @@ instead of saving registers, as TASKING does.
   with `ADDC`/`SUBC`/`CMPC`-style sequences, and runtime calls for 32-bit
   multiply, divide and variable shifts.
 - `MUL`/`MULU`/`DIV`/`DIVU`/`DIVL`/`DIVLU` go through `MDH`/`MDL`.
-- Comparisons set `PSW`; branches use `JMPR cc_xx` and `JMPA` when out of
-  range. Branch relaxation runs in the backend, so that openc166's generic
-  `JMP` is not relied on to fix ranges.
+- Comparisons set `PSW`; branches are openc166's generic `JMP cc_xx`,
+  which becomes `JMPR` or `JMPA` by distance, so the back end does no
+  branch relaxation (decided in milestone 2).
 - `BSET`/`BCLR`/`BMOV`/`JB`/`JNB`/`JBC` for `_bit`, `_sfrbit` and
   single-bit tests on bit-addressable memory.
 - The C166 short forms (`[Rw0-3]`, `[Rw0-3+]`, `#data3`, `#data4`) are chosen
