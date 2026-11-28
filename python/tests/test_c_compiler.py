@@ -74,7 +74,7 @@ class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
     def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167",
-                 sections=None, tiny=False, model="small"):
+                 sections=None, tiny=False, model="small", reserve=()):
         if tiny:
             model = "tiny"
         # The harness module matches the model: $SEGMENTED but in tiny.
@@ -101,6 +101,7 @@ class Program:
             modules,
             classes=classes or {"CPROGRAM": [ROM], "CNEARROM": [ROM], "CNEAR": [RAM]},
             sections=sections,
+            reserve=reserve,
             libraries=[os.path.join(runtime, "lib")],
         )
         if not self.result.ok:
@@ -630,6 +631,86 @@ int test(int a, int b) {
         asm = p.asm[-1][1]
         self.assertIn("RETI", asm)
         self.assertIn("SCXT\tMDC, #0010H", asm)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class RegisterBankTest(unittest.TestCase):
+    """_using(bank): the interrupt function runs in a register bank of its
+    own, as in TASKING (MOV DPP3:bank, R0; SCXT CP, #DPP3:bank ... POP CP),
+    and the bank is a REGDEF that openc166 places. Functions in two modules
+    that use the same name share one bank; _using(push) saves registers on
+    the stack instead."""
+
+    ISRS = r"""
+#include <c166.h>
+volatile int ticks;
+long acc;
+int helper(int x);
+void _interrupt(0x22) _using(ISR_RB) isr(void) {
+  int t[4], i;
+  for (i = 0; i < 4; i++)
+    t[i] = helper(ticks + i);
+  ticks += 3;
+  acc += (long)t[3] * t[1] / 7;
+}
+void _interrupt(0x24) _using(push) pushed(void) { ticks++; }
+"""
+    OTHER = r"""
+#include <c166.h>
+extern volatile int ticks;
+extern long acc;
+int helper(int x) { return x * 5 + 1; }
+void _interrupt(0x23) _using(ISR_RB) other(void) { ticks <<= 1; }
+int test(int a, int b) {
+  int x = a * b, y = a - b, z = a ^ b, w = a + 7 * b;
+  ticks = 0;  /* Program.call clears near variables only */
+  acc = 0;
+  _int166(0x22);
+  _int166(0x23);
+  _int166(0x24);
+  _int166(0x22);
+  return x + y + z + w + ticks;
+}
+"""
+
+    def test_bank_switch(self):
+        # CP is 0FC00H out of reset: keep that bank (the code's own) free.
+        p = Program([self.ISRS, self.OTHER], reserve=[(0xFC00, 0xFC1F)])
+        bank = p.sections["ISR_RB"].address
+        self.assertTrue(0xFC20 <= bank < 0xFE00, hex(bank))
+        self.assertEqual(p.sections["ISR_RB"].size, 32)  # calls: R0-R15
+        lo, _, s = p.call("test", 9, 4)
+        # ticks: 3, then *2 = 6, +1 = 7, +3 = 10.
+        self.assertEqual(lo, 36 + 5 + (9 ^ 4) + 37 + 10)
+        self.assertEqual(s.sfr["CP"], 0xFC00)
+        # The interrupt worked in the bank, on the caller's user stack.
+        self.assertNotEqual(s.read16(bank), 0)
+        asm = p.asm[1][1]
+        self.assertIn("MOV\tDPP3:ISR_RB, R0\n\tSCXT\tCP, #DPP3:ISR_RB", asm)
+        self.assertIn("POP\tCP\n\tRETI", asm)
+        self.assertIn("ISR_RB\tREGDEF\tR0-R15", asm)
+        # The register-free isr in OTHER needs only a small bank, and the
+        # instruction after SCXT CP may not use a GPR.
+        other = p.asm[2][1]
+        self.assertIn("ISR_RB\tREGDEF", other)
+        self.assertIn("SCXT\tCP, #DPP3:ISR_RB\n\tNOP", other)
+        acc = s.read16(p.address("_acc")) | s.read16(p.address("_acc") + 2) << 16
+        # First isr: ticks 0 -> t = 1, 6, 11, 16: 16*6/7 = 13.
+        # Second: ticks 7 -> t = 36, 41, 46, 51: 51*41/7 = 298.
+        self.assertEqual(acc, 13 + 298)
+
+    def test_models(self):
+        for model in MODELS:
+            with self.subTest(model=model):
+                # Far variables in the internal RAM as well.
+                p = Program([self.ISRS, self.OTHER], model=model,
+                            reserve=[(0xFC00, 0xFC1F)],
+                            classes={"CPROGRAM": [ROM], "CNEARROM": [ROM],
+                                     "CNEAR": [(0xF600, 0xF7FF)],
+                                     "CHUGE": [(0xF800, 0xF9FF)]})
+                lo, _, s = p.call("test", 9, 4)
+                self.assertEqual(lo, 36 + 5 + (9 ^ 4) + 37 + 10)
+                self.assertEqual(s.sfr["CP"], 0xFC00)
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

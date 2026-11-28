@@ -389,7 +389,11 @@ modules (`--lib`) so only what a program uses is pulled in:
    - **Interrupt frames push** (Classic's `_using(push)`): used registers on
      the user stack of the interrupted code, MDC/MDH/MDL on the system stack
      when needed, `RETI` inside `PROC TASK`, a `JMPS` vector at 4 x n.
-     Register bank switching is not done yet.
+     `_using(bank)` switches banks as TASKING does (`MOV DPP3:bank, R0`,
+     `SCXT CP, #DPP3:bank`, `POP CP`) and the module defines `bank REGDEF
+     R0-Rn`; Clang passes the name as an `annotate` attribute. Unlike
+     TASKING, an interrupt function without `_using` pushes rather than
+     using a bank named after the module.
    - **Intrinsics are a header** (`<c166.h>`): inline assembly and Clang's
      generic builtins, no new Clang builtins. Inline assembly takes `"r"`
      and `"i"(&var)` operands; the latter prints a variable's A166 name.

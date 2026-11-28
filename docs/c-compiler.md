@@ -176,7 +176,7 @@ openc166's `REG167.INC` by `tools/reg_h.py`.
 | `_bitword` | a word in the bit-addressable RAM |
 | `_at(address)` | a variable or constant at a fixed address (variables without initial value) |
 | `_interrupt(n)` | an interrupt function with a vector at 4 × n; `-1` gives no vector |
-| `_using(...)` | accepted; interrupt functions push what they use (`_using(push)`) |
+| `_using(bank)`, `_using(push)` | an interrupt function's own register bank, or pushed registers (see below) |
 | `_inline`, `_noinline` | inlining |
 | `_near`, `_system`, `_iram`, `_bita` | accepted (data is near) |
 | `_far`, `_huge`, `_shuge` | pointers and variables anywhere in 16 MB (see below) |
@@ -218,7 +218,42 @@ variable is read and written directly, `EXTS #SEG x, #1` then
 
 An interrupt function saves the registers it uses on the user stack it
 interrupted, and MDC/MDH/MDL when it multiplies, divides, calls a function
-or has inline assembly, and returns with `RETI`.
+or has inline assembly, and returns with `RETI`. `_using(push)` asks for
+the same frame.
+
+With `_using(name)` it runs in a register bank of its own instead, as in
+TASKING. The frame is shorter and saves no registers:
+
+```
+_isr?T  PROC    TASK
+        MOV     DPP3:ISR_RB, R0     ; the bank's R0: the interrupted user stack
+        SCXT    CP, #DPP3:ISR_RB
+        NOP                         ; only if the next instruction uses a GPR
+        ...
+        POP     CP
+        RETI
+ISR_RB  REGDEF  R0-R15
+```
+
+The C167 cannot use a GPR in the instruction right after `SCXT CP`, hence
+the `NOP`. The bank holds the registers the function uses, or R0-R15 if it
+calls anything. Interrupt functions that name the same bank, in one module
+or several, share it, so give them the same interrupt level. A function
+that needs no register does not switch banks.
+
+openc166 places banks as L166 does, at the lowest free even address from
+`0FC00H` on. That is also where CP points after reset, and `__cstart` keeps
+the CP it is called with. So keep the bank of the code that gets
+interrupted out of the way with `--reserve`:
+
+```sh
+clang --target=c166 -Os main.c -o prog.hex -Wl,--reserve,0FC00h-0FC1Fh
+```
+
+In the stock 5WY19 firmware, the interrupts switch CP to banks from
+`0FC2EH` up to `0FD06H`, and the bit-addressable RAM above that holds the
+firmware's flags. A payload that keeps the firmware running therefore has
+no free room for a bank: its interrupt functions should use `_using(push)`.
 
 Intrinsics: `_nop`, `_srvwdt`, `_diswdt`, `_einit`, `_idle`, `_pwrdn`,
 `_int166`, `_atomic`, `_rol`, `_ror`, `_prior`, `_mul32`, `_mulu32`,
@@ -237,8 +272,7 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 - Structs returned by value work, but through a hidden pointer argument,
   not TASKING's block on the user stack, so such functions cannot be
   called from TASKING-built code.
-- Register bank switching for interrupts (`_using(name)` falls back to
-  pushing registers), `#pragma` (`noframe`, `regdef`, ...), `_packed`,
+- `#pragma` (`noframe`, `regdef`, ...), `_localbank`, `_packed`,
   `_noalign`, `_stackparm`.
 - `_bit` variables as bits in the bit-addressable RAM.
 - Alignment above 2 bytes (`_Alignas(4)`): A166 has only `EVEN`.
