@@ -9,12 +9,11 @@ STRNCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _strncpy:
 _strncpy?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOV	[-R0], R7
 	MOV	[-R0], R6
 	MOV	R5, R13
 	MOV	R4, R12
-	MOV	R1, [R0+#6]
-	MOV	R2, [R0+#4]
+	MOV	R1, [R0+#4]
+	MOV	R2, [R0+#2]
 	MOV	R3, R2
 	OR	R3, R1
 	JMP	cc_EQ, ?LBB0_6
@@ -25,8 +24,7 @@ _strncpy?F	PROC	FAR
 	EXTS	R15, #1
 	MOVB	RL6, [R14]
 	MOVBZ	R6, RL6
-	MOV	R7, R6
-	AND	R7, #255
+	MOVBZ	R11, RL6
 	JMP	cc_EQ, ?LBB0_4
 ; %bb.3:                                ; %for.body
 	ADD	R14, #1
@@ -65,7 +63,6 @@ _strncpy?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_5
 ?LBB0_6:
 	MOV	R6, [R0+]
-	MOV	R7, [R0+]
 	RETS
 _strncpy?F	ENDP
 STRNCPY_PR	ENDS

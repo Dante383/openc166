@@ -35,57 +35,59 @@ _labs:
 	PUBLIC	_llabs
 _llabs:
 ; %bb.0:                                ; %entry
-	MOV	R1, [R0]
-	MOV	R5, [R0+#2]
-	MOV	R4, #0
-	MOV	R11, #1
-	MOV	R3, R11
-	CMP	R5, #0
-	JMP	cc_NE, ?LBB2_2
+	MOV	R5, #0
+	MOV	R4, #1
+	MOV	R1, R4
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB2_13
 ; %bb.1:                                ; %entry
-	MOV	R3, R4
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB2_14
 ?LBB2_2:
-	CMP	R1, #0
-	JMP	cc_NE, ?LBB2_4
-; %bb.3:                                ; %entry
-	MOV	R11, R4
-?LBB2_4:
-	MOV	R2, [R0+#6]
-	MOV	R13, [R0+#4]
-	CMP	R5, #0
-	JMP	cc_EQ, ?LBB2_6
-; %bb.5:                                ; %entry
-	MOV	R11, R3
-?LBB2_6:
-	MOV	R3, R4
-	MOV	R10, R4
-	SUB	R3, R13
-	SUBC	R10, R2
-	SUB	R3, R11
-	SUBC	R10, R4
-	JB	R2.15, ?LBB2_8
-; %bb.7:                                ; %entry
-	MOV	R3, R13
-?LBB2_8:
-	JB	R2.15, ?LBB2_10
-; %bb.9:                                ; %entry
-	MOV	R10, R2
-?LBB2_10:
-	MOV	R11, R4
-	SUB	R4, R1
-	SUBC	R11, R5
-	JB	R2.15, ?LBB2_12
-; %bb.11:                               ; %entry
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB2_4
+?LBB2_3:
 	MOV	R4, R1
+?LBB2_4:
+	MOV	R1, R5
+	MOV	R2, R5
+	SUB	R1, R14
+	SUBC	R2, R15
+	SUB	R1, R4
+	SUBC	R2, R5
+	JB	R15.15, ?LBB2_6
+; %bb.5:                                ; %entry
+	MOV	R1, R14
+?LBB2_6:
+	JB	R15.15, ?LBB2_8
+; %bb.7:                                ; %entry
+	MOV	R2, R15
+?LBB2_8:
+	MOV	R3, R5
+	SUB	R5, R12
+	SUBC	R3, R13
+	JB	R15.15, ?LBB2_10
+; %bb.9:                                ; %entry
+	MOV	R5, R12
+?LBB2_10:
+	MOV	R4, R0
+	JB	R15.15, ?LBB2_12
+; %bb.11:                               ; %entry
+	MOV	R3, R13
 ?LBB2_12:
-	JB	R2.15, ?LBB2_14
-; %bb.13:                               ; %entry
-	MOV	R11, R5
-?LBB2_14:
-	MOV	[R12+#2], R11
-	MOV	[R12], R4
-	MOV	[R12+#6], R10
-	MOV	[R12+#4], R3
+	MOV	[R4+#2], R3
+	MOV	[R4], R5
+	MOV	[R4+#6], R2
+	MOV	[R4+#4], R1
 	RET
+?LBB2_13:
+	MOV	R1, R5
+	CMP	R12, #0
+	JMP	cc_NE, ?LBB2_2
+?LBB2_14:
+	MOV	R4, R5
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB2_3
+	JMP	cc_UC, ?LBB2_4
 ABS_PR	ENDS
 	END

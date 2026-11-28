@@ -18,14 +18,15 @@ _frexp?F	PROC	FAR
 	MOV	[-R0], R7
 	MOV	[-R0], R6
 	SUB	R0, #38
-	MOV	R6, R12
 	MOV	R8, [R0+#52]
 	MOV	R12, [R0+#50]
 	MOV	R10, [R0+#48]
 	MOV	R13, [R0+#46]
-	MOV	R7, R8
-	AND	R7, #32752
-	CMP	R7, #32752
+	MOV	R7, R0
+	ADD	R7, #56
+	MOV	R6, R8
+	AND	R6, #32752
+	CMP	R6, #32752
 	JMP	cc_EQ, ?LBB0_10
 ; %bb.1:                                ; %if.end.i.i
 	MOV	R9, [R0+#54]
@@ -52,7 +53,7 @@ _frexp?F	PROC	FAR
 	MOV	R13, [R0+#20]
 	JMP	cc_UC, ?LBB0_10
 ?LBB0_3:
-	CMP	R7, #0
+	CMP	R6, #0
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.4:                                ; %if.else.i.i.i.i
 	MOV	R1, R8
@@ -146,10 +147,12 @@ _frexp?F	PROC	FAR
 	OR	R8, R5
 	OR	R8, #16352
 ?LBB0_10:
-	MOV	[R6], R13
-	MOV	[R6+#2], R10
-	MOV	[R6+#4], R12
-	MOV	[R6+#6], R8
+	MOV	[R7], R13
+	MOV	[R7+#2], R10
+	MOV	[R7+#4], R12
+	MOV	[R7+#6], R8
+	MOV	R4, R0
+	ADD	R4, #56
 	ADD	R0, #38
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]

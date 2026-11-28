@@ -8,11 +8,10 @@ STRNCAT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_strncat
 _strncat:
 ; %bb.0:                                ; %entry
-	MOV	[-R0], R7
 	MOV	[-R0], R6
 	MOV	R5, R13
 	MOV	R4, R12
-	MOV	R1, [R0+#4]
+	MOV	R1, [R0+#2]
 	MOV	R10, R4
 	MOV	R11, R5
 ?LBB0_1:
@@ -21,10 +20,10 @@ _strncat:
 	EXTS	R2, #1
 	MOVB	RL6, [R3]
 	MOVBZ	R6, RL6
-	AND	R6, #255
+	MOVBZ	R12, RL6
 	ADD	R10, #1
 	ADDC	R11, #0
-	CMP	R6, #0
+	CMP	R12, #0
 	JMP	cc_NE, ?LBB0_1
 ; %bb.2:                                ; %for.cond.preheader
 	CMP	R1, #0
@@ -33,8 +32,7 @@ _strncat:
 	EXTS	R15, #1
 	MOVB	RL6, [R14]
 	MOVBZ	R6, RL6
-	MOV	R7, R6
-	AND	R7, #255
+	MOVBZ	R10, RL6
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.4:                                ; %for.body
 	ADD	R14, #1
@@ -59,7 +57,6 @@ _strncat:
 	EXTS	R11, #1
 	MOVB	[R10], RL1
 	MOV	R6, [R0+]
-	MOV	R7, [R0+]
 	RET
 STRNCAT_PR	ENDS
 	END

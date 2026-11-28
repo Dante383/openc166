@@ -153,13 +153,21 @@ including the stock 5WY19 firmware:
   first); one that no longer fits, a float, a struct by value (a copy, in
   words) and every argument after them go on the user stack, and so do the
   `...` of a variadic function;
-- results in R4 (`char` in RL4), 32 bits in R4:R5;
+- results in R4, 32 bits in R4:R5; a `char` only in RL4 (TASKING leaves
+  RH4 as it is, so the caller extends it); a `_bit`/`_Bool` in USR0
+  (PSW.6);
+- a struct or `double` result in a block the caller reserves on the user
+  stack above the stack arguments; the called function writes it there and
+  returns its address in R4. (A variadic function cannot know where that
+  is, so there the block's address is a hidden first argument instead.)
 - R6-R9 saved by the called function; R0 is the user stack pointer; the
   system stack holds only return addresses;
 - C names get a leading underscore (`main` is `_main`).
 
 Stack arguments are laid out first argument lowest, starting at R0 on
-entry; that order is still to be checked against a Classic compiler.
+entry, as the stock 5WY19 firmware's callees read them (its non-leaf
+functions push R15..R12 at entry, putting the register arguments in the
+same order just below).
 
 ## TASKING extensions
 
@@ -269,9 +277,6 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 - `_near` function pointers (all function pointers are far in the small
   and large models, near in tiny and medium).
-- Structs returned by value work, but through a hidden pointer argument,
-  not TASKING's block on the user stack, so such functions cannot be
-  called from TASKING-built code.
 - `#pragma` (`noframe`, `regdef`, ...), `_localbank`, `_packed`,
   `_noalign`, `_stackparm`.
 - `_bit` variables as bits in the bit-addressable RAM.

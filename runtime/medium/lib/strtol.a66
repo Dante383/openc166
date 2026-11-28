@@ -111,7 +111,7 @@ _convert:
 	EXTS	R9, #1
 	MOVB	RL5, [R8]
 	MOVBZ	R5, RL5
-	AND	R5, #255
+	MOVBZ	R5, RL5
 	MOV	R14, [R0+#22]
 	CMP	R5, #45
 	JMP	cc_EQ, ?LBB1_4
@@ -138,8 +138,7 @@ _convert:
 	EXTS	R9, #1
 	MOVB	RL4, [R8]
 	MOVBZ	R4, RL4
-	MOV	R5, R4
-	AND	R5, #255
+	MOVBZ	R5, RL4
 	CMP	R5, #48
 	JMP	cc_NE, ?LBB1_18
 ; %bb.9:                                ; %land.lhs.true18
@@ -195,7 +194,7 @@ _convert:
 	CMP	R14, #0
 	JMP	cc_NE, ?LBB1_21
 ?LBB1_19:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	MOV	R14, #8
 	CMP	R4, #48
 	JMP	cc_EQ, ?LBB1_21

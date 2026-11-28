@@ -60,23 +60,23 @@ _getchar?F	ENDP
 _ungetc:
 _ungetc?F	PROC	FAR
 ; %bb.0:                                ; %entry
+	MOV	R5, R12
 	MOV	R4, #65535
-	CMP	R12, #65535
+	CMP	R5, #65535
 	JMP	cc_EQ, ?LBB3_2
 ; %bb.1:                                ; %lor.lhs.false
-	MOV	R5, [R13+#2]
-	CMP	R5, #65535
+	MOV	R1, [R13+#2]
+	CMP	R1, #65535
 	JMP	cc_EQ, ?LBB3_3
 ?LBB3_2:
 	RETS
 ?LBB3_3:
-	AND	R12, #255
-	MOV	[R13+#2], R12
-	MOVB	RL4, [R13+#4]
-	MOVBZ	R4, RL4
-	AND	R4, #254
-	MOVB	[R13+#4], RL4
-	MOV	R4, R12
+	MOVBZ	R4, RL5
+	MOV	[R13+#2], R4
+	MOVB	RL5, [R13+#4]
+	MOVBZ	R5, RL5
+	AND	R5, #254
+	MOVB	[R13+#4], RL5
 	RETS
 _ungetc?F	ENDP
 	EXTRN	__read : NEAR

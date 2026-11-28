@@ -14,7 +14,7 @@ _strlen:
 	EXTS	R13, #1
 	MOVB	RL1, [R4]
 	MOVBZ	R1, RL1
-	AND	R1, #255
+	MOVBZ	R1, RL1
 	ADD	R5, #1
 	ADDC	R13, #0
 	CMP	R1, #0

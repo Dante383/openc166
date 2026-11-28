@@ -11,16 +11,14 @@ _strcmp:
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	MOV	R5, R4
-	AND	R5, #255
+	MOVBZ	R5, RL4
 	JMP	cc_EQ, ?LBB0_5
 ?LBB0_1:
 	EXTS	R15, #1
 	MOVB	RL5, [R14]
 	MOVBZ	R5, RL5
-	AND	R5, #255
-	MOV	R1, R4
-	AND	R1, #255
+	MOVBZ	R5, RL5
+	MOVBZ	R1, RL4
 	CMP	R1, R5
 	JMP	cc_NE, ?LBB0_4
 ; %bb.2:                                ; %while.body
@@ -31,13 +29,12 @@ _strcmp:
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	MOV	R5, R4
-	AND	R5, #255
+	MOVBZ	R5, RL4
 	JMP	cc_NE, ?LBB0_1
 ; %bb.3:
 	MOV	R4, #0
 ?LBB0_4:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_UC, ?LBB0_6
 ?LBB0_5:
 	MOV	R4, #0
@@ -53,16 +50,14 @@ _strcoll:
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	MOV	R5, R4
-	AND	R5, #255
+	MOVBZ	R5, RL4
 	JMP	cc_EQ, ?LBB1_5
 ?LBB1_1:
 	EXTS	R15, #1
 	MOVB	RL5, [R14]
 	MOVBZ	R5, RL5
-	AND	R5, #255
-	MOV	R1, R4
-	AND	R1, #255
+	MOVBZ	R5, RL5
+	MOVBZ	R1, RL4
 	CMP	R1, R5
 	JMP	cc_NE, ?LBB1_4
 ; %bb.2:                                ; %while.body.i
@@ -73,13 +68,12 @@ _strcoll:
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	MOV	R5, R4
-	AND	R5, #255
+	MOVBZ	R5, RL4
 	JMP	cc_NE, ?LBB1_1
 ; %bb.3:
 	MOV	R4, #0
 ?LBB1_4:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_UC, ?LBB1_6
 ?LBB1_5:
 	MOV	R4, #0

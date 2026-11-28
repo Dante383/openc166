@@ -53,10 +53,10 @@ ___floatundisf:
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R1, R4
-	SHR	R1, #8
-	ADD	R1, R4
-	AND	R1, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R1, RL5
 	ADD	R1, #16
 	CMP	R13, #0
 	JMP	cc_EQ, ?LBB0_6
@@ -83,14 +83,14 @@ ___floatundisf:
 	SHR	R5, #2
 	AND	R5, #13107
 	ADD	R5, R4
-	MOV	R2, R5
-	SHR	R2, #4
-	ADD	R2, R5
-	AND	R2, #3855
-	MOV	R4, R2
-	SHR	R4, #8
-	ADD	R4, R2
-	AND	R4, #31
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R4, RL5
 	JMP	cc_UC, ?LBB0_7
 ?LBB0_4:
 	MOV	R4, #0
@@ -123,10 +123,10 @@ ___floatundisf:
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R1, R4
-	SHR	R1, #8
-	ADD	R1, R4
-	AND	R1, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R1, RL5
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_3
 ?LBB0_6:
@@ -152,14 +152,14 @@ ___floatundisf:
 	SHR	R5, #2
 	AND	R5, #13107
 	ADD	R5, R4
-	MOV	R2, R5
-	SHR	R2, #4
-	ADD	R2, R5
-	AND	R2, #3855
-	MOV	R4, R2
-	SHR	R4, #8
-	ADD	R4, R2
-	AND	R4, #31
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R4, RL5
 	ADD	R4, #16
 ?LBB0_7:
 	MOV	R5, R14

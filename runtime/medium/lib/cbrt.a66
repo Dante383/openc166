@@ -13,28 +13,32 @@ CBRT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _cbrt:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
-	SUB	R0, #16
-	MOV	R6, R12
-	MOV	R4, [R0+#18]
-	MOV	R5, [R0+#20]
-	MOV	R1, [R0+#22]
-	MOV	R2, [R0+#24]
+	SUB	R0, #24
+	MOV	R6, R0
+	ADD	R6, #34
+	MOV	R4, [R0+#26]
+	MOV	R5, [R0+#28]
+	MOV	R1, [R0+#30]
+	MOV	R2, [R0+#32]
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #8
 	CALL	__ZN16__llvm_libc_c1664math4cbrtEd
-	MOV	R4, [R0+#10]
-	MOV	R5, [R0+#8]
-	MOV	R1, [R0+#14]
-	MOV	R2, [R0+#12]
-	MOV	[R6+#4], R2
-	MOV	[R6+#6], R1
-	MOV	[R6], R5
-	MOV	[R6+#2], R4
-	ADD	R0, #16
+	MOV	R4, [R0+#14]
+	MOV	[R0+#22], R4
+	MOV	R5, [R0+#12]
+	MOV	[R0+#20], R5
+	MOV	R1, [R0+#10]
+	MOV	[R0+#18], R1
+	MOV	R2, [R0+#8]
+	MOV	[R0+#16], R2
+	MOV	[R6], R2
+	MOV	[R6+#2], R1
+	MOV	[R6+#6], R4
+	MOV	[R6+#4], R5
+	MOV	R4, R6
+	ADD	R0, #24
 	MOV	R6, [R0+]
 	RET
 __ZN16__llvm_libc_c1664math4cbrtEd:
@@ -43,10 +47,9 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[-R0], R8
 	MOV	[-R0], R7
 	MOV	[-R0], R6
-	SUB	R0, #934
-	MOV	R9, R12
-	MOV	R7, [R0+#948]
-	MOV	R3, [R0+#946]
+	SUB	R0, #942
+	MOV	R7, [R0+#956]
+	MOV	R3, [R0+#954]
 	MOV	R6, R7
 	AND	R6, #32767
 	MOV	R4, R3
@@ -68,8 +71,10 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 ; %bb.3:                                ; %entry
 	MOV	R4, R5
 ?LBB1_4:
-	MOV	R2, [R0+#944]
-	MOV	R1, [R0+#942]
+	MOV	R2, [R0+#952]
+	MOV	R1, [R0+#950]
+	MOV	R9, R0
+	ADD	R9, #958
 	MOV	R5, #682
 	JB	R4.0, ?LBB1_12
 ; %bb.5:                                ; %if.then
@@ -78,15 +83,15 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R8
 	MOV	[R0+#8], R8
-	MOV	[R0+#138], R2
+	MOV	[R0+#146], R2
 	MOV	[R0+#2], R2
-	MOV	[R0+#130], R1
+	MOV	[R0+#138], R1
 	MOV	[R0], R1
 	MOV	[R0+#4], R3
 	MOV	[R0+#6], R7
-	MOV	[R0+#140], R3
+	MOV	[R0+#148], R3
 	CALL	___eqdf2
-	MOV	R1, [R0+#140]
+	MOV	R1, [R0+#148]
 	OR	R5, R4
 	JMP	cc_EQ, ?LBB1_14
 ; %bb.6:                                ; %if.then
@@ -106,30 +111,28 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	JB	R8.0, ?LBB1_11
 	JMP	cc_UC, ?LBB1_14
 ?LBB1_11:
-	MOV	[R0+#48], R9
+	MOV	[R0+#56], R9
 	MOV	R4, #17328
 	MOV	[R0+#14], R4
 	MOV	R4, #0
 	MOV	[R0+#12], R4
 	MOV	[R0+#10], R4
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#138]
+	MOV	R4, [R0+#146]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#130]
+	MOV	R4, [R0+#138]
 	MOV	[R0], R4
 	MOV	[R0+#4], R1
 	MOV	[R0+#6], R7
-	MOV	R12, R0
-	ADD	R12, #918
 	CALL	___muldf3
+	MOV	R7, [R0+#22]
+	MOV	R3, [R0+#20]
+	MOV	R2, [R0+#18]
+	MOV	R1, [R0+#16]
 	MOV	R5, #662
-	MOV	R7, [R0+#924]
-	MOV	R3, [R0+#922]
-	MOV	R2, [R0+#920]
-	MOV	R1, [R0+#918]
 	JMP	cc_UC, ?LBB1_13
 ?LBB1_12:
-	MOV	[R0+#48], R9
+	MOV	[R0+#56], R9
 ?LBB1_13:
 	MOV	R10, R7
 	SHR	R10, #4
@@ -139,12 +142,12 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	R4, MDH
 	SHR	R4, #1
 	ADD	R5, R4
-	MOV	[R0+#128], R5
+	MOV	[R0+#136], R5
 	MOV	R5, #3
 	MUL	R4, R5
 	MOV	R4, MDL
 	SUB	R10, R4
-	MOV	[R0+#82], R10
+	MOV	[R0+#90], R10
 	MOV	R8, R7
 	AND	R8, #15
 	OR	R8, #16368
@@ -153,7 +156,7 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	SHL	R4, #4
 	ADD	R4, #16368
 	OR	R4, R7
-	MOV	[R0+#126], R4
+	MOV	[R0+#134], R4
 	MOV	[R0+#10], R2
 	MOV	[R0+#8], R1
 	MOV	[R0+#2], R2
@@ -162,21 +165,19 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#4], R3
 	MOV	[R0+#14], R8
 	MOV	[R0+#6], R8
-	MOV	R12, R0
-	ADD	R12, #910
 	MOV	R7, R3
-	MOV	[R0+#140], R7
+	MOV	[R0+#148], R7
 	MOV	R9, R1
 	MOV	R6, R2
 	CALL	___muldf3
-	MOV	R4, [R0+#910]
-	MOV	[R0+#136], R4
-	MOV	R4, [R0+#912]
-	MOV	[R0+#134], R4
-	MOV	R4, [R0+#914]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#144], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#142], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#140], R4
+	MOV	R4, [R0+#22]
 	MOV	[R0+#132], R4
-	MOV	R4, [R0+#916]
-	MOV	[R0+#124], R4
 	MOV	R4, #49179
 	MOV	[R0+#14], R4
 	MOV	R4, #21183
@@ -189,8 +190,6 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0], R9
 	MOV	[R0+#4], R7
 	MOV	[R0+#6], R8
-	MOV	R12, R0
-	ADD	R12, #894
 	CALL	___muldf3
 	MOV	R4, #16395
 	MOV	[R0+#14], R4
@@ -200,25 +199,23 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #54726
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#900]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#898]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#896]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#894]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #886
 	CALL	___adddf3
-	MOV	R4, [R0+#886]
-	MOV	[R0+#122], R4
-	MOV	R4, [R0+#888]
-	MOV	[R0+#120], R4
-	MOV	R4, [R0+#890]
-	MOV	[R0+#118], R4
-	MOV	R4, [R0+#892]
-	MOV	[R0+#116], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#130], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#128], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#126], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#124], R4
 	MOV	R4, #49181
 	MOV	[R0+#14], R4
 	MOV	R4, #58075
@@ -228,15 +225,13 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	R4, #53127
 	MOV	[R0+#8], R4
 	MOV	R7, R6
-	MOV	[R0+#138], R7
+	MOV	[R0+#146], R7
 	MOV	[R0+#2], R7
 	MOV	[R0], R9
 	MOV	R6, R9
-	MOV	R9, [R0+#140]
+	MOV	R9, [R0+#148]
 	MOV	[R0+#4], R9
 	MOV	[R0+#6], R8
-	MOV	R12, R0
-	ADD	R12, #878
 	CALL	___muldf3
 	MOV	R4, #16417
 	MOV	[R0+#14], R4
@@ -246,25 +241,23 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #53542
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#884]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#882]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#880]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#878]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #870
 	CALL	___adddf3
-	MOV	R4, [R0+#870]
-	MOV	[R0+#112], R4
-	MOV	R4, [R0+#872]
-	MOV	[R0+#108], R4
-	MOV	R4, [R0+#874]
-	MOV	[R0+#104], R4
-	MOV	R4, [R0+#876]
-	MOV	[R0+#100], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#122], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#118], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#114], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#110], R4
 	MOV	R4, #49141
 	MOV	[R0+#14], R4
 	MOV	R4, #38716
@@ -275,12 +268,10 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#8], R4
 	MOV	[R0+#2], R7
 	MOV	R7, R6
-	MOV	[R0+#130], R7
+	MOV	[R0+#138], R7
 	MOV	[R0], R7
 	MOV	[R0+#4], R9
 	MOV	[R0+#6], R8
-	MOV	R12, R0
-	ADD	R12, #846
 	CALL	___muldf3
 	MOV	R4, #16400
 	MOV	[R0+#14], R4
@@ -290,25 +281,23 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #21437
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#852]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#850]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#848]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#846]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #838
 	CALL	___adddf3
-	MOV	R4, [R0+#838]
-	MOV	[R0+#114], R4
-	MOV	R4, [R0+#840]
-	MOV	[R0+#110], R4
-	MOV	R4, [R0+#842]
-	MOV	[R0+#106], R4
-	MOV	R4, [R0+#844]
-	MOV	[R0+#102], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#120], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#116], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#112], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#108], R4
 	MOV	R4, #49045
 	MOV	[R0+#14], R4
 	MOV	R4, #58685
@@ -317,13 +306,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #7352
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#138]
+	MOV	R4, [R0+#146]
 	MOV	[R0+#2], R4
 	MOV	[R0], R7
 	MOV	[R0+#4], R9
 	MOV	[R0+#6], R8
-	MOV	R12, R0
-	ADD	R12, #830
 	CALL	___muldf3
 	MOV	R4, #16336
 	MOV	[R0+#14], R4
@@ -333,167 +320,151 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #9554
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#836]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#834]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#832]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#830]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #822
 	CALL	___adddf3
-	MOV	R4, [R0+#822]
-	MOV	[R0+#90], R4
-	MOV	R4, [R0+#824]
-	MOV	[R0+#88], R4
-	MOV	R4, [R0+#826]
-	MOV	[R0+#86], R4
-	MOV	R4, [R0+#828]
-	MOV	[R0+#84], R4
-	MOV	R6, [R0+#124]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#98], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#96], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#94], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#92], R4
+	MOV	R6, [R0+#132]
 	MOV	[R0+#14], R6
-	MOV	R8, [R0+#132]
+	MOV	R8, [R0+#140]
 	MOV	[R0+#12], R8
-	MOV	R7, [R0+#134]
+	MOV	R7, [R0+#142]
 	MOV	[R0+#10], R7
-	MOV	R9, [R0+#136]
+	MOV	R9, [R0+#144]
 	MOV	[R0+#8], R9
 	MOV	[R0+#6], R6
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R9
-	MOV	R12, R0
-	ADD	R12, #902
 	CALL	___muldf3
-	MOV	R4, [R0+#902]
-	MOV	[R0+#98], R4
-	MOV	R4, [R0+#904]
-	MOV	[R0+#96], R4
-	MOV	R4, [R0+#906]
-	MOV	[R0+#94], R4
-	MOV	R4, [R0+#908]
-	MOV	[R0+#92], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#106], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#104], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#102], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#100], R4
 	MOV	[R0+#6], R6
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R9
-	MOV	R4, [R0+#100]
+	MOV	R4, [R0+#110]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#104]
+	MOV	R4, [R0+#114]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#108]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#112]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #862
-	CALL	___muldf3
-	MOV	R4, [R0+#116]
-	MOV	[R0+#14], R4
 	MOV	R4, [R0+#118]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#120]
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#122]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#868]
+	CALL	___muldf3
+	MOV	R4, [R0+#124]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#126]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#128]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#130]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#866]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#864]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#862]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #854
 	CALL	___adddf3
-	MOV	R4, [R0+#854]
-	MOV	[R0+#122], R4
-	MOV	R4, [R0+#856]
-	MOV	[R0+#116], R4
-	MOV	R4, [R0+#858]
-	MOV	[R0+#120], R4
-	MOV	R4, [R0+#860]
-	MOV	[R0+#118], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#124], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#130], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#128], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#126], R4
 	MOV	[R0+#6], R6
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R9
-	MOV	R4, [R0+#84]
+	MOV	R4, [R0+#92]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#86]
+	MOV	R4, [R0+#94]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#88]
+	MOV	R4, [R0+#96]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#90]
+	MOV	R4, [R0+#98]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #814
 	CALL	___muldf3
-	MOV	R4, [R0+#102]
+	MOV	R4, [R0+#108]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#106]
+	MOV	R4, [R0+#112]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#110]
+	MOV	R4, [R0+#116]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#114]
+	MOV	R4, [R0+#120]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#820]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#818]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#816]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#814]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #806
 	CALL	___adddf3
-	MOV	R4, [R0+#806]
-	MOV	R5, [R0+#808]
-	MOV	R1, [R0+#810]
-	MOV	R2, [R0+#812]
-	MOV	R3, [R0+#92]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	R3, [R0+#100]
 	MOV	[R0+#6], R3
-	MOV	R3, [R0+#94]
+	MOV	R3, [R0+#102]
 	MOV	[R0+#4], R3
-	MOV	R3, [R0+#96]
+	MOV	R3, [R0+#104]
 	MOV	[R0+#2], R3
-	MOV	R3, [R0+#98]
+	MOV	R3, [R0+#106]
 	MOV	[R0], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #798
 	CALL	___muldf3
-	MOV	R4, [R0+#118]
+	MOV	R4, [R0+#126]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#120]
+	MOV	R4, [R0+#128]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#116]
+	MOV	R4, [R0+#130]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#122]
+	MOV	R4, [R0+#124]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#804]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#802]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#800]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#798]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #790
 	CALL	___adddf3
-	MOV	R4, [R0+#790]
-	MOV	R5, [R0+#792]
-	MOV	R1, [R0+#794]
-	MOV	R2, [R0+#796]
-	MOV	R14, [R0+#82]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	R14, [R0+#90]
 	MOV	R3, R14
 	SHR	R3, #13
 	SHL	R14, #3
@@ -525,406 +496,124 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #782
 	CALL	___muldf3
-	MOV	R4, [R0+#782]
-	MOV	[R0+#136], R4
-	MOV	R4, [R0+#784]
-	MOV	[R0+#124], R4
-	MOV	R4, [R0+#786]
-	MOV	[R0+#134], R4
-	MOV	R4, [R0+#788]
-	MOV	[R0+#122], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#144], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#132], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#142], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#130], R4
 	MOV	R4, #16800
-	MOV	[R0+#100], R4
+	MOV	[R0+#108], R4
 	MOV	[R0+#14], R4
 	MOV	R5, #0
-	MOV	[R0+#132], R5
+	MOV	[R0+#140], R5
 	MOV	[R0+#12], R5
 	MOV	R4, #512
-	MOV	[R0+#98], R4
+	MOV	[R0+#106], R4
 	MOV	[R0+#10], R4
 	MOV	[R0+#8], R5
-	MOV	R7, [R0+#138]
+	MOV	R7, [R0+#146]
 	MOV	[R0+#2], R7
-	MOV	R9, [R0+#130]
+	MOV	R9, [R0+#138]
 	MOV	[R0], R9
-	MOV	R8, [R0+#140]
+	MOV	R8, [R0+#148]
 	MOV	[R0+#4], R8
-	MOV	R6, [R0+#126]
+	MOV	R6, [R0+#134]
 	MOV	[R0+#6], R6
-	MOV	R12, R0
-	ADD	R12, #526
 	CALL	___muldf3
-	MOV	R4, [R0+#526]
-	MOV	R5, [R0+#528]
-	MOV	R1, [R0+#530]
-	MOV	R2, [R0+#532]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#2], R7
 	MOV	[R0], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#6], R6
 	MOV	[R0+#14], R2
-	MOV	R6, R2
+	MOV	R7, R2
 	MOV	[R0+#12], R1
-	MOV	R7, R1
+	MOV	R9, R1
 	MOV	[R0+#10], R5
-	MOV	R9, R5
-	MOV	[R0+#8], R4
+	MOV	R6, R5
 	MOV	R8, R4
-	MOV	R12, R0
-	ADD	R12, #518
+	MOV	[R0+#8], R8
 	CALL	___subdf3
-	MOV	R4, [R0+#518]
-	MOV	R5, [R0+#520]
-	MOV	R1, [R0+#522]
-	MOV	R2, [R0+#524]
-	MOV	[R0+#6], R6
-	MOV	[R0+#4], R7
-	MOV	[R0+#2], R9
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R7
+	MOV	[R0+#4], R9
+	MOV	[R0+#2], R6
 	MOV	[R0], R8
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #510
 	CALL	___adddf3
-	MOV	R4, [R0+#510]
-	MOV	[R0+#78], R4
-	MOV	R5, [R0+#512]
-	MOV	[R0+#88], R5
-	MOV	R1, [R0+#514]
-	MOV	[R0+#76], R1
-	MOV	R2, [R0+#516]
-	MOV	[R0+#74], R2
-	MOV	R7, [R0+#138]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#88], R4
+	MOV	R5, [R0+#18]
+	MOV	[R0+#98], R5
+	MOV	R1, [R0+#20]
+	MOV	[R0+#86], R1
+	MOV	R2, [R0+#22]
+	MOV	[R0+#84], R2
+	MOV	R7, [R0+#146]
 	MOV	[R0+#2], R7
-	MOV	R8, [R0+#130]
+	MOV	R8, [R0+#138]
 	MOV	[R0], R8
-	MOV	R9, [R0+#140]
+	MOV	R9, [R0+#148]
 	MOV	[R0+#4], R9
-	MOV	R3, [R0+#126]
+	MOV	R3, [R0+#134]
 	MOV	[R0+#6], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #502
 	CALL	___subdf3
-	MOV	R4, [R0+#502]
-	MOV	[R0+#86], R4
-	MOV	R4, [R0+#504]
-	MOV	[R0+#84], R4
-	MOV	R4, [R0+#506]
-	MOV	[R0+#82], R4
-	MOV	R4, [R0+#508]
-	MOV	[R0+#80], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#96], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#94], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#92], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#90], R4
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R8
 	MOV	[R0+#12], R9
 	MOV	[R0+#4], R9
-	MOV	R4, [R0+#126]
+	MOV	R4, [R0+#134]
 	MOV	[R0+#14], R4
 	MOV	[R0+#6], R4
-	MOV	R12, R0
-	ADD	R12, #438
 	CALL	___muldf3
-	MOV	R4, [R0+#438]
-	MOV	[R0+#108], R4
-	MOV	R4, [R0+#440]
-	MOV	[R0+#106], R4
-	MOV	R4, [R0+#442]
-	MOV	[R0+#104], R4
-	MOV	R4, [R0+#444]
-	MOV	[R0+#102], R4
-	MOV	R9, [R0+#74]
-	MOV	[R0+#14], R9
-	MOV	R8, [R0+#76]
-	MOV	[R0+#12], R8
-	MOV	R7, [R0+#88]
-	MOV	[R0+#10], R7
-	MOV	R6, [R0+#78]
-	MOV	[R0+#8], R6
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #462
-	CALL	___muldf3
-	MOV	R4, [R0+#102]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#104]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#106]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#108]
-	MOV	[R0+#8], R4
-	MOV	R4, [R0+#468]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#466]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#464]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#462]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #302
-	CALL	___subdf3
-	MOV	R4, [R0+#302]
-	MOV	[R0+#120], R4
-	MOV	R4, [R0+#304]
-	MOV	[R0+#118], R4
-	MOV	R4, [R0+#306]
+	MOV	R4, [R0+#16]
 	MOV	[R0+#116], R4
-	MOV	R4, [R0+#308]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#114], R4
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	R4, [R0+#80]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#82]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#84]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#86]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #494
-	CALL	___muldf3
-	MOV	R4, [R0+#114]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#116]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#118]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#120]
-	MOV	[R0+#8], R4
-	MOV	R6, [R0+#500]
-	MOV	[R0+#6], R6
-	MOV	R7, [R0+#498]
-	MOV	[R0+#4], R7
-	MOV	R8, [R0+#496]
-	MOV	[R0+#2], R8
-	MOV	R9, [R0+#494]
-	MOV	[R0], R9
-	MOV	R12, R0
-	ADD	R12, #294
-	CALL	___adddf3
-	MOV	R4, [R0+#294]
-	MOV	R5, [R0+#296]
-	MOV	R1, [R0+#298]
-	MOV	R2, [R0+#300]
-	MOV	[R0+#6], R6
-	MOV	[R0+#4], R7
-	MOV	[R0+#2], R8
-	MOV	[R0], R9
-	MOV	[R0+#14], R2
-	MOV	[R0+#12], R1
-	MOV	[R0+#10], R5
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #286
-	CALL	___adddf3
-	MOV	R6, [R0+#286]
-	MOV	R7, [R0+#288]
-	MOV	R8, [R0+#290]
-	MOV	R9, [R0+#292]
-	MOV	R2, [R0+#80]
-	MOV	[R0+#14], R2
-	MOV	R1, [R0+#82]
-	MOV	[R0+#12], R1
-	MOV	R5, [R0+#84]
-	MOV	[R0+#10], R5
-	MOV	R4, [R0+#86]
-	MOV	[R0+#8], R4
-	MOV	[R0+#6], R2
-	MOV	[R0+#4], R1
-	MOV	[R0+#2], R5
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #486
-	CALL	___muldf3
-	MOV	R4, [R0+#492]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#490]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#488]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#486]
-	MOV	[R0], R4
-	MOV	[R0+#14], R9
-	MOV	[R0+#12], R8
-	MOV	[R0+#10], R7
-	MOV	[R0+#8], R6
-	MOV	R12, R0
-	ADD	R12, #278
-	CALL	___adddf3
-	MOV	R4, [R0+#278]
-	MOV	[R0+#46], R4
-	MOV	R4, [R0+#280]
-	MOV	[R0+#44], R4
-	MOV	R4, [R0+#282]
-	MOV	[R0+#42], R4
-	MOV	R4, [R0+#284]
-	MOV	[R0+#40], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#14], R4
-	MOV	R5, [R0+#132]
-	MOV	[R0+#12], R5
-	MOV	R4, [R0+#98]
-	MOV	[R0+#10], R4
-	MOV	[R0+#8], R5
-	MOV	R9, [R0+#122]
-	MOV	[R0+#6], R9
-	MOV	R8, [R0+#134]
-	MOV	[R0+#4], R8
-	MOV	R7, [R0+#124]
-	MOV	[R0+#2], R7
-	MOV	R6, [R0+#136]
-	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #774
-	CALL	___muldf3
-	MOV	R4, [R0+#774]
-	MOV	R5, [R0+#776]
-	MOV	R1, [R0+#778]
-	MOV	R2, [R0+#780]
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	[R0+#14], R2
-	MOV	R6, R2
-	MOV	[R0+#12], R1
-	MOV	R8, R1
-	MOV	[R0+#10], R5
-	MOV	R9, R5
-	MOV	[R0+#8], R4
-	MOV	R7, R4
-	MOV	R12, R0
-	ADD	R12, #766
-	CALL	___subdf3
-	MOV	R4, [R0+#766]
-	MOV	R5, [R0+#768]
-	MOV	R1, [R0+#770]
-	MOV	R2, [R0+#772]
-	MOV	[R0+#6], R6
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R9
-	MOV	[R0], R7
-	MOV	[R0+#14], R2
-	MOV	[R0+#12], R1
-	MOV	[R0+#10], R5
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #758
-	CALL	___adddf3
-	MOV	R4, [R0+#758]
-	MOV	[R0+#120], R4
-	MOV	R5, [R0+#760]
-	MOV	[R0+#118], R5
-	MOV	R1, [R0+#762]
-	MOV	[R0+#96], R1
-	MOV	R2, [R0+#764]
-	MOV	[R0+#94], R2
-	MOV	R7, [R0+#122]
-	MOV	[R0+#6], R7
-	MOV	R3, [R0+#134]
-	MOV	[R0+#4], R3
-	MOV	R8, [R0+#124]
-	MOV	[R0+#2], R8
-	MOV	R3, [R0+#136]
-	MOV	[R0], R3
-	MOV	[R0+#14], R2
-	MOV	[R0+#12], R1
-	MOV	[R0+#10], R5
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #750
-	CALL	___subdf3
-	MOV	R4, [R0+#750]
-	MOV	[R0+#116], R4
-	MOV	R4, [R0+#752]
-	MOV	[R0+#114], R4
-	MOV	R4, [R0+#754]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#112], R4
-	MOV	R4, [R0+#756]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#110], R4
-	MOV	[R0+#14], R7
-	MOV	R1, [R0+#134]
-	MOV	[R0+#12], R1
-	MOV	[R0+#10], R8
-	MOV	R4, [R0+#136]
-	MOV	[R0+#8], R4
-	MOV	[R0+#6], R7
-	MOV	[R0+#4], R1
-	MOV	[R0+#2], R8
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #718
-	CALL	___muldf3
-	MOV	R4, [R0+#718]
-	MOV	[R0+#92], R4
-	MOV	R4, [R0+#720]
-	MOV	[R0+#90], R4
-	MOV	R4, [R0+#722]
-	MOV	[R0+#72], R4
-	MOV	R4, [R0+#724]
-	MOV	[R0+#70], R4
-	MOV	R9, [R0+#94]
+	MOV	R9, [R0+#84]
 	MOV	[R0+#14], R9
-	MOV	R8, [R0+#96]
+	MOV	R8, [R0+#86]
 	MOV	[R0+#12], R8
-	MOV	R7, [R0+#118]
+	MOV	R7, [R0+#98]
 	MOV	[R0+#10], R7
-	MOV	R6, [R0+#120]
+	MOV	R6, [R0+#88]
 	MOV	[R0+#8], R6
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #726
 	CALL	___muldf3
-	MOV	R4, [R0+#70]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#72]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#90]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#92]
-	MOV	[R0+#8], R4
-	MOV	R4, [R0+#732]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#730]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#728]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#726]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #574
-	CALL	___subdf3
-	MOV	R4, [R0+#574]
-	MOV	[R0+#68], R4
-	MOV	R4, [R0+#576]
-	MOV	[R0+#66], R4
-	MOV	R4, [R0+#578]
-	MOV	[R0+#64], R4
-	MOV	R4, [R0+#580]
-	MOV	[R0+#62], R4
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
 	MOV	R4, [R0+#110]
 	MOV	[R0+#14], R4
 	MOV	R4, [R0+#112]
@@ -933,32 +622,57 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#116]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #742
-	CALL	___muldf3
-	MOV	R4, [R0+#62]
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___subdf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#128], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#126], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#124], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#122], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R4, [R0+#90]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#64]
+	MOV	R4, [R0+#92]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#66]
+	MOV	R4, [R0+#94]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#68]
+	MOV	R4, [R0+#96]
 	MOV	[R0+#8], R4
-	MOV	R6, [R0+#748]
+	CALL	___muldf3
+	MOV	R4, [R0+#122]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#124]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#126]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#128]
+	MOV	[R0+#8], R4
+	MOV	R6, [R0+#22]
 	MOV	[R0+#6], R6
-	MOV	R7, [R0+#746]
+	MOV	R7, [R0+#20]
 	MOV	[R0+#4], R7
-	MOV	R8, [R0+#744]
+	MOV	R8, [R0+#18]
 	MOV	[R0+#2], R8
-	MOV	R9, [R0+#742]
+	MOV	R9, [R0+#16]
 	MOV	[R0], R9
-	MOV	R12, R0
-	ADD	R12, #566
 	CALL	___adddf3
-	MOV	R4, [R0+#566]
-	MOV	R5, [R0+#568]
-	MOV	R1, [R0+#570]
-	MOV	R2, [R0+#572]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R6
 	MOV	[R0+#4], R7
 	MOV	[R0+#2], R8
@@ -967,73 +681,277 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #558
 	CALL	___adddf3
-	MOV	R6, [R0+#558]
-	MOV	R7, [R0+#560]
-	MOV	R8, [R0+#562]
-	MOV	R9, [R0+#564]
-	MOV	R2, [R0+#110]
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R2, [R0+#90]
 	MOV	[R0+#14], R2
-	MOV	R1, [R0+#112]
+	MOV	R1, [R0+#92]
 	MOV	[R0+#12], R1
-	MOV	R5, [R0+#114]
+	MOV	R5, [R0+#94]
 	MOV	[R0+#10], R5
-	MOV	R4, [R0+#116]
+	MOV	R4, [R0+#96]
 	MOV	[R0+#8], R4
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #734
 	CALL	___muldf3
-	MOV	R4, [R0+#740]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#738]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#736]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#734]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R12, R0
-	ADD	R12, #550
 	CALL	___adddf3
-	MOV	R4, [R0+#550]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#54], R4
+	MOV	R4, [R0+#18]
 	MOV	[R0+#52], R4
-	MOV	R4, [R0+#552]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#50], R4
-	MOV	R4, [R0+#554]
-	MOV	[R0+#38], R4
-	MOV	R4, [R0+#556]
-	MOV	[R0+#36], R4
-	MOV	R4, [R0+#100]
+	MOV	R4, [R0+#22]
+	MOV	[R0+#48], R4
+	MOV	R4, [R0+#108]
 	MOV	[R0+#14], R4
-	MOV	R5, [R0+#132]
+	MOV	R5, [R0+#140]
 	MOV	[R0+#12], R5
-	MOV	R4, [R0+#98]
+	MOV	R4, [R0+#106]
 	MOV	[R0+#10], R4
 	MOV	[R0+#8], R5
-	MOV	R9, [R0+#70]
+	MOV	R9, [R0+#130]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#72]
+	MOV	R8, [R0+#142]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#90]
+	MOV	R7, [R0+#132]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#92]
+	MOV	R6, [R0+#144]
 	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #710
 	CALL	___muldf3
-	MOV	R4, [R0+#710]
-	MOV	R5, [R0+#712]
-	MOV	R1, [R0+#714]
-	MOV	R2, [R0+#716]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	[R0+#14], R2
+	MOV	R8, R2
+	MOV	[R0+#12], R1
+	MOV	R9, R1
+	MOV	[R0+#10], R5
+	MOV	R6, R5
+	MOV	R7, R4
+	MOV	[R0+#8], R7
+	CALL	___subdf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R8
+	MOV	[R0+#4], R9
+	MOV	[R0+#2], R6
+	MOV	[R0], R7
+	MOV	[R0+#14], R2
+	MOV	[R0+#12], R1
+	MOV	[R0+#10], R5
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#128], R4
+	MOV	R5, [R0+#18]
+	MOV	[R0+#126], R5
+	MOV	R1, [R0+#20]
+	MOV	[R0+#104], R1
+	MOV	R9, [R0+#22]
+	MOV	R7, [R0+#130]
+	MOV	[R0+#6], R7
+	MOV	R2, [R0+#142]
+	MOV	[R0+#4], R2
+	MOV	R8, [R0+#132]
+	MOV	[R0+#2], R8
+	MOV	R2, [R0+#144]
+	MOV	[R0], R2
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R1
+	MOV	[R0+#10], R5
+	MOV	[R0+#8], R4
+	CALL	___subdf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#124], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#122], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#120], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#118], R4
+	MOV	[R0+#14], R7
+	MOV	R1, [R0+#142]
+	MOV	[R0+#12], R1
+	MOV	[R0+#10], R8
+	MOV	R4, [R0+#144]
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R7
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R8
+	MOV	[R0], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#102], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#100], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#80], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#78], R4
+	MOV	[R0+#14], R9
+	MOV	R8, [R0+#104]
+	MOV	[R0+#12], R8
+	MOV	R7, [R0+#126]
+	MOV	[R0+#10], R7
+	MOV	R6, [R0+#128]
+	MOV	[R0+#8], R6
+	MOV	[R0+#6], R9
+	MOV	[R0+#82], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	CALL	___muldf3
+	MOV	R4, [R0+#78]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#80]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#100]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#102]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___subdf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#76], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#74], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#72], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#70], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R4, [R0+#118]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#120]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#122]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#124]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#70]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#72]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#74]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#76]
+	MOV	[R0+#8], R4
+	MOV	R6, [R0+#22]
+	MOV	[R0+#6], R6
+	MOV	R7, [R0+#20]
+	MOV	[R0+#4], R7
+	MOV	R8, [R0+#18]
+	MOV	[R0+#2], R8
+	MOV	R9, [R0+#16]
+	MOV	[R0], R9
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R6
+	MOV	[R0+#4], R7
+	MOV	[R0+#2], R8
+	MOV	[R0], R9
+	MOV	[R0+#14], R2
+	MOV	[R0+#12], R1
+	MOV	[R0+#10], R5
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R2, [R0+#118]
+	MOV	[R0+#14], R2
+	MOV	R1, [R0+#120]
+	MOV	[R0+#12], R1
+	MOV	R5, [R0+#122]
+	MOV	[R0+#10], R5
+	MOV	R4, [R0+#124]
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R6
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#60], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#58], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#46], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#44], R4
+	MOV	R4, [R0+#108]
+	MOV	[R0+#14], R4
+	MOV	R5, [R0+#140]
+	MOV	[R0+#12], R5
+	MOV	R4, [R0+#106]
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R5
+	MOV	R9, [R0+#78]
+	MOV	[R0+#6], R9
+	MOV	R8, [R0+#80]
+	MOV	[R0+#4], R8
+	MOV	R7, [R0+#100]
+	MOV	[R0+#2], R7
+	MOV	R6, [R0+#102]
+	MOV	[R0], R6
+	CALL	___muldf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
@@ -1046,13 +964,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	R9, R5
 	MOV	[R0+#8], R4
 	MOV	R8, R4
-	MOV	R12, R0
-	ADD	R12, #702
 	CALL	___subdf3
-	MOV	R4, [R0+#702]
-	MOV	R5, [R0+#704]
-	MOV	R1, [R0+#706]
-	MOV	R2, [R0+#708]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R7
 	MOV	[R0+#4], R6
 	MOV	[R0+#2], R9
@@ -1061,110 +977,64 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #694
 	CALL	___adddf3
-	MOV	R4, [R0+#694]
-	MOV	[R0+#60], R4
-	MOV	R5, [R0+#696]
-	MOV	[R0+#58], R5
-	MOV	R1, [R0+#698]
-	MOV	[R0+#56], R1
-	MOV	R2, [R0+#700]
-	MOV	[R0+#54], R2
-	MOV	R9, [R0+#70]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#68], R4
+	MOV	R5, [R0+#18]
+	MOV	[R0+#66], R5
+	MOV	R1, [R0+#20]
+	MOV	[R0+#64], R1
+	MOV	R2, [R0+#22]
+	MOV	[R0+#62], R2
+	MOV	R9, [R0+#78]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#72]
+	MOV	R8, [R0+#80]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#90]
+	MOV	R7, [R0+#100]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#92]
+	MOV	R6, [R0+#102]
 	MOV	[R0], R6
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #686
 	CALL	___subdf3
-	MOV	R4, [R0+#686]
-	MOV	[R0+#68], R4
-	MOV	R4, [R0+#688]
-	MOV	[R0+#66], R4
-	MOV	R4, [R0+#690]
-	MOV	[R0+#64], R4
-	MOV	R4, [R0+#692]
-	MOV	[R0+#62], R4
-	MOV	R4, [R0+#122]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#76], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#74], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#72], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#70], R4
+	MOV	R4, [R0+#130]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#134]
+	MOV	R4, [R0+#142]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#124]
+	MOV	R4, [R0+#132]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#136]
+	MOV	R4, [R0+#144]
 	MOV	[R0], R4
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R12, R0
-	ADD	R12, #646
 	CALL	___muldf3
-	MOV	R4, [R0+#646]
-	MOV	[R0+#92], R4
-	MOV	R4, [R0+#648]
-	MOV	[R0+#90], R4
-	MOV	R6, [R0+#650]
-	MOV	[R0+#72], R6
-	MOV	R7, [R0+#652]
-	MOV	[R0+#70], R7
-	MOV	R8, [R0+#94]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#102], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#100], R4
+	MOV	R6, [R0+#20]
+	MOV	[R0+#80], R6
+	MOV	R7, [R0+#22]
+	MOV	[R0+#78], R7
+	MOV	R8, [R0+#82]
 	MOV	[R0+#6], R8
-	MOV	R9, [R0+#96]
+	MOV	R9, [R0+#104]
 	MOV	[R0+#4], R9
-	MOV	R4, [R0+#118]
+	MOV	R4, [R0+#126]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#120]
-	MOV	[R0], R4
-	MOV	R4, [R0+#54]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#56]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#58]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#60]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #662
-	CALL	___muldf3
-	MOV	[R0+#14], R7
-	MOV	[R0+#12], R6
-	MOV	R4, [R0+#90]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#92]
-	MOV	[R0+#8], R4
-	MOV	R4, [R0+#668]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#666]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#664]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#662]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #606
-	CALL	___subdf3
-	MOV	R6, [R0+#606]
-	MOV	R7, [R0+#608]
-	MOV	R4, [R0+#610]
-	MOV	[R0+#34], R4
-	MOV	R4, [R0+#612]
-	MOV	[R0+#32], R4
-	MOV	[R0+#6], R8
-	MOV	[R0+#4], R9
-	MOV	R4, [R0+#118]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#120]
+	MOV	R4, [R0+#128]
 	MOV	[R0], R4
 	MOV	R4, [R0+#62]
 	MOV	[R0+#14], R4
@@ -1174,41 +1044,186 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#68]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #678
 	CALL	___muldf3
-	MOV	R4, [R0+#32]
+	MOV	[R0+#14], R7
+	MOV	[R0+#12], R6
+	MOV	R4, [R0+#100]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#102]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___subdf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R4, [R0+#20]
+	MOV	[R0+#42], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#40], R4
+	MOV	[R0+#6], R8
+	MOV	[R0+#4], R9
+	MOV	R4, [R0+#126]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#128]
+	MOV	[R0], R4
+	MOV	R4, [R0+#70]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#34]
+	MOV	R4, [R0+#72]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#74]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#76]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#40]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#42]
 	MOV	[R0+#12], R4
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R4, [R0+#684]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#682]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#680]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#678]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #598
 	CALL	___adddf3
-	MOV	R4, [R0+#598]
-	MOV	[R0+#34], R4
-	MOV	R4, [R0+#600]
-	MOV	[R0+#32], R4
-	MOV	R4, [R0+#602]
-	MOV	[R0+#30], R4
-	MOV	R4, [R0+#604]
-	MOV	[R0+#28], R4
-	MOV	R4, [R0+#54]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#42], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#40], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#38], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#36], R4
+	MOV	R4, [R0+#62]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#56]
+	MOV	R4, [R0+#64]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#66]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#68]
+	MOV	[R0+#8], R4
+	MOV	R9, [R0+#118]
+	MOV	[R0+#6], R9
+	MOV	R8, [R0+#120]
+	MOV	[R0+#4], R8
+	MOV	R7, [R0+#122]
+	MOV	[R0+#2], R7
+	MOV	R6, [R0+#124]
+	MOV	[R0], R6
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	R4, [R0+#36]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#38]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#40]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#42]
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#68], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#66], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#64], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#62], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R4, [R0+#70]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#72]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#74]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#76]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	R4, [R0+#62]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#64]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#66]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#68]
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#130]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#142]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#132]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#144]
+	MOV	[R0], R4
+	MOV	R4, [R0+#44]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#46]
 	MOV	[R0+#12], R4
 	MOV	R4, [R0+#58]
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#60]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R6
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#46], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#44], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#42], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#40], R4
+	MOV	R4, [R0+#108]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#140]
+	MOV	[R0+#12], R4
+	MOV	R5, [R0+#106]
+	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
 	MOV	R9, [R0+#110]
 	MOV	[R0+#6], R9
@@ -1218,138 +1233,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#2], R7
 	MOV	R6, [R0+#116]
 	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #654
 	CALL	___muldf3
-	MOV	R4, [R0+#660]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#658]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#656]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#654]
-	MOV	[R0], R4
-	MOV	R4, [R0+#28]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#30]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#32]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#34]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #590
-	CALL	___adddf3
-	MOV	R4, [R0+#590]
-	MOV	[R0+#60], R4
-	MOV	R4, [R0+#592]
-	MOV	[R0+#58], R4
-	MOV	R4, [R0+#594]
-	MOV	[R0+#56], R4
-	MOV	R4, [R0+#596]
-	MOV	[R0+#54], R4
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	R4, [R0+#62]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#64]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#66]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#68]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #670
-	CALL	___muldf3
-	MOV	R4, [R0+#676]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#674]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#672]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#670]
-	MOV	[R0], R4
-	MOV	R4, [R0+#54]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#56]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#58]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#60]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #582
-	CALL	___adddf3
-	MOV	R6, [R0+#582]
-	MOV	R7, [R0+#584]
-	MOV	R8, [R0+#586]
-	MOV	R9, [R0+#588]
-	MOV	R4, [R0+#122]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#134]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#124]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#136]
-	MOV	[R0], R4
-	MOV	R4, [R0+#36]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#38]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#50]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#52]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #542
-	CALL	___muldf3
-	MOV	[R0+#14], R9
-	MOV	[R0+#12], R8
-	MOV	[R0+#10], R7
-	MOV	[R0+#8], R6
-	MOV	R4, [R0+#548]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#546]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#544]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#542]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #534
-	CALL	___adddf3
-	MOV	R4, [R0+#534]
-	MOV	[R0+#38], R4
-	MOV	R4, [R0+#536]
-	MOV	[R0+#36], R4
-	MOV	R4, [R0+#538]
-	MOV	[R0+#34], R4
-	MOV	R4, [R0+#540]
-	MOV	[R0+#32], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#132]
-	MOV	[R0+#12], R4
-	MOV	R5, [R0+#98]
-	MOV	[R0+#10], R5
-	MOV	[R0+#8], R4
-	MOV	R9, [R0+#102]
-	MOV	[R0+#6], R9
-	MOV	R8, [R0+#104]
-	MOV	[R0+#4], R8
-	MOV	R7, [R0+#106]
-	MOV	[R0+#2], R7
-	MOV	R6, [R0+#108]
-	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #430
-	CALL	___muldf3
-	MOV	R4, [R0+#430]
-	MOV	R5, [R0+#432]
-	MOV	R1, [R0+#434]
-	MOV	R2, [R0+#436]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
@@ -1362,13 +1250,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	R8, R5
 	MOV	[R0+#8], R4
 	MOV	R7, R4
-	MOV	R12, R0
-	ADD	R12, #422
 	CALL	___subdf3
-	MOV	R4, [R0+#422]
-	MOV	R5, [R0+#424]
-	MOV	R1, [R0+#426]
-	MOV	R2, [R0+#428]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R6
 	MOV	[R0+#4], R9
 	MOV	[R0+#2], R8
@@ -1377,62 +1263,56 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #414
 	CALL	___adddf3
-	MOV	R4, [R0+#414]
-	MOV	[R0+#68], R4
-	MOV	R5, [R0+#416]
-	MOV	[R0+#66], R5
-	MOV	R1, [R0+#418]
-	MOV	[R0+#64], R1
-	MOV	R2, [R0+#420]
-	MOV	[R0+#62], R2
-	MOV	R3, [R0+#102]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#76], R4
+	MOV	R5, [R0+#18]
+	MOV	[R0+#74], R5
+	MOV	R1, [R0+#20]
+	MOV	[R0+#72], R1
+	MOV	R2, [R0+#22]
+	MOV	[R0+#70], R2
+	MOV	R3, [R0+#110]
 	MOV	[R0+#6], R3
-	MOV	R3, [R0+#104]
+	MOV	R3, [R0+#112]
 	MOV	[R0+#4], R3
-	MOV	R3, [R0+#106]
+	MOV	R3, [R0+#114]
 	MOV	[R0+#2], R3
-	MOV	R3, [R0+#108]
+	MOV	R3, [R0+#116]
 	MOV	[R0], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #406
 	CALL	___subdf3
-	MOV	R4, [R0+#406]
-	MOV	[R0+#22], R4
-	MOV	R4, [R0+#408]
-	MOV	[R0+#20], R4
-	MOV	R4, [R0+#410]
-	MOV	[R0+#18], R4
-	MOV	R4, [R0+#412]
-	MOV	[R0+#16], R4
-	MOV	R4, [R0+#100]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#30], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#28], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#26], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#24], R4
+	MOV	R4, [R0+#108]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#132]
+	MOV	R4, [R0+#140]
 	MOV	[R0+#12], R4
-	MOV	R5, [R0+#98]
+	MOV	R5, [R0+#106]
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R9, [R0+#70]
+	MOV	R9, [R0+#78]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#72]
+	MOV	R8, [R0+#80]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#90]
+	MOV	R7, [R0+#100]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#92]
+	MOV	R6, [R0+#102]
 	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #638
 	CALL	___muldf3
-	MOV	R4, [R0+#638]
-	MOV	R5, [R0+#640]
-	MOV	R1, [R0+#642]
-	MOV	R2, [R0+#644]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
@@ -1445,13 +1325,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	R9, R5
 	MOV	[R0+#8], R4
 	MOV	R8, R4
-	MOV	R12, R0
-	ADD	R12, #630
 	CALL	___subdf3
-	MOV	R4, [R0+#630]
-	MOV	R5, [R0+#632]
-	MOV	R1, [R0+#634]
-	MOV	R2, [R0+#636]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R7
 	MOV	[R0+#4], R6
 	MOV	[R0+#2], R9
@@ -1460,324 +1338,292 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #622
 	CALL	___adddf3
-	MOV	R4, [R0+#622]
-	MOV	[R0+#56], R4
-	MOV	R5, [R0+#624]
-	MOV	[R0+#54], R5
-	MOV	R1, [R0+#626]
-	MOV	[R0+#52], R1
-	MOV	R2, [R0+#628]
-	MOV	[R0+#50], R2
-	MOV	R9, [R0+#70]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#64], R4
+	MOV	R5, [R0+#18]
+	MOV	[R0+#62], R5
+	MOV	R1, [R0+#20]
+	MOV	[R0+#60], R1
+	MOV	R2, [R0+#22]
+	MOV	[R0+#58], R2
+	MOV	R9, [R0+#78]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#72]
+	MOV	R8, [R0+#80]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#90]
+	MOV	R7, [R0+#100]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#92]
+	MOV	R6, [R0+#102]
 	MOV	[R0], R6
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #614
 	CALL	___subdf3
-	MOV	R4, [R0+#614]
-	MOV	[R0+#100], R4
-	MOV	R4, [R0+#616]
-	MOV	[R0+#98], R4
-	MOV	R4, [R0+#618]
-	MOV	[R0+#60], R4
-	MOV	R4, [R0+#620]
-	MOV	[R0+#58], R4
-	MOV	R4, [R0+#102]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#108], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#106], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#68], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#66], R4
+	MOV	R4, [R0+#110]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#104]
+	MOV	R4, [R0+#112]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#106]
+	MOV	R4, [R0+#114]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#108]
+	MOV	R4, [R0+#116]
 	MOV	[R0+#8], R4
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
 	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #366
 	CALL	___muldf3
-	MOV	R6, [R0+#366]
-	MOV	[R0+#30], R6
-	MOV	R7, [R0+#368]
-	MOV	[R0+#28], R7
-	MOV	R8, [R0+#370]
-	MOV	[R0+#26], R8
-	MOV	R9, [R0+#372]
-	MOV	[R0+#24], R9
-	MOV	R4, [R0+#62]
+	MOV	R6, [R0+#16]
+	MOV	[R0+#38], R6
+	MOV	R7, [R0+#18]
+	MOV	[R0+#36], R7
+	MOV	R8, [R0+#20]
+	MOV	[R0+#34], R8
+	MOV	R9, [R0+#22]
+	MOV	[R0+#32], R9
+	MOV	R4, [R0+#70]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#64]
+	MOV	R4, [R0+#72]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#66]
+	MOV	R4, [R0+#74]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#68]
-	MOV	[R0], R4
-	MOV	R4, [R0+#50]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#52]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#54]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#56]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #382
-	CALL	___muldf3
-	MOV	[R0+#14], R9
-	MOV	[R0+#12], R8
-	MOV	[R0+#10], R7
-	MOV	[R0+#8], R6
-	MOV	R4, [R0+#388]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#386]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#384]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#382]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #350
-	CALL	___subdf3
-	MOV	R6, [R0+#350]
-	MOV	R8, [R0+#352]
-	MOV	R7, [R0+#354]
-	MOV	R9, [R0+#356]
-	MOV	R4, [R0+#62]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#64]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#66]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#68]
+	MOV	R4, [R0+#76]
 	MOV	[R0], R4
 	MOV	R4, [R0+#58]
 	MOV	[R0+#14], R4
 	MOV	R4, [R0+#60]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#98]
+	MOV	R4, [R0+#62]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#100]
+	MOV	R4, [R0+#64]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #374
+	CALL	___muldf3
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R6
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___subdf3
+	MOV	R6, [R0+#16]
+	MOV	R8, [R0+#18]
+	MOV	R7, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#70]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#72]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#74]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#76]
+	MOV	[R0], R4
+	MOV	R4, [R0+#66]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#68]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#106]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#108]
+	MOV	[R0+#8], R4
 	CALL	___muldf3
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R7
 	MOV	[R0+#10], R8
 	MOV	[R0+#8], R6
-	MOV	R4, [R0+#380]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#378]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#376]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#374]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #342
 	CALL	___adddf3
-	MOV	R4, [R0+#342]
-	MOV	[R0+#68], R4
-	MOV	R4, [R0+#344]
-	MOV	[R0+#66], R4
-	MOV	R4, [R0+#346]
-	MOV	[R0+#64], R4
-	MOV	R4, [R0+#348]
-	MOV	[R0+#62], R4
-	MOV	R9, [R0+#16]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#76], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#74], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#72], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#70], R4
+	MOV	R9, [R0+#24]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#18]
+	MOV	R8, [R0+#26]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#20]
+	MOV	R7, [R0+#28]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#22]
-	MOV	[R0], R6
-	MOV	R4, [R0+#50]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#52]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#54]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#56]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #398
-	CALL	___muldf3
-	MOV	R4, [R0+#404]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#402]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#400]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#398]
-	MOV	[R0], R4
-	MOV	R4, [R0+#62]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#64]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#66]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#68]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #334
-	CALL	___adddf3
-	MOV	R4, [R0+#334]
-	MOV	[R0+#68], R4
-	MOV	R4, [R0+#336]
-	MOV	[R0+#66], R4
-	MOV	R4, [R0+#338]
-	MOV	[R0+#64], R4
-	MOV	R4, [R0+#340]
-	MOV	[R0+#62], R4
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
+	MOV	R6, [R0+#30]
 	MOV	[R0], R6
 	MOV	R4, [R0+#58]
 	MOV	[R0+#14], R4
 	MOV	R4, [R0+#60]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#98]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #390
-	CALL	___muldf3
-	MOV	R4, [R0+#396]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#394]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#392]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#390]
-	MOV	[R0], R4
 	MOV	R4, [R0+#62]
-	MOV	[R0+#14], R4
+	MOV	[R0+#10], R4
 	MOV	R4, [R0+#64]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#66]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#68]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #326
-	CALL	___adddf3
-	MOV	R6, [R0+#326]
-	MOV	R7, [R0+#328]
-	MOV	R8, [R0+#330]
-	MOV	R9, [R0+#332]
-	MOV	R4, [R0+#102]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#104]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#106]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#108]
-	MOV	[R0], R4
-	MOV	R4, [R0+#32]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#34]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#36]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#38]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #318
 	CALL	___muldf3
-	MOV	[R0+#14], R9
-	MOV	[R0+#12], R8
-	MOV	[R0+#10], R7
-	MOV	[R0+#8], R6
-	MOV	R4, [R0+#324]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#322]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#320]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#318]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #310
-	CALL	___adddf3
-	MOV	R6, [R0+#310]
-	MOV	R7, [R0+#312]
-	MOV	R8, [R0+#314]
-	MOV	R9, [R0+#316]
 	MOV	R4, [R0+#70]
 	MOV	[R0+#14], R4
 	MOV	R4, [R0+#72]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#90]
+	MOV	R4, [R0+#74]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#92]
+	MOV	R4, [R0+#76]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#40]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#42]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#44]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#46]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #270
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#76], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#74], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#72], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#70], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R4, [R0+#66]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#68]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#106]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#108]
+	MOV	[R0+#8], R4
 	CALL	___muldf3
-	MOV	R4, [R0+#276]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#274]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#272]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#270]
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	R4, [R0+#70]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#72]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#74]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#76]
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#110]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#112]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#114]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#116]
+	MOV	[R0], R4
+	MOV	R4, [R0+#40]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#42]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#44]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#46]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	[R0+#14], R9
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R6
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALL	___adddf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#78]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#80]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#100]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#102]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#48]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#50]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#52]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#54]
+	MOV	[R0], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R12, R0
-	ADD	R12, #262
 	CALL	___adddf3
-	MOV	R6, [R0+#262]
-	MOV	R7, [R0+#264]
-	MOV	R8, [R0+#266]
-	MOV	R9, [R0+#268]
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
 	MOV	R4, #49136
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#132]
+	MOV	R4, [R0+#140]
 	MOV	[R0+#12], R4
 	MOV	[R0+#10], R4
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#24]
+	MOV	R4, [R0+#32]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#26]
+	MOV	R4, [R0+#34]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#28]
+	MOV	R4, [R0+#36]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#30]
+	MOV	R4, [R0+#38]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #358
 	CALL	___adddf3
-	MOV	R4, [R0+#358]
-	MOV	R5, [R0+#360]
-	MOV	R1, [R0+#362]
-	MOV	R2, [R0+#364]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
@@ -1786,13 +1632,11 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R12, R0
-	ADD	R12, #254
 	CALL	___adddf3
-	MOV	R5, [R0+#254]
-	MOV	R1, [R0+#256]
-	MOV	R2, [R0+#258]
-	MOV	R3, [R0+#260]
+	MOV	R5, [R0+#16]
+	MOV	R1, [R0+#18]
+	MOV	R2, [R0+#20]
+	MOV	R3, [R0+#22]
 	MOV	R4, #49094
 	MOV	[R0+#14], R4
 	MOV	R4, #8090
@@ -1803,18 +1647,16 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#8], R4
 	MOV	[R0+#6], R3
 	MOV	R9, R3
-	MOV	[R0+#102], R9
+	MOV	[R0+#110], R9
 	MOV	[R0+#4], R2
 	MOV	R8, R2
-	MOV	[R0+#104], R8
+	MOV	[R0+#112], R8
 	MOV	[R0+#2], R1
 	MOV	R7, R1
-	MOV	[R0+#106], R7
+	MOV	[R0+#114], R7
 	MOV	[R0], R5
 	MOV	R6, R5
-	MOV	[R0+#108], R6
-	MOV	R12, R0
-	ADD	R12, #246
+	MOV	[R0+#116], R6
 	CALL	___muldf3
 	MOV	R4, #16332
 	MOV	[R0+#14], R4
@@ -1824,21 +1666,19 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#10], R4
 	MOV	R4, #50972
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#252]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#250]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#248]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#246]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #238
 	CALL	___adddf3
-	MOV	R4, [R0+#238]
-	MOV	R5, [R0+#240]
-	MOV	R1, [R0+#242]
-	MOV	R2, [R0+#244]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R9
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
@@ -1847,8 +1687,6 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #230
 	CALL	___muldf3
 	MOV	R4, #49109
 	MOV	[R0+#14], R4
@@ -1856,333 +1694,303 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#12], R4
 	MOV	[R0+#10], R4
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#236]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#234]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#232]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#230]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #222
 	CALL	___adddf3
-	MOV	R4, [R0+#222]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#108], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#106], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#102], R4
+	MOV	R4, [R0+#22]
 	MOV	[R0+#100], R4
-	MOV	R4, [R0+#224]
-	MOV	[R0+#98], R4
-	MOV	R4, [R0+#226]
-	MOV	[R0+#92], R4
-	MOV	R4, [R0+#228]
-	MOV	[R0+#90], R4
-	MOV	R9, [R0+#122]
-	MOV	[R0+#6], R9
-	MOV	R8, [R0+#134]
+	MOV	R6, [R0+#130]
+	MOV	[R0+#6], R6
+	MOV	R8, [R0+#142]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#124]
+	MOV	R7, [R0+#132]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#136]
-	MOV	[R0], R6
-	MOV	R4, [R0+#102]
+	MOV	R9, [R0+#144]
+	MOV	[R0], R9
+	MOV	R4, [R0+#110]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#104]
+	MOV	R4, [R0+#112]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#114]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#116]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	MOV	R4, [R0+#100]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#102]
 	MOV	[R0+#12], R4
 	MOV	R4, [R0+#106]
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#108]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #214
 	CALL	___muldf3
-	MOV	R4, [R0+#214]
-	MOV	R5, [R0+#216]
-	MOV	R1, [R0+#218]
-	MOV	R2, [R0+#220]
-	MOV	[R0+#6], R2
-	MOV	[R0+#4], R1
-	MOV	[R0+#2], R5
-	MOV	[R0], R4
-	MOV	R4, [R0+#90]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#92]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#98]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#116], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#114], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#112], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#110], R4
+	MOV	R4, [R0+#146]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #206
-	CALL	___muldf3
-	MOV	R4, [R0+#206]
-	MOV	[R0+#108], R4
-	MOV	R4, [R0+#208]
-	MOV	[R0+#106], R4
-	MOV	R4, [R0+#210]
-	MOV	[R0+#104], R4
-	MOV	R4, [R0+#212]
-	MOV	[R0+#102], R4
 	MOV	R4, [R0+#138]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#130]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#140]
+	MOV	R4, [R0+#148]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#126]
+	MOV	R4, [R0+#134]
 	MOV	[R0+#14], R4
-	MOV	[R0+#6], R9
+	MOV	[R0+#6], R6
 	MOV	[R0+#4], R8
 	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	R12, R0
-	ADD	R12, #190
+	MOV	[R0], R9
 	CALL	___muldf3
-	MOV	R9, [R0+#190]
-	MOV	[R0+#136], R9
-	MOV	R6, [R0+#192]
-	MOV	[R0+#134], R6
-	MOV	R7, [R0+#194]
-	MOV	[R0+#124], R7
-	MOV	R8, [R0+#196]
-	MOV	[R0+#122], R8
-	MOV	R4, [R0+#74]
+	MOV	R9, [R0+#16]
+	MOV	[R0+#144], R9
+	MOV	R6, [R0+#18]
+	MOV	[R0+#142], R6
+	MOV	R7, [R0+#20]
+	MOV	[R0+#132], R7
+	MOV	R8, [R0+#22]
+	MOV	[R0+#130], R8
+	MOV	R4, [R0+#84]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#76]
+	MOV	R4, [R0+#86]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#88]
+	MOV	R4, [R0+#98]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#78]
+	MOV	R4, [R0+#88]
 	MOV	[R0], R4
-	MOV	R4, [R0+#94]
+	MOV	R4, [R0+#82]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#96]
+	MOV	R4, [R0+#104]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#118]
+	MOV	R4, [R0+#126]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#120]
+	MOV	R4, [R0+#128]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #454
 	CALL	___muldf3
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R7
 	MOV	[R0+#10], R6
 	MOV	[R0+#8], R9
-	MOV	R4, [R0+#460]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#458]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#456]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#454]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #182
 	CALL	___subdf3
-	MOV	R6, [R0+#182]
-	MOV	R7, [R0+#184]
-	MOV	R8, [R0+#186]
-	MOV	R9, [R0+#188]
-	MOV	R4, [R0+#74]
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#84]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#76]
+	MOV	R4, [R0+#86]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#88]
+	MOV	R4, [R0+#98]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#78]
+	MOV	R4, [R0+#88]
 	MOV	[R0], R4
-	MOV	R4, [R0+#110]
+	MOV	R4, [R0+#118]
 	MOV	[R0+#14], R4
-	MOV	R4, [R0+#112]
+	MOV	R4, [R0+#120]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#114]
+	MOV	R4, [R0+#122]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#116]
+	MOV	R4, [R0+#124]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #446
 	CALL	___muldf3
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R4, [R0+#452]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#450]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#448]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#446]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #174
 	CALL	___adddf3
-	MOV	R4, [R0+#174]
+	MOV	R4, [R0+#16]
+	MOV	[R0+#108], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#106], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#102], R4
+	MOV	R4, [R0+#22]
 	MOV	[R0+#100], R4
-	MOV	R4, [R0+#176]
-	MOV	[R0+#98], R4
-	MOV	R4, [R0+#178]
-	MOV	[R0+#92], R4
-	MOV	R4, [R0+#180]
-	MOV	[R0+#90], R4
-	MOV	R9, [R0+#80]
+	MOV	R9, [R0+#90]
 	MOV	[R0+#6], R9
-	MOV	R8, [R0+#82]
+	MOV	R8, [R0+#92]
 	MOV	[R0+#4], R8
-	MOV	R7, [R0+#84]
+	MOV	R7, [R0+#94]
 	MOV	[R0+#2], R7
-	MOV	R6, [R0+#86]
+	MOV	R6, [R0+#96]
 	MOV	[R0], R6
-	MOV	R4, [R0+#94]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#96]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#118]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#120]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #478
-	CALL	___muldf3
-	MOV	R4, [R0+#484]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#482]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#480]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#478]
-	MOV	[R0], R4
-	MOV	R4, [R0+#90]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#92]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#98]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #166
-	CALL	___adddf3
-	MOV	R4, [R0+#166]
-	MOV	[R0+#120], R4
-	MOV	R4, [R0+#168]
-	MOV	[R0+#118], R4
-	MOV	R4, [R0+#170]
-	MOV	[R0+#100], R4
-	MOV	R4, [R0+#172]
-	MOV	[R0+#98], R4
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R8
-	MOV	[R0+#2], R7
-	MOV	[R0], R6
-	MOV	R4, [R0+#110]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#112]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#114]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#116]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #470
-	CALL	___muldf3
-	MOV	R4, [R0+#476]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#474]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#472]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#470]
-	MOV	[R0], R4
-	MOV	R4, [R0+#98]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#100]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#118]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#120]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #158
-	CALL	___adddf3
-	MOV	R6, [R0+#158]
-	MOV	R7, [R0+#160]
-	MOV	R8, [R0+#162]
-	MOV	R9, [R0+#164]
-	MOV	R4, [R0+#138]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#130]
-	MOV	[R0], R4
-	MOV	R4, [R0+#140]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#126]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#102]
+	MOV	R4, [R0+#82]
 	MOV	[R0+#14], R4
 	MOV	R4, [R0+#104]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#126]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#128]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	R4, [R0+#100]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#102]
 	MOV	[R0+#12], R4
 	MOV	R4, [R0+#106]
 	MOV	[R0+#10], R4
 	MOV	R4, [R0+#108]
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #198
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	[R0+#128], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#126], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#108], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#106], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R4, [R0+#118]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#120]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#122]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#124]
+	MOV	[R0+#8], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	MOV	R4, [R0+#106]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#108]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#126]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#128]
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R6, [R0+#16]
+	MOV	R7, [R0+#18]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#22]
+	MOV	R4, [R0+#146]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#138]
+	MOV	[R0], R4
+	MOV	R4, [R0+#148]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#134]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#110]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#112]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#114]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#116]
+	MOV	[R0+#8], R4
 	CALL	___muldf3
 	MOV	[R0+#14], R9
 	MOV	[R0+#12], R8
 	MOV	[R0+#10], R7
 	MOV	[R0+#8], R6
-	MOV	R4, [R0+#204]
+	MOV	R4, [R0+#22]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#202]
+	MOV	R4, [R0+#20]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#200]
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#198]
+	MOV	R4, [R0+#16]
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #150
 	CALL	___adddf3
-	MOV	R4, [R0+#150]
-	MOV	R5, [R0+#152]
-	MOV	R1, [R0+#154]
-	MOV	R2, [R0+#156]
-	MOV	R3, [R0+#122]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	R3, [R0+#130]
 	MOV	[R0+#6], R3
-	MOV	R3, [R0+#124]
+	MOV	R3, [R0+#132]
 	MOV	[R0+#4], R3
-	MOV	R3, [R0+#134]
+	MOV	R3, [R0+#142]
 	MOV	[R0+#2], R3
-	MOV	R3, [R0+#136]
+	MOV	R3, [R0+#144]
 	MOV	[R0], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
 	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #142
 	CALL	___adddf3
-	MOV	R4, [R0+#144]
-	MOV	R5, [R0+#142]
-	MOV	R1, [R0+#148]
-	MOV	R2, [R0+#146]
-	MOV	R3, [R0+#128]
+	MOV	R4, [R0+#18]
+	MOV	R5, [R0+#16]
+	MOV	R1, [R0+#22]
+	MOV	R2, [R0+#20]
+	MOV	R3, [R0+#136]
 	SHL	R3, #4
-	MOV	[R0+#128], R3
-	MOV	R3, [R0+#128]
-	MOV	R10, [R0+#132]
+	MOV	[R0+#136], R3
+	MOV	R3, [R0+#136]
+	MOV	R10, [R0+#140]
 	ADD	R10, R2
 	ADDC	R3, R1
 	MOV	R2, R10
-	MOV	[R0+#128], R3
-	MOV	R1, [R0+#128]
+	MOV	[R0+#136], R3
+	MOV	R1, [R0+#136]
 	ADD	R1, #0
 	ADD	R1, #49168
-	MOV	R9, [R0+#48]
+	MOV	R9, [R0+#56]
 	JMP	cc_UC, ?LBB1_15
 ?LBB1_14:
-	MOV	R5, [R0+#138]
+	MOV	R5, [R0+#146]
 	MOV	[R0+#10], R5
-	MOV	R4, [R0+#130]
+	MOV	R4, [R0+#138]
 	MOV	[R0+#8], R4
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
@@ -2190,19 +1998,19 @@ __ZN16__llvm_libc_c1664math4cbrtEd:
 	MOV	[R0+#4], R1
 	MOV	[R0+#14], R7
 	MOV	[R0+#6], R7
-	MOV	R12, R0
-	ADD	R12, #926
 	CALL	___adddf3
-	MOV	R1, [R0+#932]
-	MOV	R2, [R0+#930]
-	MOV	R4, [R0+#928]
-	MOV	R5, [R0+#926]
+	MOV	R1, [R0+#22]
+	MOV	R2, [R0+#20]
+	MOV	R4, [R0+#18]
+	MOV	R5, [R0+#16]
 ?LBB1_15:
 	MOV	[R9], R5
 	MOV	[R9+#2], R4
 	MOV	[R9+#4], R2
 	MOV	[R9+#6], R1
-	ADD	R0, #934
+	MOV	R4, R0
+	ADD	R4, #958
+	ADD	R0, #942
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]

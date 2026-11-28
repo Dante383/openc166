@@ -6,20 +6,21 @@ STRRCHR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_strrchr
 _strrchr:
 ; %bb.0:                                ; %entry
+	MOV	R5, R13
 	MOV	R4, #0
-	AND	R13, #255
-	MOV	R5, R12
+	MOVBZ	R5, RL5
+	MOV	R1, R12
 ?LBB0_1:
-	MOVB	RL1, [R5+]
-	MOVBZ	R1, RL1
-	CMP	R1, R13
+	MOVB	RL2, [R1+]
+	MOVBZ	R2, RL2
+	CMP	R2, R5
 	JMP	cc_EQ, ?LBB0_3
 ; %bb.2:                                ; %for.cond
 	MOV	R12, R4
 ?LBB0_3:
 	MOV	R4, R12
-	MOV	R12, R5
-	CMP	R1, #0
+	MOV	R12, R1
+	CMP	R2, #0
 	JMP	cc_NE, ?LBB0_1
 ; %bb.4:                                ; %if.then4
 	RET

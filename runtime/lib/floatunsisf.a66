@@ -53,10 +53,10 @@ ___floatunsisf?F	PROC	FAR
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R8, RL5
 	ADD	R8, #16
 	JMP	cc_UC, ?LBB0_5
 ?LBB0_3:
@@ -90,10 +90,10 @@ ___floatunsisf?F	PROC	FAR
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R8, RL5
 ?LBB0_5:
 	MOV	R4, R8
 	XOR	R4, #31

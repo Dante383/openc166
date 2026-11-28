@@ -16,11 +16,11 @@ _memcmp:
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	EXTS	R15, #1
 	MOVB	RL2, [R14]
 	MOVBZ	R2, RL2
-	AND	R2, #255
+	MOVBZ	R2, RL2
 	CMP	R4, R2
 	JMP	cc_NE, ?LBB0_4
 ; %bb.2:                                ; %for.inc

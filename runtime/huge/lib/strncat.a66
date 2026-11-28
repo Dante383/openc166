@@ -9,12 +9,11 @@ STRNCAT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _strncat:
 _strncat?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOV	[-R0], R7
 	MOV	[-R0], R6
 	MOV	R5, R13
 	MOV	R4, R12
-	MOV	R1, [R0+#6]
-	MOV	R2, [R0+#4]
+	MOV	R1, [R0+#4]
+	MOV	R2, [R0+#2]
 	MOV	R11, R4
 	MOV	R12, R5
 ?LBB0_1:
@@ -23,10 +22,10 @@ _strncat?F	PROC	FAR
 	EXTS	R3, #1
 	MOVB	RL6, [R10]
 	MOVBZ	R6, RL6
-	AND	R6, #255
+	MOVBZ	R13, RL6
 	ADD	R11, #1
 	ADDC	R12, #0
-	CMP	R6, #0
+	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_1
 ; %bb.2:                                ; %for.cond.preheader
 	MOV	R11, R2
@@ -36,8 +35,7 @@ _strncat?F	PROC	FAR
 	EXTS	R15, #1
 	MOVB	RL6, [R14]
 	MOVBZ	R6, RL6
-	MOV	R7, R6
-	AND	R7, #255
+	MOVBZ	R11, RL6
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.4:                                ; %for.body
 	ADD	R14, #1
@@ -65,7 +63,6 @@ _strncat?F	PROC	FAR
 	EXTS	R12, #1
 	MOVB	[R11], RL1
 	MOV	R6, [R0+]
-	MOV	R7, [R0+]
 	RETS
 _strncat?F	ENDP
 STRNCAT_PR	ENDS

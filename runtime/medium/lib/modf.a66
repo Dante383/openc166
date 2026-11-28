@@ -16,15 +16,15 @@ _modf:
 	MOV	[-R0], R8
 	MOV	[-R0], R7
 	MOV	[-R0], R6
-	SUB	R0, #50
-	MOV	R7, [R0+#64]
-	MOV	R8, [R0+#62]
-	MOV	R6, [R0+#60]
-	MOV	R9, [R0+#58]
-	MOV	R1, R7
+	SUB	R0, #58
+	MOV	R6, [R0+#72]
+	MOV	R7, [R0+#70]
+	MOV	R9, [R0+#68]
+	MOV	R8, [R0+#66]
+	MOV	R1, R6
 	AND	R1, #32767
-	MOV	R5, R9
-	OR	R5, R6
+	MOV	R5, R8
+	OR	R5, R9
 	MOV	R2, #0
 	MOV	R4, #1
 	MOV	R3, R4
@@ -33,7 +33,7 @@ _modf:
 ; %bb.1:                                ; %entry
 	MOV	R3, R2
 ?LBB0_2:
-	MOV	R5, R8
+	MOV	R5, R7
 	MOV	R10, R1
 	ADD	R5, #65535
 	ADDC	R10, #32783
@@ -53,78 +53,80 @@ _modf:
 ; %bb.5:                                ; %entry
 	MOV	R2, R4
 ?LBB0_6:
-	MOV	R4, [R0+#68]
-	MOV	R5, [R0+#66]
+	MOV	R4, [R0+#76]
+	MOV	R5, [R0+#74]
+	MOV	R3, R0
+	ADD	R3, #78
 	JB	R2.0, ?LBB0_8
 ; %bb.7:                                ; %if.then.i.i
 	MOV	R1, R5
 	ADD	R1, #2
 	EXTS	R4, #1
-	MOV	[R1], R6
+	MOV	[R1], R9
 	EXTS	R4, #1
-	MOV	[R5], R9
+	MOV	[R5], R8
 	ADD	R5, #4
 	ADDC	R4, #0
 	MOV	R1, R5
 	ADD	R1, #2
 	EXTS	R4, #1
-	MOV	[R1], R7
+	MOV	[R1], R6
 	EXTS	R4, #1
-	MOV	[R5], R8
+	MOV	[R5], R7
 	JMP	cc_UC, ?LBB0_19
 ?LBB0_8:
-	MOV	R2, R9
-	OR	R2, R8
+	MOV	R2, R8
+	OR	R2, R7
 	XOR	R1, #32752
-	OR	R1, R6
+	OR	R1, R9
 	OR	R1, R2
 	JMP	cc_NE, ?LBB0_10
 ; %bb.9:                                ; %if.then3.i.i
 	MOV	R1, R5
 	ADD	R1, #2
 	EXTS	R4, #1
-	MOV	[R1], R6
+	MOV	[R1], R9
 	EXTS	R4, #1
-	MOV	[R5], R9
+	MOV	[R5], R8
 	ADD	R5, #4
 	ADDC	R4, #0
 	MOV	R1, R5
 	ADD	R1, #2
 	EXTS	R4, #1
-	MOV	[R1], R7
+	MOV	[R1], R6
 	EXTS	R4, #1
-	MOV	[R5], R8
-	AND	R7, #32768
-	MOV	R9, #0
-	MOV	R6, R9
-	MOV	R8, R9
+	MOV	[R5], R7
+	AND	R6, #32768
+	MOV	R8, #0
+	MOV	R9, R8
+	MOV	R7, R8
 	JMP	cc_UC, ?LBB0_19
 ?LBB0_10:
-	MOV	[R0+#24], R12
-	MOV	R1, R7
+	MOV	[R0+#32], R3
+	MOV	R1, R6
 	CPL	R1
 	AND	R1, #32752
-	MOV	R3, R9
-	MOV	R12, R6
-	MOV	R14, R8
-	MOV	R10, R7
+	MOV	R3, R8
+	MOV	R12, R9
+	MOV	R14, R7
+	MOV	R10, R6
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB0_15
 ; %bb.11:                               ; %if.end.i.i.i
-	MOV	R1, R7
+	MOV	R1, R6
 	SHR	R1, #4
 	AND	R1, #2047
-	MOV	R3, R9
-	MOV	R12, R6
-	MOV	R14, R8
-	MOV	R10, R7
+	MOV	R3, R8
+	MOV	R12, R9
+	MOV	R14, R7
+	MOV	R10, R6
 	CMP	R1, #1074
 	JMP	cc_UGT, ?LBB0_15
 ; %bb.12:                               ; %if.end3.i.i.i
 	CMP	R1, #1022
 	JMP	cc_UGT, ?LBB0_14
 ; %bb.13:                               ; %if.then5.i.i.i
-	MOV	R10, R7
+	MOV	R10, R6
 	AND	R10, #32768
 	MOV	R3, #0
 	MOV	R12, R3
@@ -134,21 +136,21 @@ _modf:
 	MOV	R2, #1075
 	SUB	R2, R1
 	MOV	R1, #65535
+	MOV	[R0+#56], R1
+	MOV	[R0+#54], R1
+	MOV	[R0+#52], R1
+	MOV	[R0+#50], R1
+	MOV	R1, #0
 	MOV	[R0+#48], R1
 	MOV	[R0+#46], R1
 	MOV	[R0+#44], R1
 	MOV	[R0+#42], R1
-	MOV	R1, #0
-	MOV	[R0+#40], R1
-	MOV	[R0+#38], R1
-	MOV	[R0+#36], R1
-	MOV	[R0+#34], R1
 	MOV	R1, R2
 	AND	R1, #15
 	SHR	R2, #3
 	AND	R2, #6
 	MOV	R3, R0
-	ADD	R3, #34
+	ADD	R3, #42
 	ADD	R3, #8
 	SUB	R3, R2
 	MOV	R2, [R3+#4]
@@ -161,7 +163,7 @@ _modf:
 	SHR	R13, #1
 	SHR	R13, R11
 	OR	R13, R10
-	MOV	R14, R8
+	MOV	R14, R7
 	AND	R14, R13
 	SHL	R12, R1
 	MOV	R10, [R3]
@@ -169,19 +171,19 @@ _modf:
 	SHR	R13, #1
 	SHR	R13, R11
 	OR	R13, R12
-	MOV	R12, R6
+	MOV	R12, R9
 	AND	R12, R13
 	MOV	R3, [R3+#6]
 	SHL	R3, R1
 	SHR	R2, #1
 	SHR	R2, R11
 	OR	R2, R3
-	AND	R2, R7
+	AND	R2, R6
 	SHL	R10, R1
-	MOV	R3, R9
+	MOV	R3, R8
 	AND	R3, R10
 	AND	R2, #15
-	MOV	R10, R7
+	MOV	R10, R6
 	AND	R10, #65520
 	OR	R10, R2
 ?LBB0_15:
@@ -199,55 +201,55 @@ _modf:
 	MOV	[R1], R10
 	EXTS	R4, #1
 	MOV	[R5], R14
-	MOV	[R0+#20], R12
+	MOV	[R0+#28], R12
 	MOV	[R0+#10], R12
-	MOV	[R0+#18], R3
+	MOV	[R0+#26], R3
 	MOV	[R0+#8], R3
-	MOV	[R0+#2], R6
-	MOV	[R0], R9
-	MOV	[R0+#22], R14
+	MOV	[R0+#2], R9
+	MOV	[R0], R8
+	MOV	[R0+#30], R14
 	MOV	[R0+#12], R14
-	MOV	[R0+#4], R8
-	MOV	[R0+#16], R10
+	MOV	[R0+#4], R7
+	MOV	[R0+#24], R10
 	MOV	[R0+#14], R10
-	MOV	[R0+#6], R7
+	MOV	[R0+#6], R6
 	CALL	___nedf2
 	OR	R5, R4
 	JMP	cc_NE, ?LBB0_17
 ; %bb.16:                               ; %if.then8.i.i
-	AND	R7, #32768
-	MOV	R9, #0
-	MOV	R6, R9
-	MOV	R8, R9
+	AND	R6, #32768
+	MOV	R8, #0
+	MOV	R9, R8
+	MOV	R7, R8
 	JMP	cc_UC, ?LBB0_18
 ?LBB0_17:
-	MOV	R4, [R0+#20]
+	MOV	R4, [R0+#28]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#18]
+	MOV	R4, [R0+#26]
 	MOV	[R0+#8], R4
-	MOV	[R0+#2], R6
-	MOV	[R0], R9
-	MOV	R4, [R0+#22]
+	MOV	[R0+#2], R9
+	MOV	[R0], R8
+	MOV	R4, [R0+#30]
 	MOV	[R0+#12], R4
-	MOV	[R0+#4], R8
-	MOV	R4, [R0+#16]
+	MOV	[R0+#4], R7
+	MOV	R4, [R0+#24]
 	MOV	[R0+#14], R4
-	MOV	[R0+#6], R7
-	MOV	R12, R0
-	ADD	R12, #26
+	MOV	[R0+#6], R6
 	CALL	___subdf3
-	MOV	R7, [R0+#32]
-	MOV	R8, [R0+#30]
-	MOV	R6, [R0+#28]
-	MOV	R9, [R0+#26]
+	MOV	R6, [R0+#22]
+	MOV	R7, [R0+#20]
+	MOV	R9, [R0+#18]
+	MOV	R8, [R0+#16]
 ?LBB0_18:
-	MOV	R12, [R0+#24]
+	MOV	R3, [R0+#32]
 ?LBB0_19:
-	MOV	[R12], R9
-	MOV	[R12+#2], R6
-	MOV	[R12+#4], R8
-	MOV	[R12+#6], R7
-	ADD	R0, #50
+	MOV	[R3], R8
+	MOV	[R3+#2], R9
+	MOV	[R3+#4], R7
+	MOV	[R3+#6], R6
+	MOV	R4, R0
+	ADD	R4, #78
+	ADD	R0, #58
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]

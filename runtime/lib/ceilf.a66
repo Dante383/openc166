@@ -38,7 +38,7 @@ _ceilf?F	PROC	FAR
 ; %bb.2:                                ; %if.end.i.i
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_UGT, ?LBB0_12
 ; %bb.3:                                ; %if.end5.i.i

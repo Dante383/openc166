@@ -9,18 +9,19 @@ STRCHR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _strchr:
 _strchr?F	PROC	FAR
 ; %bb.0:                                ; %entry
+	MOV	R5, R13
 	MOV	R4, R12
-	AND	R13, #255
-	MOVB	RL5, [R4]
-?LBB0_1:
 	MOVBZ	R5, RL5
-	CMP	R5, R13
+	MOVB	RL1, [R4]
+?LBB0_1:
+	MOVBZ	R1, RL1
+	CMP	R1, R5
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.2:                                ; %if.end
-	AND	R5, #255
+	MOVBZ	R1, RL1
 	JMP	cc_EQ, ?LBB0_4
 ; %bb.3:                                ; %for.inc
-	MOVB	RL5, [R4+#1]
+	MOVB	RL1, [R4+#1]
 	ADD	R4, #1
 	JMP	cc_UC, ?LBB0_1
 ?LBB0_4:

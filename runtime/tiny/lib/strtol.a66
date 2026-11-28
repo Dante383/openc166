@@ -127,7 +127,7 @@ _convert:
 	CMP	R14, #0
 	JMP	cc_NE, ?LBB1_20
 ?LBB1_18:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	MOV	R14, #8
 	CMP	R4, #48
 	JMP	cc_EQ, ?LBB1_20

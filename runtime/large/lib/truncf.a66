@@ -24,7 +24,7 @@ _truncf?F	PROC	FAR
 ; %bb.1:                                ; %if.end.i.i
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_UGT, ?LBB0_5
 ; %bb.2:                                ; %if.end3.i.i

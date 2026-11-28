@@ -89,33 +89,33 @@ _getchar?F	ENDP
 _ungetc:
 _ungetc?F	PROC	FAR
 ; %bb.0:                                ; %entry
+	MOV	R5, R12
 	MOV	R4, #65535
-	CMP	R12, #65535
+	CMP	R5, #65535
 	JMP	cc_EQ, ?LBB3_2
 ; %bb.1:                                ; %lor.lhs.false
-	MOV	R5, R14
-	MOV	R1, R13
-	ADD	R1, #2
-	ADDC	R5, #0
-	EXTS	R5, #1
-	MOV	R2, [R1]
-	CMP	R2, #65535
+	MOV	R1, R14
+	MOV	R2, R13
+	ADD	R2, #2
+	ADDC	R1, #0
+	EXTS	R1, #1
+	MOV	R3, [R2]
+	CMP	R3, #65535
 	JMP	cc_EQ, ?LBB3_3
 ?LBB3_2:
 	RETS
 ?LBB3_3:
-	AND	R12, #255
-	EXTS	R5, #1
-	MOV	[R1], R12
+	MOVBZ	R4, RL5
+	EXTS	R1, #1
+	MOV	[R2], R4
 	ADD	R13, #4
 	ADDC	R14, #0
 	EXTS	R14, #1
-	MOVB	RL4, [R13]
-	MOVBZ	R4, RL4
-	AND	R4, #65534
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	AND	R5, #65534
 	EXTS	R14, #1
-	MOVB	[R13], RL4
-	MOV	R4, R12
+	MOVB	[R13], RL5
 	RETS
 _ungetc?F	ENDP
 	EXTRN	__read : NEAR

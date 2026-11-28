@@ -47,9 +47,9 @@ _frexpf?F	PROC	FAR
 	CMP	R8, #0
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.4:                                ; %if.else.i.i.i.i
-	MOV	R2, R6
-	SHR	R2, #7
-	AND	R2, #255
+	MOV	R4, R6
+	SHR	R4, #7
+	MOVBZ	R2, RL4
 	SUB	R2, #127
 	MOV	R5, R6
 	MOV	R4, [R0+#10]

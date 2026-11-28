@@ -15,9 +15,9 @@ ___fixunssfsi:
 	MOV	R4, R5
 	JB	R13.15, ?LBB0_6
 ; %bb.1:                                ; %entry
-	MOV	R14, R13
-	SHR	R14, #7
-	AND	R14, #255
+	MOV	R1, R13
+	SHR	R1, #7
+	MOVBZ	R14, RL1
 	CMP	R14, #127
 	JMP	cc_ULT, ?LBB0_6
 ; %bb.2:                                ; %if.end.i

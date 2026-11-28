@@ -12,15 +12,17 @@ NEGDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	___negdf2
 ___negdf2:
 ; %bb.0:                                ; %entry
-	MOV	R4, [R0+#6]
-	XOR	R4, #32768
-	MOV	R5, [R0]
-	MOV	R1, [R0+#2]
-	MOV	R2, [R0+#4]
-	MOV	[R12+#6], R4
-	MOV	[R12+#4], R2
-	MOV	[R12+#2], R1
-	MOV	[R12], R5
+	MOV	R5, [R0+#6]
+	XOR	R5, #32768
+	MOV	R4, R0
+	ADD	R4, #8
+	MOV	R1, [R0]
+	MOV	R2, [R0+#2]
+	MOV	R3, [R0+#4]
+	MOV	[R4+#6], R5
+	MOV	[R4+#4], R3
+	MOV	[R4+#2], R2
+	MOV	[R4], R1
 	RET
 NEGDF2_PR	ENDS
 	END

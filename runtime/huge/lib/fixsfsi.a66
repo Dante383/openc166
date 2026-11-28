@@ -22,9 +22,9 @@ ___fixsfsi?F	PROC	FAR
 ; %bb.1:                                ; %entry
 	MOV	R1, R4
 ?LBB0_2:
-	MOV	R14, R13
-	SHR	R14, #7
-	AND	R14, #255
+	MOV	R5, R13
+	SHR	R5, #7
+	MOVBZ	R14, RL5
 	MOV	R5, R4
 	CMP	R14, #127
 	JMP	cc_ULT, ?LBB0_12

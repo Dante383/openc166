@@ -14,140 +14,132 @@ ___fixunssfdi:
 	MOV	[-R0], R8
 	MOV	[-R0], R7
 	MOV	[-R0], R6
-	SUB	R0, #64
-	MOV	R6, R12
-	MOV	R8, [R0+#74]
-	MOV	R7, [R0+#72]
-	MOV	R9, #0
-	MOV	[R0+#6], R9
-	MOV	[R0+#4], R9
-	MOV	[R0+#2], R8
-	MOV	[R0], R7
+	SUB	R0, #72
+	MOV	R7, [R0+#82]
+	MOV	R6, [R0+#80]
+	MOV	R8, #0
+	MOV	[R0+#6], R8
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
 	CALL	___lesf2
 	MOV	R1, #1
 	MOV	R2, R1
 	CMP	R5, #1
-	JMP	cc_SGE, ?LBB0_5
+	JMP	cc_SGE, ?LBB0_6
 ; %bb.1:                                ; %entry
 	CMP	R4, #0
-	JMP	cc_NE, ?LBB0_6
+	JMP	cc_NE, ?LBB0_7
 ?LBB0_2:
 	CMP	R5, #0
-	JMP	cc_NE, ?LBB0_7
+	JMP	cc_EQ, ?LBB0_4
 ?LBB0_3:
-	JNB	R1.0, ?LBB0_4
-	JMP	cc_UC, ?LBB0_8
+	MOV	R1, R2
 ?LBB0_4:
-	MOV	[R0+#2], R8
-	MOV	[R0], R7
-	MOV	R12, R0
-	ADD	R12, #56
+	MOV	R9, R0
+	ADD	R9, #84
+	JNB	R1.0, ?LBB0_5
+	JMP	cc_UC, ?LBB0_8
+?LBB0_5:
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
 	CALL	___extendsfdf2
-	MOV	R5, [R0+#56]
-	MOV	[R0+#22], R5
-	MOV	R1, [R0+#58]
-	MOV	[R0+#20], R1
-	MOV	R2, [R0+#60]
-	MOV	[R0+#18], R2
-	MOV	R3, [R0+#62]
-	MOV	[R0+#16], R3
+	MOV	R5, [R0+#4]
+	MOV	[R0+#30], R5
+	MOV	R1, [R0+#6]
+	MOV	[R0+#28], R1
+	MOV	R2, [R0+#8]
+	MOV	[R0+#26], R2
+	MOV	R3, [R0+#10]
+	MOV	[R0+#24], R3
 	MOV	R4, #15856
 	MOV	[R0+#14], R4
-	MOV	R9, #0
-	MOV	[R0+#12], R9
-	MOV	[R0+#10], R9
-	MOV	[R0+#8], R9
+	MOV	R8, #0
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R8
+	MOV	[R0+#8], R8
 	MOV	[R0+#6], R3
 	MOV	[R0+#4], R2
 	MOV	[R0+#2], R1
 	MOV	[R0], R5
-	MOV	R12, R0
-	ADD	R12, #48
-	CALL	___muldf3
-	MOV	R4, [R0+#48]
-	MOV	R5, [R0+#50]
-	MOV	R1, [R0+#52]
-	MOV	R2, [R0+#54]
-	MOV	[R0+#6], R2
-	MOV	[R0+#4], R1
-	MOV	[R0+#2], R5
-	MOV	[R0], R4
-	CALL	___fixunsdfsi
-	MOV	R7, R4
-	MOV	R8, R5
-	MOV	R12, R0
-	ADD	R12, #40
-	MOV	R13, R7
-	MOV	R14, R8
-	CALL	___floatunsidf
-	MOV	R4, [R0+#40]
-	MOV	R5, [R0+#42]
-	MOV	R1, [R0+#44]
-	MOV	R2, [R0+#46]
-	MOV	R3, #49648
-	MOV	[R0+#14], R3
-	MOV	[R0+#12], R9
-	MOV	[R0+#10], R9
-	MOV	[R0+#8], R9
-	MOV	[R0+#6], R2
-	MOV	[R0+#4], R1
-	MOV	[R0+#2], R5
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #32
 	CALL	___muldf3
 	MOV	R4, [R0+#16]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#18]
-	MOV	[R0+#4], R4
-	MOV	R4, [R0+#20]
-	MOV	[R0+#2], R4
-	MOV	R4, [R0+#22]
-	MOV	[R0], R4
-	MOV	R4, [R0+#38]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#36]
-	MOV	[R0+#12], R4
-	MOV	R4, [R0+#34]
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#32]
-	MOV	[R0+#8], R4
-	MOV	R12, R0
-	ADD	R12, #24
-	CALL	___adddf3
-	MOV	R4, [R0+#24]
-	MOV	R5, [R0+#26]
-	MOV	R1, [R0+#28]
-	MOV	R2, [R0+#30]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
 	CALL	___fixunsdfsi
-	MOV	R9, R4
+	MOV	R6, R4
+	MOV	R7, R5
+	MOV	R12, R6
+	MOV	R13, R7
+	CALL	___floatunsidf
+	MOV	R4, [R0]
+	MOV	R5, [R0+#2]
+	MOV	R1, [R0+#4]
+	MOV	R2, [R0+#6]
+	MOV	R3, #49648
+	MOV	[R0+#14], R3
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R8
+	MOV	[R0+#8], R8
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	CALL	___muldf3
+	MOV	R4, [R0+#24]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#26]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#28]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#30]
+	MOV	[R0], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#8], R4
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	CALL	___fixunsdfsi
+	MOV	R8, R4
 	JMP	cc_UC, ?LBB0_9
-?LBB0_5:
-	MOV	R2, R9
+?LBB0_6:
+	MOV	R2, R8
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_2
-?LBB0_6:
-	MOV	R1, R9
-	CMP	R5, #0
-	JMP	cc_EQ, ?LBB0_3
 ?LBB0_7:
-	MOV	R1, R2
-	JB	R1.0, ?LBB0_8
+	MOV	R1, R8
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_3
 	JMP	cc_UC, ?LBB0_4
 ?LBB0_8:
-	MOV	R5, R9
-	MOV	R7, R9
-	MOV	R8, R9
+	MOV	R5, R8
+	MOV	R6, R8
+	MOV	R7, R8
 ?LBB0_9:
-	MOV	[R6], R9
-	MOV	[R6+#2], R5
-	MOV	[R6+#4], R7
-	MOV	[R6+#6], R8
-	ADD	R0, #64
+	MOV	[R9], R8
+	MOV	[R9+#2], R5
+	MOV	[R9+#4], R6
+	MOV	[R9+#6], R7
+	MOV	R4, R0
+	ADD	R4, #84
+	ADD	R0, #72
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]

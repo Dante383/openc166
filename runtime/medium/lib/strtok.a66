@@ -44,7 +44,7 @@ _strtok:
 	EXTS	R7, #1
 	MOVB	RL4, [R6]
 	MOVBZ	R4, RL4
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_EQ, ?LBB0_9
 ; %bb.6:                                ; %if.end6
 	MOV	R12, R6
@@ -60,7 +60,7 @@ _strtok:
 	EXTS	R2, #1
 	MOVB	RL4, [R1]
 	MOVBZ	R4, RL4
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_EQ, ?LBB0_10
 ; %bb.7:                                ; %if.then11
 	MOV	R5, R1

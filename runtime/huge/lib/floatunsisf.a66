@@ -19,16 +19,17 @@ ___floatunsisf?F	PROC	FAR
 	MOV	[-R0], R6
 	SUB	R0, #4
 	MOV	R6, R13
-	MOV	R4, R12
+	MOV	R7, R12
+	MOV	R4, R7
 	OR	R4, R6
 	JMP	cc_EQ, ?LBB0_3
 ; %bb.1:                                ; %if.end
 	CMP	R6, #0
 	JMP	cc_NE, ?LBB0_4
 ; %bb.2:                                ; %if.end
-	MOV	R4, R12
+	MOV	R4, R7
 	SHR	R4, #1
-	OR	R4, R12
+	OR	R4, R7
 	MOV	R5, R4
 	SHR	R5, #2
 	OR	R5, R4
@@ -52,11 +53,11 @@ ___floatunsisf?F	PROC	FAR
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R7, R4
-	SHR	R7, #8
-	ADD	R7, R4
-	AND	R7, #31
-	ADD	R7, #16
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R9, RL5
+	ADD	R9, #16
 	JMP	cc_UC, ?LBB0_5
 ?LBB0_3:
 	MOV	R4, #0
@@ -89,34 +90,36 @@ ___floatunsisf?F	PROC	FAR
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R7, R4
-	SHR	R7, #8
-	ADD	R7, R4
-	AND	R7, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R9, RL5
 ?LBB0_5:
-	MOV	R4, R7
+	MOV	R4, R9
 	XOR	R4, #31
 	CMP	R4, #23
 	JMP	cc_UGT, ?LBB0_7
 ; %bb.6:                                ; %if.then2
 	MOV	R14, #23
 	SUB	R14, R4
+	MOV	R12, R7
 	MOV	R13, R6
 	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	XOR	R5, #128
 	JMP	cc_UC, ?LBB0_16
 ?LBB0_7:
 	MOV	R8, #8
-	SUB	R8, R7
-	MOV	R9, R12
+	MOV	[R0+#2], R9
+	SUB	R8, R9
+	MOV	R12, R7
 	MOV	R13, R6
 	MOV	R14, R8
 	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
-	MOV	[R0+#2], R4
-	MOV	[R0], R5
+	MOV	[R0], R4
+	MOV	R9, R5
 	MOV	R14, #32
 	SUB	R14, R8
-	MOV	R12, R9
+	MOV	R12, R7
 	MOV	R13, R6
 	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
 	MOV	R1, R4
@@ -135,16 +138,15 @@ ___floatunsisf?F	PROC	FAR
 ; %bb.10:                               ; %if.else
 	MOV	R10, R5
 ?LBB0_11:
-	MOV	R11, [R0]
-	XOR	R11, #128
+	XOR	R9, #128
 	CMP	R2, #32768
 	JMP	cc_EQ, ?LBB0_13
 ; %bb.12:                               ; %if.else
 	MOV	R10, R3
 ?LBB0_13:
-	MOV	R3, [R0+#2]
+	MOV	R3, [R0]
 	ADD	R3, R10
-	ADDC	R11, R5
+	ADDC	R9, R5
 	XOR	R2, #32768
 	OR	R1, R2
 	JMP	cc_EQ, ?LBB0_15
@@ -153,10 +155,11 @@ ___floatunsisf?F	PROC	FAR
 ?LBB0_15:
 	AND	R4, R3
 	ADD	R4, R3
-	ADDC	R5, R11
+	ADDC	R5, R9
+	MOV	R9, [R0+#2]
 ?LBB0_16:
 	MOV	R1, #158
-	SUB	R1, R7
+	SUB	R1, R9
 	SHL	R1, #7
 	MOV	R2, #0
 	ADD	R4, R2

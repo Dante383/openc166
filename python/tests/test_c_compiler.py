@@ -74,7 +74,7 @@ class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
     def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167",
-                 sections=None, tiny=False, model="small", reserve=()):
+                 sections=None, tiny=False, model="small", reserve=(), asm=()):
         if tiny:
             model = "tiny"
         # The harness module matches the model: $SEGMENTED but in tiny.
@@ -95,6 +95,9 @@ class Program:
             opt += " -mabi=" + model
         for i, src in enumerate(sources):
             modules.append((f"m{i}.a66", compile_c(src, opt, name=f"m{i}.c")))
+        # Hand-written modules, linked with the C ones.
+        for i, src in enumerate(asm):
+            modules.append((f"a{i}.a66", src))
         self.asm = modules
         self.board = board
         self.result = openc166.assemble_many(
@@ -711,6 +714,127 @@ int test(int a, int b) {
                 lo, _, s = p.call("test", 9, 4)
                 self.assertEqual(lo, 36 + 5 + (9 ^ 4) + 37 + 10)
                 self.assertEqual(s.sfr["CP"], 0xFC00)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class TaskingInterfaceTest(unittest.TestCase):
+    """Calls between C and assembly written the way TASKING C166 Classic
+    compiles (manual v8.9, sections 3.6 and 3.15, and the stock 5WY19
+    firmware): a char result only in RL4, a bit result in USR0, a struct
+    result in a block the caller reserves on the user stack above the stack
+    arguments, with R4 pointing at it, and a fifth argument at [R0]."""
+
+    ASM = r"""$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+        PUBLIC  _tk_char, _tk_bit, _tk_struct, _tk_call_c
+        EXTRN   _c_mk : FAR, _c_flag : FAR, _c_char : FAR
+TK_PR   SECTION CODE WORD PUBLIC 'CPROGRAM'
+; unsigned char tk_char(unsigned char a, unsigned char b): a + b, RH4 left
+; as garbage.
+_tk_char PROC   FAR
+        MOV     R4, R12
+        ADD     R4, R13
+        MOVB    RH4, #0ABH
+        RETS
+_tk_char ENDP
+; bit tk_bit(int x): x > 100 in USR0; R4 is not the result.
+_tk_bit PROC    FAR
+        MOV     R4, #5555H
+        BCLR    USR0
+        CMP     R12, #100
+        JMPR    cc_SLE, ?TB1
+        BSET    USR0
+?TB1:   RETS
+_tk_bit ENDP
+; struct S tk_struct(int a, int b, int c, int d, int e):
+; {a + e, b + b, c - d}. e is at [R0], the block above it.
+_tk_struct PROC FAR
+        MOV     R4, [R0]
+        ADD     R4, R12
+        MOV     [R0+#2], R4
+        MOV     R4, R13
+        ADD     R4, R13
+        MOV     [R0+#4], R4
+        MOV     R4, R14
+        SUB     R4, R15
+        MOV     [R0+#6], R4
+        MOV     R4, R0
+        ADD     R4, #2
+        RETS
+_tk_struct ENDP
+; int tk_call_c(void): the fields of c_mk(1, 2, 3, 4, 5) added, + 100 if
+; c_flag(7), + c_char(250, 10) * 1000.
+_tk_call_c PROC FAR
+        SUB     R0, #6              ; the block for c_mk's result
+        MOV     R4, #5
+        MOV     [-R0], R4           ; e
+        MOV     R12, #1
+        MOV     R13, #2
+        MOV     R14, #3
+        MOV     R15, #4
+        CALLS   SEG _c_mk, _c_mk
+        ADD     R0, #2              ; the argument
+        MOV     R5, [R4]            ; R4: the block
+        MOV     R1, [R4+#2]
+        ADD     R5, R1
+        MOV     R1, [R4+#4]
+        ADD     R5, R1
+        ADD     R0, #6              ; the block
+        MOV     [-R0], R5
+        MOV     R12, #7
+        CALLS   SEG _c_flag, _c_flag
+        MOV     R5, [R0+]
+        JNB     USR0, ?TC1
+        ADD     R5, #100
+?TC1:   MOV     [-R0], R5
+        MOV     R12, #250
+        MOV     R13, #10
+        CALLS   SEG _c_char, _c_char
+        MOV     R5, [R0+]
+        MOVBZ   R4, RL4
+        MOV     R1, #1000
+        MUL     R4, R1
+        MOV     R4, MDL
+        ADD     R4, R5
+        RETS
+_tk_call_c ENDP
+TK_PR   ENDS
+        END
+"""
+
+    C = r"""
+#include <c166.h>
+struct S { int a, b, c; };
+unsigned char tk_char(unsigned char a, unsigned char b);
+_bit tk_bit(int x);
+struct S tk_struct(int a, int b, int c, int d, int e);
+int tk_call_c(void);
+struct S c_mk(int a, int b, int c, int d, int e) {
+  struct S s = {a * e, b + c, d - a};
+  return s;
+}
+_Bool c_flag(int x) { return x == 7; }
+unsigned char c_char(unsigned char a, unsigned char b) { return a + b; }
+int test(void) {
+  int r = tk_char(200, 100) + 1000;        /* 44 + 1000 */
+  r += tk_bit(150) ? 1 : 0;
+  r += tk_bit(50) ? 10 : 0;                /* + 1 */
+  struct S s = tk_struct(1, 2, 3, 4, 5);   /* {6, 4, -1} */
+  r += s.a * 100 + s.b * 10 + s.c;         /* + 639 */
+  r += tk_call_c();                        /* 5 + 5 + 3 + 100 + 4000 */
+  return r;
+}
+"""
+
+    def test_calls_both_ways(self):
+        # Far code (CALLS/RETS), with near and with far data.
+        for model, opt in (("small", "-O0"), ("small", "-Os"), ("large", "-Os")):
+            with self.subTest(model=model, opt=opt):
+                p = Program([self.C], opt, model=model, asm=[self.ASM])
+                lo, _, _ = p.call("test")
+                self.assertEqual(signed16(lo), 1044 + 1 + 639 + 4113)
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

@@ -17,7 +17,7 @@ _strlen?F	PROC	FAR
 	EXTS	R5, #1
 	MOVB	RL3, [R4]
 	MOVBZ	R3, RL3
-	AND	R3, #255
+	MOVBZ	R3, RL3
 	ADD	R1, #1
 	ADDC	R2, #0
 	CMP	R3, #0

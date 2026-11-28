@@ -8,31 +8,32 @@ STRRCHR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 	PUBLIC	_strrchr
 _strrchr:
 ; %bb.0:                                ; %entry
-	MOV	R1, #0
-	AND	R14, #255
-	MOV	R3, R1
+	MOV	R4, R14
+	MOV	R2, #0
+	MOVBZ	R1, RL4
+	MOV	R10, R2
 ?LBB0_1:
 	EXTS	R13, #1
-	MOVB	RL2, [R12]
-	MOVBZ	R2, RL2
-	AND	R2, #255
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	MOVBZ	R3, RL4
 	MOV	R5, R13
-	CMP	R2, R14
+	CMP	R3, R1
 	JMP	cc_EQ, ?LBB0_3
 ; %bb.2:                                ; %for.cond
-	MOV	R5, R3
+	MOV	R5, R10
 ?LBB0_3:
 	MOV	R4, R12
-	CMP	R2, R14
+	CMP	R3, R1
 	JMP	cc_EQ, ?LBB0_5
 ; %bb.4:                                ; %for.cond
-	MOV	R4, R1
+	MOV	R4, R2
 ?LBB0_5:
 	ADD	R12, #1
 	ADDC	R13, #0
-	MOV	R1, R4
-	MOV	R3, R5
-	CMP	R2, #0
+	MOV	R2, R4
+	MOV	R10, R5
+	CMP	R3, #0
 	JMP	cc_NE, ?LBB0_1
 ; %bb.6:                                ; %if.then4
 	RET

@@ -13,16 +13,17 @@ SUBDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 ___subdf3:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
-	SUB	R0, #24
-	MOV	R6, R12
-	MOV	R4, [R0+#26]
-	MOV	R5, [R0+#28]
-	MOV	R1, [R0+#30]
-	MOV	R2, [R0+#32]
-	MOV	R3, [R0+#34]
-	MOV	R10, [R0+#36]
-	MOV	R11, [R0+#38]
-	MOV	R12, [R0+#40]
+	SUB	R0, #32
+	MOV	R6, R0
+	ADD	R6, #50
+	MOV	R4, [R0+#34]
+	MOV	R5, [R0+#36]
+	MOV	R1, [R0+#38]
+	MOV	R2, [R0+#40]
+	MOV	R3, [R0+#42]
+	MOV	R10, [R0+#44]
+	MOV	R11, [R0+#46]
+	MOV	R12, [R0+#48]
 	XOR	R12, #32768
 	MOV	[R0+#14], R12
 	MOV	[R0+#12], R11
@@ -32,18 +33,21 @@ ___subdf3:
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #16
 	CALL	___adddf3
-	MOV	R4, [R0+#18]
-	MOV	R5, [R0+#16]
-	MOV	R1, [R0+#22]
-	MOV	R2, [R0+#20]
-	MOV	[R6+#4], R2
-	MOV	[R6+#6], R1
-	MOV	[R6], R5
-	MOV	[R6+#2], R4
-	ADD	R0, #24
+	MOV	R4, [R0+#22]
+	MOV	[R0+#30], R4
+	MOV	R5, [R0+#20]
+	MOV	[R0+#28], R5
+	MOV	R1, [R0+#18]
+	MOV	[R0+#26], R1
+	MOV	R2, [R0+#16]
+	MOV	[R0+#24], R2
+	MOV	[R6], R2
+	MOV	[R6+#2], R1
+	MOV	[R6+#6], R4
+	MOV	[R6+#4], R5
+	MOV	R4, R6
+	ADD	R0, #32
 	MOV	R6, [R0+]
 	RET
 	EXTRN	___adddf3 : NEAR

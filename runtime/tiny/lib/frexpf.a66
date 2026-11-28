@@ -41,7 +41,7 @@ _frexpf:
 ; %bb.4:                                ; %if.else.i.i.i.i
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	SUB	R4, #127
 	MOV	R5, R6
 	JMP	cc_UC, ?LBB0_9

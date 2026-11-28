@@ -180,9 +180,26 @@ at `002014H` takes its operands in `R4:R5` and `R10:R11` and returns in
 `R4:R5`. The backend calls such helpers with their own register conventions,
 named after TASKING's helper names where they can be identified in the
 firmware. The manual documents the floating-point helpers' registers
-(§3.16). Still open: the order of stack arguments, which the manual's stack
-diagram (§7) shows only in outline; to be settled with a test program once
-a Classic compiler runs, or from calls in the firmware.
+(§3.16).
+
+Checked on 2026-11-28 against the whole stock 5WY19 image:
+
+- Stack arguments: first argument lowest, at R0 on entry. A callee taking a
+  fifth argument pushes 10 bytes and reads it at `[R0+#0AH]`; non-leaf
+  functions push `R15`..`R12` at entry, so the register arguments lie in
+  order just below the stack ones. The firmware almost never passes more
+  than one word on the stack, so the order of several is the manual's.
+- `char` results: `MOVB RL4, #0` with RH4 left as it was, so a caller
+  extends RL4 itself. `char` arguments are extended by the caller (`MOVBZ
+  R12, ...`), and callees rely on that (`SUB R12, R13` on two bytes).
+- `bit` results: `BMOV USR0, Rn.0` before `RETS`.
+- Interrupts with their own banks: `SCXT CP, #bank` then `NOP` before the
+  first GPR access, with banks at `0FC2EH`..`0FD06H`.
+
+The compiler follows all of this: Clang leaves `char` results unextended
+(clang/lib/CodeGen/Targets/C166.cpp), `_Bool` results go in USR0, and
+structs and `double` come back in the block of manual §3.15/Table 3-22,
+reserved by the caller above its stack arguments.
 | Frame | locals at `[R0+#d16]`; no frame pointer unless needed (variable-length arrays, `alloca`) |
 | Calls | `CALLA`/`CALLR` in the small model; `CALLS` and `RETS` for far code later |
 
@@ -450,8 +467,8 @@ modules (`--lib`) so only what a program uses is pulled in:
      compiled for the C166 by `runtime/build.py` (they handle a 16-bit
      `int`). 64-bit `double` is the default, as planned; `-mdouble=32` makes
      it `float`, with `_SINGLE_FP`/`_DOUBLE_FP` as in TASKING. Both came at
-     once, since compiler-rt has both. A `double` result comes back through
-     a hidden pointer in R12, not TASKING's block on the user stack.
+     once, since compiler-rt has both. A `double` result comes back in
+     TASKING's block on the user stack.
    - Aliases (`x EQU y` in A166) for the builtins that define several names.
    - `_far` and `_huge` pointers: LLVM address spaces 1 and 2, 32 bits,
      low word first (offset, then page or segment). Loads and stores

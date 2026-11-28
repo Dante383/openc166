@@ -605,7 +605,7 @@ __ZN16__llvm_libc_c1666fputil11NormalFloatIfEC2ENS0_6FPBitsIfEE?F	PROC	FAR
 ; %bb.3:                                ; %if.else.i
 	MOV	R4, R13
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	MOV	R5, #0
 	ADD	R4, #65409
 	ADDC	R5, #65535
@@ -704,20 +704,20 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIfEcvfEv?F	PROC	FAR
 	MOV	R7, R12
 	EXTS	R6, #1
 	MOV	R9, [R7]
-	MOV	R4, R9
-	ADD	R4, #127
-	MOV	R5, R6
+	MOV	R5, R9
+	ADD	R5, #127
+	MOV	R4, R6
 	MOV	R1, R7
 	ADD	R1, #8
-	ADDC	R5, #0
-	EXTS	R5, #1
-	MOVB	RL1, [R1]
-	MOVBZ	R1, RL1
-	CMP	R4, #255
+	ADDC	R4, #0
+	EXTS	R4, #1
+	MOVB	RL4, [R1]
+	MOVBZ	R4, RL4
+	CMP	R5, #255
 	JMP	cc_SLT, ?LBB3_4
 ; %bb.1:                                ; %if.then
 	MOV	R5, #65408
-	JB	R1.0, ?LBB3_3
+	JB	R4.0, ?LBB3_3
 ; %bb.2:                                ; %if.then
 	MOV	R5, #32640
 ?LBB3_3:
@@ -726,7 +726,7 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIfEcvfEv?F	PROC	FAR
 ?LBB3_4:
 	MOV	R5, R7
 	ADD	R5, #2
-	AND	R1, #255
+	MOVBZ	R1, RL4
 	MOV	R4, #0
 	MOV	R3, R4
 	CMP	R1, #0
@@ -896,8 +896,7 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIfE3cmpERKS2_?F	PROC	FAR
 ; %bb.1:                                ; %entry
 	MOV	R5, R4
 ?LBB4_2:
-	MOV	R1, R2
-	AND	R1, #255
+	MOVBZ	R1, RL2
 	JB	R2.0, ?LBB4_4
 ; %bb.3:                                ; %entry
 	MOV	R4, R3
@@ -909,7 +908,7 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIfE3cmpERKS2_?F	PROC	FAR
 	EXTS	R3, #1
 	MOVB	RL2, [R2]
 	MOVBZ	R2, RL2
-	AND	R2, #255
+	MOVBZ	R2, RL2
 	CMP	R1, R2
 	JMP	cc_NE, ?LBB4_22
 ; %bb.5:                                ; %if.end

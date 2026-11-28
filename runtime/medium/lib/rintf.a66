@@ -85,7 +85,7 @@ __ZN16__llvm_libc_c1666fputil33round_using_current_rounding_modeIfEENS_3cpp9enab
 ; %bb.3:                                ; %if.end.i
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_ULE, ?LBB1_13
 ?LBB1_4:
@@ -121,7 +121,7 @@ __ZN16__llvm_libc_c1666fputil33round_using_current_rounding_modeIfEENS_3cpp9enab
 ; %bb.9:                                ; %if.end.i44
 	MOV	R4, R7
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_UGT, ?LBB1_39
 ; %bb.10:                               ; %if.end5.i49
@@ -189,7 +189,7 @@ __ZN16__llvm_libc_c1666fputil33round_using_current_rounding_modeIfEENS_3cpp9enab
 	MOV	R6, [R0+#20]
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_UGT, ?LBB1_38
 ; %bb.23:                               ; %if.end5.i77
@@ -274,7 +274,7 @@ __ZN16__llvm_libc_c1666fputil33round_using_current_rounding_modeIfEENS_3cpp9enab
 	MOV	R6, [R0+#20]
 	MOV	R4, R6
 	SHR	R4, #7
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	CMP	R4, #149
 	JMP	cc_ULE, ?LBB1_41
 ?LBB1_38:

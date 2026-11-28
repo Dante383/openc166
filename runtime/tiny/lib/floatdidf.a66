@@ -14,19 +14,18 @@ ___floatdidf:
 	MOV	[-R0], R8
 	MOV	[-R0], R7
 	MOV	[-R0], R6
-	SUB	R0, #48
-	MOV	R6, R12
-	MOV	R7, [R0+#56]
-	MOV	R8, [R0+#58]
-	MOV	R13, [R0+#60]
-	MOV	R14, [R0+#62]
-	MOV	R12, R0
-	ADD	R12, #40
+	SUB	R0, #56
+	MOV	R8, R13
+	MOV	R7, R12
+	MOV	R6, R0
+	ADD	R6, #64
+	MOV	R12, R14
+	MOV	R13, R15
 	CALL	___floatsidf
-	MOV	R4, [R0+#40]
-	MOV	R5, [R0+#42]
-	MOV	R1, [R0+#44]
-	MOV	R2, [R0+#46]
+	MOV	R4, [R0]
+	MOV	R5, [R0+#2]
+	MOV	R1, [R0+#4]
+	MOV	R2, [R0+#6]
 	MOV	R3, #16880
 	MOV	[R0+#14], R3
 	MOV	R9, #0
@@ -37,13 +36,11 @@ ___floatdidf:
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #32
 	CALL	___muldf3
-	MOV	R4, [R0+#32]
-	MOV	R5, [R0+#34]
-	MOV	R1, [R0+#36]
-	MOV	R2, [R0+#38]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	R3, #49968
 	MOV	[R0+#14], R3
 	MOV	[R0+#12], R9
@@ -53,13 +50,11 @@ ___floatdidf:
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #24
 	CALL	___adddf3
-	MOV	R4, [R0+#24]
-	MOV	R5, [R0+#26]
-	MOV	R1, [R0+#28]
-	MOV	R2, [R0+#30]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	R3, #17200
 	MOV	[R0+#14], R3
 	MOV	[R0+#12], R9
@@ -69,8 +64,6 @@ ___floatdidf:
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #16
 	CALL	___adddf3
 	MOV	R4, [R0+#16]
 	MOV	R5, [R0+#18]
@@ -80,7 +73,8 @@ ___floatdidf:
 	MOV	[R6+#4], R1
 	MOV	[R6+#2], R5
 	MOV	[R6], R4
-	ADD	R0, #48
+	MOV	R4, R6
+	ADD	R0, #56
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]

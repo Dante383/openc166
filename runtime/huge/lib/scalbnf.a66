@@ -159,7 +159,7 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	MOVB	[R0+#14], RL5
 	MOV	R5, R6
 	SHR	R5, #7
-	AND	R5, #255
+	MOVBZ	R5, RL5
 	MOV	R2, #65387
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB1_12
@@ -215,10 +215,10 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R14, R4
-	SHR	R14, #8
-	ADD	R14, R4
-	AND	R14, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R14, RL5
 	ADD	R14, #16
 	JMP	cc_UC, ?LBB1_25
 ?LBB1_17:
@@ -301,10 +301,10 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R14, R4
-	SHR	R14, #8
-	ADD	R14, R4
-	AND	R14, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R14, RL5
 ?LBB1_25:
 	SUB	R2, R14
 	MOV	R12, R7

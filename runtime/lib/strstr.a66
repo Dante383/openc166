@@ -27,7 +27,7 @@ _strstr?F	PROC	FAR
 	ADD	R3, R1
 	MOVB	RL3, [R3]
 	MOVBZ	R3, RL3
-	AND	R2, #255
+	MOVBZ	R2, RL2
 	CMP	R3, R2
 	JMP	cc_NE, ?LBB0_6
 ; %bb.5:                                ; %while.body

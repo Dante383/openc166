@@ -12,28 +12,28 @@ _strcpy?F	PROC	FAR
 	MOV	[-R0], R6
 	MOV	R5, R13
 	MOV	R4, R12
-	MOV	R11, R4
+	MOV	R3, R4
 	MOV	R12, R5
 	MOV	R1, R14
 	MOV	R2, R15
-	MOV	R3, R11
-	MOV	R10, R12
+	MOV	R10, R3
+	MOV	R11, R12
 ?LBB0_1:
 	ADD	R1, #1
 	ADDC	R2, #0
 	EXTS	R15, #1
 	MOVB	RL6, [R14]
 	MOVBZ	R6, RL6
-	ADD	R3, #1
-	ADDC	R10, #0
+	MOVBZ	R13, RL6
+	ADD	R10, #1
+	ADDC	R11, #0
 	EXTS	R12, #1
-	MOVB	[R11], RL6
-	AND	R6, #255
+	MOVB	[R3], RL6
 	MOV	R14, R1
 	MOV	R15, R2
-	MOV	R11, R3
-	MOV	R12, R10
-	CMP	R6, #0
+	MOV	R3, R10
+	MOV	R12, R11
+	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_1
 ; %bb.2:                                ; %while.end
 	MOV	R6, [R0+]

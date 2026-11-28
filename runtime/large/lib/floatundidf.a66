@@ -17,42 +17,37 @@ ___floatundidf?F	PROC	FAR
 	MOV	[-R0], R8
 	MOV	[-R0], R7
 	MOV	[-R0], R6
-	SUB	R0, #32
-	MOV	R6, R12
-	MOV	R7, [R0+#40]
-	MOV	R8, [R0+#42]
-	MOV	R4, [R0+#44]
-	MOV	R5, [R0+#46]
-	MOV	R1, #50480
-	MOV	[R0+#14], R1
+	SUB	R0, #40
+	MOV	R7, R13
+	MOV	R8, R12
+	MOV	R6, R0
+	ADD	R6, #48
+	MOV	R4, #50480
+	MOV	[R0+#14], R4
 	MOV	R9, #0
 	MOV	[R0+#12], R9
-	MOV	R1, #16
-	MOV	[R0+#10], R1
+	MOV	R4, #16
+	MOV	[R0+#10], R4
 	MOV	[R0+#8], R9
-	MOV	R1, #17712
-	MOV	[R0+#6], R1
+	MOV	R4, #17712
+	MOV	[R0+#6], R4
 	MOV	[R0+#4], R9
-	MOV	[R0+#2], R5
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #24
+	MOV	[R0+#2], R15
+	MOV	[R0], R14
 	CALLS	SEG ___adddf3, SOF ___adddf3
-	MOV	R4, [R0+#24]
-	MOV	R5, [R0+#26]
-	MOV	R1, [R0+#28]
-	MOV	R2, [R0+#30]
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
 	MOV	R3, #17200
 	MOV	[R0+#14], R3
 	MOV	[R0+#12], R9
-	MOV	[R0+#10], R8
-	MOV	[R0+#8], R7
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R8
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #16
 	CALLS	SEG ___adddf3, SOF ___adddf3
 	MOV	R4, [R0+#16]
 	MOV	R5, [R0+#18]
@@ -62,7 +57,8 @@ ___floatundidf?F	PROC	FAR
 	MOV	[R6+#4], R1
 	MOV	[R6+#2], R5
 	MOV	[R6], R4
-	ADD	R0, #32
+	MOV	R4, R6
+	ADD	R0, #40
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]

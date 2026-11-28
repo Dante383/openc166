@@ -18,7 +18,7 @@ _perror?F	PROC	FAR
 	EXTS	R13, #1
 	MOVB	RL4, [R12]
 	MOVBZ	R4, RL4
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_EQ, ?LBB0_3
 ; %bb.2:                                ; %if.then
 	MOV	R6, #SOF (___c166_iob+12)

@@ -17,8 +17,7 @@ _strcmp?F	PROC	FAR
 ?LBB0_2:
 	MOVB	RL5, [R13]
 	MOVBZ	R5, RL5
-	MOV	R1, R4
-	AND	R1, #255
+	MOVBZ	R1, RL4
 	CMP	R1, R5
 	JMP	cc_NE, ?LBB0_5
 ; %bb.3:                                ; %while.body
@@ -30,7 +29,7 @@ _strcmp?F	PROC	FAR
 ; %bb.4:
 	MOV	R4, #0
 ?LBB0_5:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_UC, ?LBB0_7
 ?LBB0_6:
 	MOV	R4, #0
@@ -52,8 +51,7 @@ _strcoll?F	PROC	FAR
 ?LBB1_2:
 	MOVB	RL5, [R13]
 	MOVBZ	R5, RL5
-	MOV	R1, R4
-	AND	R1, #255
+	MOVBZ	R1, RL4
 	CMP	R1, R5
 	JMP	cc_NE, ?LBB1_5
 ; %bb.3:                                ; %while.body.i
@@ -65,7 +63,7 @@ _strcoll?F	PROC	FAR
 ; %bb.4:
 	MOV	R4, #0
 ?LBB1_5:
-	AND	R4, #255
+	MOVBZ	R4, RL4
 	JMP	cc_UC, ?LBB1_7
 ?LBB1_6:
 	MOV	R4, #0

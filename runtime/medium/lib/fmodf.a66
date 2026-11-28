@@ -13,11 +13,11 @@ FMODF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _fmodf:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
-	SUB	R0, #20
-	MOV	R4, [R0+#28]
-	MOV	R2, [R0+#26]
-	MOV	R6, [R0+#24]
-	MOV	R1, [R0+#22]
+	SUB	R0, #24
+	MOV	R4, [R0+#32]
+	MOV	R2, [R0+#30]
+	MOV	R6, [R0+#28]
+	MOV	R1, [R0+#26]
 	MOV	R3, R4
 	AND	R3, #32767
 	MOV	R5, R2
@@ -54,23 +54,25 @@ _fmodf:
 ; %bb.8:
 	XOR	R4, #32768
 ?LBB0_9:
-	MOV	[R0+#12], R1
-	MOV	[R0+#14], R5
-	MOV	[R0+#8], R2
-	MOV	[R0+#10], R4
-	MOV	R4, [R0+#10]
-	MOV	[R0+#6], R4
-	MOV	R4, [R0+#8]
-	MOV	[R0+#4], R4
+	MOV	[R0+#16], R1
+	MOV	[R0+#18], R5
+	MOV	[R0+#12], R2
+	MOV	[R0+#14], R4
 	MOV	R4, [R0+#14]
-	MOV	[R0+#2], R4
+	MOV	[R0+#6], R4
 	MOV	R4, [R0+#12]
-	MOV	[R0], R4
-	MOV	R12, R0
-	ADD	R12, #16
-	CALL	__ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE13eval_internalENS0_6FPBitsIfEES7_
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
 	MOV	R4, [R0+#16]
-	MOV	R5, [R0+#18]
+	MOV	[R0], R4
+	CALL	__ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE13eval_internalENS0_6FPBitsIfEES7_
+	MOV	R4, [R0+#8]
+	MOV	[R0+#20], R4
+	MOV	R4, [R0+#10]
+	MOV	[R0+#22], R4
+	MOV	R4, [R0+#20]
+	MOV	R5, [R0+#22]
 	AND	R6, #32768
 	AND	R5, #32767
 	OR	R5, R6
@@ -171,7 +173,7 @@ _fmodf:
 	MOV	R5, #32704
 	MOV	R4, #0
 ?LBB0_33:
-	ADD	R0, #20
+	ADD	R0, #24
 	MOV	R6, [R0+]
 	RET
 __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE13eval_internalENS0_6FPBitsIfEES7_:
@@ -181,93 +183,94 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	[-R0], R7
 	MOV	[-R0], R6
 	SUB	R0, #120
-	MOV	R2, R12
 	MOV	R13, [R0+#130]
 	MOV	R12, [R0+#128]
-	MOV	R7, [R0+#134]
-	MOV	R8, [R0+#132]
+	MOV	R6, [R0+#134]
+	MOV	R7, [R0+#132]
 	MOV	R1, #0
 	MOV	R4, #1
 	MOV	R5, R4
-	CMP	R13, R7
-	JMP	cc_ULE, ?LBB1_12
-; %bb.1:                                ; %entry
-	CMP	R12, R8
+	CMP	R13, R6
 	JMP	cc_ULE, ?LBB1_13
+; %bb.1:                                ; %entry
+	CMP	R12, R7
+	JMP	cc_ULE, ?LBB1_14
 ?LBB1_2:
-	CMP	R13, R7
-	JMP	cc_NE, ?LBB1_14
+	CMP	R13, R6
+	JMP	cc_EQ, ?LBB1_4
 ?LBB1_3:
-	JNB	R4.0, ?LBB1_15
+	MOV	R4, R5
 ?LBB1_4:
-	MOV	[R0+#26], R2
-	MOV	R9, R13
-	SHR	R9, #7
-	AND	R9, #255
-	MOV	R6, R7
-	SHR	R6, #7
-	AND	R6, #255
-	CMP	R6, #24
-	JMP	cc_ULT, ?LBB1_20
+	MOV	R2, R0
+	ADD	R2, #136
+	JNB	R4.0, ?LBB1_15
 ; %bb.5:                                ; %if.end7
+	MOV	[R0+#28], R2
+	MOV	R4, R13
+	SHR	R4, #7
+	MOVBZ	R9, RL4
+	MOV	R4, R6
+	SHR	R4, #7
+	MOVBZ	R8, RL4
+	CMP	R8, #24
+	JMP	cc_ULT, ?LBB1_20
+; %bb.6:                                ; %if.end7
 	MOV	R14, R9
-	SUB	R14, R6
+	SUB	R14, R8
 	CMP	R14, #8
 	JMP	cc_SGT, ?LBB1_20
-; %bb.6:                                ; %if.then13
+; %bb.7:                                ; %if.then13
 	MOV	R4, R13
 	AND	R4, #32640
 	AND	R13, #127
 	CMP	R4, #0
-	JMP	cc_EQ, ?LBB1_8
-; %bb.7:                                ; %if.then13
+	JMP	cc_EQ, ?LBB1_9
+; %bb.8:                                ; %if.then13
 	OR	R13, #128
-?LBB1_8:
-	MOV	R4, R7
+?LBB1_9:
+	MOV	R4, R6
 	AND	R4, #32640
-	AND	R7, #127
+	AND	R6, #127
 	CMP	R4, #0
-	JMP	cc_EQ, ?LBB1_10
-; %bb.9:                                ; %if.then13
-	OR	R7, #128
-?LBB1_10:
-	CMP	R9, R6
+	JMP	cc_EQ, ?LBB1_11
+; %bb.10:                               ; %if.then13
+	OR	R6, #128
+?LBB1_11:
+	CMP	R9, R8
 	JMP	cc_NE, ?LBB1_31
-; %bb.11:                               ; %cond.true
-	SUB	R12, R8
-	SUBC	R13, R7
+; %bb.12:                               ; %cond.true
+	SUB	R12, R7
+	SUBC	R13, R6
 	JMP	cc_UC, ?LBB1_32
-?LBB1_12:
-	MOV	R5, R1
-	CMP	R12, R8
-	JMP	cc_UGT, ?LBB1_2
 ?LBB1_13:
-	MOV	R4, R1
-	CMP	R13, R7
-	JMP	cc_EQ, ?LBB1_3
+	MOV	R5, R1
+	CMP	R12, R7
+	JMP	cc_UGT, ?LBB1_2
 ?LBB1_14:
-	MOV	R4, R5
-	JB	R4.0, ?LBB1_4
+	MOV	R4, R1
+	CMP	R13, R6
+	JMP	cc_NE, ?LBB1_3
+	JMP	cc_UC, ?LBB1_4
 ?LBB1_15:
 	MOV	R1, #0
 	MOV	R5, #1
 	MOV	R4, R5
-	CMP	R12, R8
+	CMP	R12, R7
 	JMP	cc_ULT, ?LBB1_27
 ; %bb.16:                               ; %if.then
-	CMP	R13, R7
+	CMP	R13, R6
 	JMP	cc_ULT, ?LBB1_28
 ?LBB1_17:
-	CMP	R13, R7
+	CMP	R13, R6
 	JMP	cc_NE, ?LBB1_29
 ?LBB1_18:
 	JB	R4.0, ?LBB1_30
 ?LBB1_19:
 	MOV	[R2], R12
 	MOV	[R2+#2], R13
-	JMP	cc_UC, ?LBB1_76
+	JMP	cc_UC, ?LBB1_78
 ?LBB1_20:
-	MOV	R4, R6
+	MOV	R4, R8
 	OR	R4, R9
 	JMP	cc_EQ, ?LBB1_35
 ; %bb.21:                               ; %if.end38
@@ -279,26 +282,26 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 ; %bb.22:                               ; %if.end38
 	OR	R13, #128
 ?LBB1_23:
-	MOV	R4, R7
+	MOV	R4, R6
 	AND	R4, #127
-	CMP	R6, #0
+	CMP	R8, #0
 	JMP	cc_EQ, ?LBB1_39
 ; %bb.24:                               ; %if.then46
-	AND	R7, #32640
+	AND	R6, #32640
 	JMP	cc_EQ, ?LBB1_26
 ; %bb.25:                               ; %if.then46
 	OR	R4, #128
 ?LBB1_26:
-	SUB	R6, #1
+	SUB	R8, #1
 	MOV	R2, #40
 	JMP	cc_UC, ?LBB1_46
 ?LBB1_27:
 	MOV	R4, R1
-	CMP	R13, R7
+	CMP	R13, R6
 	JMP	cc_UGE, ?LBB1_17
 ?LBB1_28:
 	MOV	R5, R1
-	CMP	R13, R7
+	CMP	R13, R6
 	JMP	cc_EQ, ?LBB1_18
 ?LBB1_29:
 	MOV	R4, R5
@@ -307,13 +310,13 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	R4, #0
 	MOV	[R2+#2], R4
 	MOV	[R2], R4
-	JMP	cc_UC, ?LBB1_76
+	JMP	cc_UC, ?LBB1_78
 ?LBB1_31:
 	CALL	___ashlsi3
 	MOV	R12, R4
 	MOV	R13, R5
-	MOV	R14, R8
-	MOV	R15, R7
+	MOV	R14, R7
+	MOV	R15, R6
 	CALL	___umodsi3
 	MOV	R12, R4
 	MOV	R13, R5
@@ -351,15 +354,15 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R14, R4
-	SHR	R14, #8
-	ADD	R14, R4
-	AND	R14, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R14, RL5
 	ADD	R14, #16
 	JMP	cc_UC, ?LBB1_37
 ?LBB1_35:
-	MOV	R14, R8
-	MOV	R15, R7
+	MOV	R14, R7
+	MOV	R15, R6
 	CALL	___umodsi3
 	AND	R5, #127
 	JMP	cc_UC, ?LBB1_38
@@ -390,35 +393,35 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R14, R4
-	SHR	R14, #8
-	ADD	R14, R4
-	AND	R14, #31
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R14, RL5
 ?LBB1_37:
-	SUB	R6, R14
-	SHL	R6, #7
-	ADD	R6, #1024
-	AND	R6, #32640
+	SUB	R8, R14
+	SHL	R8, #7
+	ADD	R8, #1024
+	AND	R8, #32640
 	SUB	R14, #8
 	CALL	___ashlsi3
 	AND	R5, #127
-	OR	R5, R6
+	OR	R5, R8
 ?LBB1_38:
-	MOV	R1, [R0+#26]
+	MOV	R1, [R0+#28]
 	MOV	[R1], R4
 	MOV	[R1+#2], R5
-	JMP	cc_UC, ?LBB1_76
+	JMP	cc_UC, ?LBB1_78
 ?LBB1_39:
-	MOV	R5, R8
+	MOV	R5, R7
 	OR	R5, R4
 	JMP	cc_EQ, ?LBB1_42
 ; %bb.40:                               ; %cond.false205
 	CMP	R4, #0
 	JMP	cc_NE, ?LBB1_43
 ; %bb.41:                               ; %cond.false205
-	MOV	R5, R8
+	MOV	R5, R7
 	SHR	R5, #1
-	OR	R5, R8
+	OR	R5, R7
 	MOV	R1, R5
 	SHR	R1, #2
 	OR	R1, R5
@@ -442,10 +445,10 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R5, #4
 	ADD	R5, R1
 	AND	R5, #3855
-	MOV	R2, R5
-	SHR	R2, #8
-	ADD	R2, R5
-	AND	R2, #31
+	MOV	R1, R5
+	SHR	R1, #8
+	ADD	R1, R5
+	MOVBZ	R2, RL1
 	ADD	R2, #16
 	JMP	cc_UC, ?LBB1_44
 ?LBB1_42:
@@ -478,22 +481,22 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R5, #4
 	ADD	R5, R1
 	AND	R5, #3855
-	MOV	R2, R5
-	SHR	R2, #8
-	ADD	R2, R5
-	AND	R2, #31
+	MOV	R1, R5
+	SHR	R1, #8
+	ADD	R1, R5
+	MOVBZ	R2, RL1
 ?LBB1_44:
 	MOV	R5, #0
 	ADD	R2, #32
 	ADDC	R5, #0
 ?LBB1_45:
-	MOV	R6, #0
+	MOV	R8, #0
 ?LBB1_46:
-	MOV	R5, R8
+	MOV	R5, R7
 	OR	R5, R4
 	JMP	cc_EQ, ?LBB1_49
 ; %bb.47:                               ; %cond.false207
-	CMP	R8, #0
+	CMP	R7, #0
 	JMP	cc_NE, ?LBB1_50
 ; %bb.48:                               ; %cond.false207
 	MOV	R5, R4
@@ -514,19 +517,19 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R5, #4
 	ADD	R5, R1
 	AND	R5, #3855
-	MOV	R3, R5
-	SHR	R3, #8
-	ADD	R3, R5
-	AND	R3, #31
+	MOV	R1, R5
+	SHR	R1, #8
+	ADD	R1, R5
+	MOVBZ	R3, RL1
 	ADD	R3, #16
 	JMP	cc_UC, ?LBB1_51
 ?LBB1_49:
 	MOV	R3, #64
 	JMP	cc_UC, ?LBB1_53
 ?LBB1_50:
-	MOV	R5, R8
+	MOV	R5, R7
 	SUB	R5, #1
-	MOV	R1, R8
+	MOV	R1, R7
 	CPL	R1
 	AND	R1, R5
 	MOV	R5, R1
@@ -542,12 +545,12 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R5, #4
 	ADD	R5, R1
 	AND	R5, #3855
-	MOV	R3, R5
-	SHR	R3, #8
-	ADD	R3, R5
-	AND	R3, #31
+	MOV	R1, R5
+	SHR	R1, #8
+	ADD	R1, R5
+	MOVBZ	R3, RL1
 ?LBB1_51:
-	MOV	R5, R8
+	MOV	R5, R7
 	OR	R5, R4
 	JMP	cc_NE, ?LBB1_53
 ; %bb.52:                               ; %cond.false207
@@ -556,17 +559,17 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	ADD	R3, #32
 	ADDC	R1, #0
 ?LBB1_53:
-	MOV	[R0+#20], R2
-	MOV	R5, R6
+	MOV	[R0+#22], R2
+	MOV	R5, R8
 	CPL	R5
 	ADD	R9, R5
-	MOV	R7, R9
+	MOV	R11, R9
 	CMP	R9, R3
 	JMP	cc_SLT, ?LBB1_55
 ; %bb.54:                               ; %cond.end208
-	MOV	R7, R3
+	MOV	R11, R3
 ?LBB1_55:
-	MOV	[R0+#18], R3
+	MOV	[R0+#20], R3
 	MOV	R5, #0
 	MOV	[R0+#102], R5
 	MOV	[R0+#100], R5
@@ -574,11 +577,11 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	[R0+#96], R5
 	MOV	[R0+#94], R5
 	MOV	[R0+#92], R5
-	MOV	[R0+#88], R8
+	MOV	[R0+#88], R7
 	MOV	[R0+#90], R4
-	MOV	R4, R7
+	MOV	R4, R11
 	AND	R4, #15
-	MOV	R1, R7
+	MOV	R1, R11
 	SHR	R1, #3
 	AND	R1, #6
 	MOV	R2, R0
@@ -589,31 +592,33 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	R3, R4
 	XOR	R3, #15
 	MOV	R10, [R2+#2]
-	MOV	R14, R10
-	SHL	R14, #1
-	SHL	R14, R3
-	OR	R14, R1
+	MOV	R7, R10
+	SHL	R7, #1
+	SHL	R7, R3
+	OR	R7, R1
 	SHR	R10, R4
 	MOV	R1, [R2+#4]
-	MOV	R15, R1
-	SHL	R15, #1
-	SHL	R15, R3
-	OR	R15, R10
+	MOV	R14, R1
+	SHL	R14, #1
+	SHL	R14, R3
+	OR	R14, R10
+	MOV	R10, R14
 	SHR	R1, R4
 	MOV	R2, [R2+#6]
-	MOV	R10, R2
-	SHL	R10, #1
-	SHL	R10, R3
-	OR	R10, R1
-	MOV	[R0+#28], R10
-	SHR	R2, R4
-	MOV	[R0+#30], R2
-	SUB	R9, R7
-	MOV	R8, R9
+	MOV	R14, R2
+	SHL	R14, #1
+	SHL	R14, R3
+	MOV	R3, R2
+	OR	R14, R1
+	MOV	[R0+#30], R14
+	SHR	R3, R4
+	MOV	R6, R11
+	SUB	R9, R11
+	MOV	R1, R9
 	CMP	R9, #40
 	JMP	cc_SLT, ?LBB1_57
 ; %bb.56:                               ; %cond.end208
-	MOV	R8, #40
+	MOV	R1, #40
 ?LBB1_57:
 	MOV	[R0+#118], R5
 	MOV	[R0+#116], R5
@@ -623,56 +628,50 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	[R0+#106], R5
 	MOV	[R0+#104], R5
 	MOV	[R0+#114], R13
-	MOV	R4, R8
+	MOV	R4, R1
 	AND	R4, #15
-	MOV	R5, R8
+	MOV	[R0+#18], R1
+	MOV	R5, R1
 	SHR	R5, #3
 	AND	R5, #6
-	MOV	R3, R0
-	ADD	R3, #104
-	ADD	R3, #8
-	SUB	R3, R5
-	MOV	R5, [R3+#2]
-	MOV	R10, R5
-	SHL	R10, R4
-	MOV	R11, R4
-	XOR	R11, #15
-	MOV	R2, [R3]
-	MOV	R1, R2
-	SHR	R1, #1
-	SHR	R1, R11
-	OR	R1, R10
-	MOV	R10, [R3+#4]
-	MOV	R12, R10
+	MOV	R1, R0
+	ADD	R1, #104
+	ADD	R1, #8
+	SUB	R1, R5
+	MOV	R14, [R1+#2]
+	MOV	R5, R14
+	SHL	R5, R4
+	MOV	R2, R4
+	XOR	R2, #15
+	MOV	R12, [R1]
+	MOV	R13, R12
+	SHR	R13, #1
+	SHR	R13, R2
+	OR	R13, R5
+	MOV	R15, [R1+#4]
+	MOV	R5, R15
+	SHL	R5, R4
+	SHR	R14, #1
+	SHR	R14, R2
+	OR	R14, R5
+	MOV	R5, [R1+#6]
+	SHL	R5, R4
+	SHR	R15, #1
+	SHR	R15, R2
+	OR	R15, R5
 	SHL	R12, R4
-	SHR	R5, #1
-	SHR	R5, R11
-	OR	R5, R12
-	MOV	R3, [R3+#6]
-	SHL	R3, R4
-	SHR	R10, #1
-	SHR	R10, R11
-	OR	R10, R3
-	SHL	R2, R4
+	MOV	[R0+#24], R3
+	MOV	[R0+#6], R3
 	MOV	R4, [R0+#30]
-	MOV	[R0+#14], R4
-	MOV	R4, [R0+#28]
-	MOV	[R0+#12], R4
-	MOV	[R0+#22], R15
-	MOV	[R0+#10], R15
-	MOV	[R0+#24], R14
-	MOV	[R0+#8], R14
-	MOV	[R0], R2
-	MOV	[R0+#6], R10
-	MOV	[R0+#4], R5
-	MOV	[R0+#2], R1
-	MOV	R12, R0
-	ADD	R12, #80
+	MOV	[R0+#4], R4
+	MOV	[R0+#26], R10
+	MOV	[R0+#2], R10
+	MOV	[R0], R7
 	CALL	___umoddi3
-	MOV	R4, [R0+#86]
-	MOV	R5, [R0+#84]
-	MOV	R13, [R0+#82]
-	MOV	R12, [R0+#80]
+	MOV	R5, [R0+#12]
+	MOV	R12, [R0+#8]
+	MOV	R4, [R0+#14]
+	MOV	R13, [R0+#10]
 	MOV	R1, R13
 	OR	R1, R4
 	MOV	R2, R12
@@ -680,13 +679,14 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	OR	R2, R1
 	JMP	cc_EQ, ?LBB1_61
 ; %bb.58:                               ; %if.end76
-	ADD	R7, R6
+	ADD	R6, R8
 	CMP	R9, #40
 	JMP	cc_SGT, ?LBB1_62
 ; %bb.59:                               ; %if.then78
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB1_65
 ; %bb.60:                               ; %if.then78
+	MOV	R8, R6
 	MOV	R4, R12
 	SHR	R4, #1
 	OR	R4, R12
@@ -713,44 +713,43 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
-	ADD	R8, #16
-	JMP	cc_UC, ?LBB1_71
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
+	ADD	R7, #16
+	JMP	cc_UC, ?LBB1_66
 ?LBB1_61:
 	MOV	R4, #0
-	MOV	R5, [R0+#26]
+	MOV	R5, [R0+#28]
 	MOV	[R5+#2], R4
 	MOV	[R5], R4
-	JMP	cc_UC, ?LBB1_76
+	JMP	cc_UC, ?LBB1_78
 ?LBB1_62:
-	MOV	[R0+#16], R7
-	MOV	R2, [R0+#20]
-	MOV	R1, [R0+#18]
+	MOV	[R0+#16], R6
+	MOV	R2, [R0+#22]
+	MOV	R1, [R0+#20]
 	ADD	R2, R1
-	SUB	R9, R8
+	MOV	R1, [R0+#18]
+	SUB	R9, R1
 	CMP	R9, R2
-	JMP	cc_SLE, ?LBB1_66
+	JMP	cc_SLE, ?LBB1_67
 ; %bb.63:                               ; %while.body.lr.ph.i
-	MOV	R6, R0
-	ADD	R6, #64
-	ADD	R6, #8
+	MOV	R3, R0
+	ADD	R3, #64
+	ADD	R3, #8
 	MOV	R1, R2
 	SHR	R1, #3
 	AND	R1, #6
-	SUB	R6, R1
-	MOV	R7, R2
-	AND	R7, #15
-	MOV	R1, R7
+	SUB	R3, R1
+	MOV	[R0+#22], R3
+	MOV	R6, R2
+	AND	R6, #15
+	MOV	R1, R6
 	XOR	R1, #15
 	MOV	[R0+#20], R1
-	MOV	R1, R0
-	ADD	R1, #56
-	MOV	[R0+#18], R1
-	MOV	R14, [R0+#24]
-	MOV	R15, [R0+#22]
+	MOV	R3, [R0+#26]
+	MOV	R10, [R0+#30]
 ?LBB1_64:
 	SUB	R9, R2
 	MOV	[R0+#72], R12
@@ -762,53 +761,51 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	[R0+#74], R13
 	MOV	[R0+#76], R5
 	MOV	[R0+#78], R4
-	MOV	R4, [R6+#2]
-	MOV	R8, R9
+	MOV	R5, [R0+#22]
+	MOV	R14, [R5+#2]
+	MOV	R4, R14
+	SHL	R4, R6
+	MOV	R12, [R5]
+	MOV	R13, R12
+	SHR	R13, #1
+	MOV	R1, [R0+#20]
+	SHR	R13, R1
+	OR	R13, R4
+	MOV	R15, [R5+#4]
+	MOV	R4, R15
+	SHL	R4, R6
+	SHR	R14, #1
+	SHR	R14, R1
+	OR	R14, R4
+	MOV	R4, [R5+#6]
+	SHL	R4, R6
+	SHR	R15, #1
+	SHR	R15, R1
+	OR	R15, R4
+	SHL	R12, R6
+	MOV	[R0+#2], R3
+	MOV	[R0], R7
+	MOV	[R0+#4], R10
+	MOV	R4, [R0+#24]
+	MOV	[R0+#6], R4
+	MOV	R8, R7
+	MOV	R7, R9
 	MOV	R9, R2
-	MOV	R2, R4
-	SHL	R2, R7
-	MOV	R1, [R6]
-	MOV	R5, R1
-	SHR	R5, #1
-	MOV	R10, [R0+#20]
-	SHR	R5, R10
-	OR	R5, R2
-	MOV	R2, [R6+#4]
-	MOV	R3, R2
-	SHL	R3, R7
-	SHR	R4, #1
-	SHR	R4, R10
-	OR	R4, R3
-	MOV	R3, [R6+#6]
-	SHL	R3, R7
-	SHR	R2, #1
-	SHR	R2, R10
-	OR	R2, R3
-	SHL	R1, R7
-	MOV	[R0+#10], R15
-	MOV	[R0+#8], R14
-	MOV	R3, [R0+#28]
-	MOV	[R0+#12], R3
-	MOV	R3, [R0+#30]
-	MOV	[R0+#14], R3
-	MOV	[R0], R1
-	MOV	[R0+#6], R2
-	MOV	[R0+#4], R4
-	MOV	[R0+#2], R5
-	MOV	R12, [R0+#18]
 	CALL	___umoddi3
-	MOV	R15, [R0+#22]
-	MOV	R14, [R0+#24]
+	MOV	R10, [R0+#30]
+	MOV	R3, [R0+#26]
 	MOV	R2, R9
-	MOV	R9, R8
-	MOV	R4, [R0+#62]
-	MOV	R5, [R0+#60]
-	MOV	R13, [R0+#58]
-	MOV	R12, [R0+#56]
+	MOV	R9, R7
+	MOV	R7, R8
+	MOV	R4, [R0+#14]
+	MOV	R5, [R0+#12]
+	MOV	R13, [R0+#10]
+	MOV	R12, [R0+#8]
 	CMP	R9, R2
 	JMP	cc_SGT, ?LBB1_64
-	JMP	cc_UC, ?LBB1_67
+	JMP	cc_UC, ?LBB1_68
 ?LBB1_65:
+	MOV	R8, R6
 	MOV	R4, R13
 	SHR	R4, #1
 	OR	R4, R13
@@ -835,15 +832,21 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
-	JMP	cc_UC, ?LBB1_71
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
 ?LBB1_66:
-	MOV	R14, [R0+#24]
-	MOV	R15, [R0+#22]
+	MOV	R6, [R0+#28]
+	SUB	R7, #8
+	MOV	R14, R7
+	CALL	___ashlsi3
+	MOV	R14, R8
+	JMP	cc_UC, ?LBB1_74
 ?LBB1_67:
+	MOV	R3, [R0+#26]
+	MOV	R10, [R0+#30]
+?LBB1_68:
 	MOV	[R0+#48], R12
 	MOV	R1, #0
 	MOV	[R0+#46], R1
@@ -853,61 +856,52 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	MOV	[R0+#50], R13
 	MOV	[R0+#52], R5
 	MOV	[R0+#54], R4
-	MOV	R2, R0
-	ADD	R2, #40
-	ADD	R2, #8
-	MOV	R4, R9
-	SHR	R4, #3
-	AND	R4, #6
-	SUB	R2, R4
-	MOV	R4, [R2+#2]
+	MOV	R4, R0
+	ADD	R4, #40
+	ADD	R4, #8
+	MOV	R5, R9
+	SHR	R5, #3
+	AND	R5, #6
+	SUB	R4, R5
+	MOV	R14, [R4+#2]
 	AND	R9, #15
-	MOV	R3, R4
-	SHL	R3, R9
-	MOV	R1, [R2]
-	MOV	R5, R1
-	SHR	R5, #1
-	MOV	R10, R9
-	XOR	R10, #15
-	SHR	R5, R10
-	OR	R5, R3
-	MOV	R3, [R2+#4]
-	MOV	R11, R3
-	SHL	R11, R9
-	SHR	R4, #1
-	SHR	R4, R10
-	OR	R4, R11
-	MOV	R2, [R2+#6]
-	SHL	R2, R9
-	SHR	R3, #1
-	SHR	R3, R10
-	OR	R3, R2
-	SHL	R1, R9
-	MOV	[R0+#10], R15
-	MOV	[R0+#8], R14
-	MOV	R2, [R0+#28]
-	MOV	[R0+#12], R2
-	MOV	R2, [R0+#30]
-	MOV	[R0+#14], R2
-	MOV	[R0], R1
-	MOV	[R0+#6], R3
-	MOV	[R0+#4], R4
-	MOV	[R0+#2], R5
-	MOV	R12, R0
-	ADD	R12, #32
+	MOV	R5, R14
+	SHL	R5, R9
+	MOV	R12, [R4]
+	MOV	R13, R12
+	SHR	R13, #1
+	MOV	R1, R9
+	XOR	R1, #15
+	SHR	R13, R1
+	OR	R13, R5
+	MOV	R15, [R4+#4]
+	MOV	R5, R15
+	SHL	R5, R9
+	SHR	R14, #1
+	SHR	R14, R1
+	OR	R14, R5
+	MOV	R4, [R4+#6]
+	SHL	R4, R9
+	SHR	R15, #1
+	SHR	R15, R1
+	OR	R15, R4
+	SHL	R12, R9
+	MOV	[R0+#2], R3
+	MOV	[R0], R7
+	MOV	[R0+#4], R10
+	MOV	R4, [R0+#24]
+	MOV	[R0+#6], R4
 	CALL	___umoddi3
-	MOV	R13, [R0+#34]
-	MOV	R12, [R0+#32]
+	MOV	R13, [R0+#10]
+	MOV	R12, [R0+#8]
 	MOV	R4, R12
 	OR	R4, R13
-	MOV	R7, [R0+#16]
-	CMP	R4, #0
-	JMP	cc_EQ, ?LBB1_70
-; %bb.68:                               ; %cond.false211
-	MOV	R6, [R0+#26]
-	CMP	R13, #0
-	JMP	cc_NE, ?LBB1_77
+	JMP	cc_EQ, ?LBB1_71
 ; %bb.69:                               ; %cond.false211
+	MOV	R6, [R0+#28]
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB1_72
+; %bb.70:                               ; %cond.false211
 	MOV	R4, R12
 	SHR	R4, #1
 	OR	R4, R12
@@ -934,48 +928,17 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
-	ADD	R8, #16
-	JMP	cc_UC, ?LBB1_72
-?LBB1_70:
-	MOV	R8, #32
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
+	ADD	R7, #16
+	JMP	cc_UC, ?LBB1_73
 ?LBB1_71:
-	MOV	R6, [R0+#26]
+	MOV	R7, #32
+	MOV	R6, [R0+#28]
+	JMP	cc_UC, ?LBB1_73
 ?LBB1_72:
-	SUB	R8, #8
-	MOV	R14, R8
-	CALL	___ashlsi3
-	SUB	R7, R8
-	JB	R7.15, ?LBB1_74
-; %bb.73:                               ; %if.then.i176
-	AND	R5, #127
-	SHL	R7, #7
-	ADD	R7, #128
-	AND	R7, #32640
-	OR	R7, R5
-	JMP	cc_UC, ?LBB1_75
-?LBB1_74:
-	NEG	R7
-	MOV	R12, R4
-	MOV	R13, R5
-	MOV	R14, R7
-	CALL	___lshrsi3
-	MOV	R7, R5
-	AND	R7, #127
-?LBB1_75:
-	MOV	[R6], R4
-	MOV	[R6+#2], R7
-?LBB1_76:
-	ADD	R0, #120
-	MOV	R6, [R0+]
-	MOV	R7, [R0+]
-	MOV	R8, [R0+]
-	MOV	R9, [R0+]
-	RET
-?LBB1_77:
 	MOV	R4, R13
 	SHR	R4, #1
 	OR	R4, R13
@@ -1002,11 +965,44 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIfyNS1_24FModDivisionSimpleHelperIyEEE
 	SHR	R4, #4
 	ADD	R4, R5
 	AND	R4, #3855
-	MOV	R8, R4
-	SHR	R8, #8
-	ADD	R8, R4
-	AND	R8, #31
-	JMP	cc_UC, ?LBB1_72
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
+?LBB1_73:
+	SUB	R7, #8
+	MOV	R14, R7
+	CALL	___ashlsi3
+	MOV	R14, [R0+#16]
+?LBB1_74:
+	SUB	R14, R7
+	JB	R14.15, ?LBB1_76
+; %bb.75:                               ; %if.then.i176
+	AND	R5, #127
+	SHL	R14, #7
+	ADD	R14, #128
+	AND	R14, #32640
+	OR	R14, R5
+	JMP	cc_UC, ?LBB1_77
+?LBB1_76:
+	NEG	R14
+	MOV	R12, R4
+	MOV	R13, R5
+	CALL	___lshrsi3
+	MOV	R14, R5
+	AND	R14, #127
+?LBB1_77:
+	MOV	[R6], R4
+	MOV	[R6+#2], R14
+?LBB1_78:
+	MOV	R4, R0
+	ADD	R4, #136
+	ADD	R0, #120
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
 	EXTRN	_errno : WORD
 	EXTRN	___ashlsi3 : NEAR
 	EXTRN	___umodsi3 : NEAR
