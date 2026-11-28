@@ -18,6 +18,6 @@ __Exit?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	CALLS	SEG __exit, SOF __exit
 __Exit?F	ENDP
-	EXTRN	__exit : NEAR
+	EXTRN	__exit : FAR
 ABORT_PR	ENDS
 	END

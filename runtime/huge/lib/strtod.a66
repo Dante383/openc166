@@ -578,11 +578,11 @@ _atof?F	PROC	FAR
 	MOV	R6, [R0+]
 	RETS
 _atof?F	ENDP
-	EXTRN	_isspace : NEAR
-	EXTRN	_isdigit : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___divdf3 : NEAR
+	EXTRN	_isspace : FAR
+	EXTRN	_isdigit : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___divdf3 : FAR
 STRTOD_PR	ENDS
 	END

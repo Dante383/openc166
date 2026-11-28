@@ -308,6 +308,6 @@ _sprintf?F	PROC	FAR
 	ADD	R0, #20
 	RETS
 _sprintf?F	ENDP
-	EXTRN	___c166_format : NEAR
+	EXTRN	___c166_format : FAR
 SPRINTF_PR	ENDS
 	END

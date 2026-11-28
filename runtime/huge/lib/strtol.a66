@@ -512,10 +512,10 @@ _atol?F	PROC	FAR
 	RETS
 _atol?F	ENDP
 	EXTRN	_errno : WORD
-	EXTRN	_isspace : NEAR
-	EXTRN	_isxdigit : NEAR
-	EXTRN	___udivsi3 : NEAR
-	EXTRN	_isdigit : NEAR
-	EXTRN	_isalpha : NEAR
+	EXTRN	_isspace : FAR
+	EXTRN	_isxdigit : FAR
+	EXTRN	___udivsi3 : FAR
+	EXTRN	_isdigit : FAR
+	EXTRN	_isalpha : FAR
 STRTOL_PR	ENDS
 	END

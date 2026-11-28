@@ -1222,6 +1222,6 @@ ___muldf3?F	PROC	FAR
 	MOV	[R0+#46], R5
 	JMP	cc_UC, ?LBB0_3
 ___muldf3?F	ENDP
-	EXTRN	___muldi3 : NEAR
+	EXTRN	___muldi3 : FAR
 MULDF3_PR	ENDS
 	END

@@ -141,8 +141,8 @@ _lldiv?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _lldiv?F	ENDP
-	EXTRN	___divsi3 : NEAR
-	EXTRN	___divdi3 : NEAR
-	EXTRN	___muldi3 : NEAR
+	EXTRN	___divsi3 : FAR
+	EXTRN	___divdi3 : FAR
+	EXTRN	___muldi3 : FAR
 DIV_PR	ENDS
 	END

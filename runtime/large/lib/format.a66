@@ -1358,10 +1358,10 @@ _pad?spaces:
 	DB	32,32,32,32,32,32,32,32
 _pad?zeros:
 	DB	48,48,48,48,48,48,48,48
-	EXTRN	___c166_icall : NEAR
-	EXTRN	___udivsi3 : NEAR
-	EXTRN	___udivdi3 : NEAR
-	EXTRN	___muldi3 : NEAR
-	EXTRN	_strlen : NEAR
+	EXTRN	___c166_icall : FAR
+	EXTRN	___udivsi3 : FAR
+	EXTRN	___udivdi3 : FAR
+	EXTRN	___muldi3 : FAR
+	EXTRN	_strlen : FAR
 FORMAT_HC	ENDS
 	END

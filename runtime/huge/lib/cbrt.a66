@@ -2041,9 +2041,9 @@ L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3:
 	DW	42301
 	DW	26110
 	DW	16345
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
 CBRT_XC	ENDS
 	END

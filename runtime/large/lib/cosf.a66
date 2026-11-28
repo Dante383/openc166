@@ -2252,13 +2252,13 @@ __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E:
 	DW	6054
 	DW	49081
 	EXTRN	_errno : WORD
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___fixdfdi : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___fixdfdi : FAR
 COSF_HC	ENDS
 	END

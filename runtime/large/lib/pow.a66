@@ -7540,18 +7540,18 @@ __ZN16__llvm_libc_c1669EXP2_MID1E:
 	DW	33182
 	DW	42945
 	DW	16383
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___gedf2 : NEAR
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___nedf2 : NEAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___gedf2 : FAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___nedf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatunsidf : NEAR
+	EXTRN	___floatunsidf : FAR
 POW_HC	ENDS
 	END

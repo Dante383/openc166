@@ -9,18 +9,18 @@ MALLOC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _malloc:
 _malloc?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOVBZ	R4, SOF _ready
+	MOVBZ	R4, NOF _ready
 	JMP	cc_NE, ?LBB0_2
 ; %bb.1:                                ; %if.then
-	MOV	R4, #SOF ___c166_heap
-	MOV	SOF _free_list, R4
+	MOV	R4, #NOF ___c166_heap
+	MOV	NOF _free_list, R4
 	MOV	R4, #65534
-	AND	R4, SOF ___c166_heap_size
-	MOV	SOF ___c166_heap, R4
+	AND	R4, NOF ___c166_heap_size
+	MOV	NOF ___c166_heap, R4
 	MOV	R4, #0
-	MOV	SOF (___c166_heap+2), R4
+	MOV	NOF (___c166_heap+2), R4
 	MOV	R4, #1
-	MOVB	SOF _ready, RL4
+	MOVB	NOF _ready, RL4
 ?LBB0_2:
 	MOV	R2, #0
 	CMP	R12, #65532
@@ -34,11 +34,11 @@ _malloc?F	PROC	FAR
 	AND	R12, #65534
 	MOV	R5, R12
 ?LBB0_5:
-	MOV	R4, SOF _free_list
+	MOV	R4, NOF _free_list
 	JMP	cc_EQ, ?LBB0_12
 ; %bb.6:                                ; %for.body.preheader
 	MOV	R3, [R4]
-	MOV	R1, #SOF _free_list
+	MOV	R1, #NOF _free_list
 	CMP	R3, R5
 	JMP	cc_UGE, ?LBB0_10
 ?LBB0_7:
@@ -82,7 +82,7 @@ _free?F	PROC	FAR
 ; %bb.1:                                ; %if.end
 	MOV	R4, R12
 	SUB	R4, #2
-	MOV	R2, #SOF _free_list
+	MOV	R2, #NOF _free_list
 	MOV	R5, #0
 ?LBB1_2:
 	MOV	R1, R5
@@ -124,7 +124,7 @@ _free?F	PROC	FAR
 	MOV	[R1+#2], R4
 	RETS
 ?LBB1_11:
-	MOV	SOF _free_list, R4
+	MOV	NOF _free_list, R4
 ?LBB1_12:
 	RETS
 ?LBB1_13:
@@ -234,7 +234,7 @@ _free_list:
 	DSB	2
 	EXTRN	___c166_heap : WORD
 	EXTRN	___c166_heap_size : WORD
-	EXTRN	_memset : NEAR
-	EXTRN	_memcpy : NEAR
+	EXTRN	_memset : FAR
+	EXTRN	_memcpy : FAR
 C166_BSS	ENDS
 	END

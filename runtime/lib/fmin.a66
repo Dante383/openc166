@@ -240,6 +240,6 @@ _fmin?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_48
 	JMP	cc_UC, ?LBB0_49
 _fmin?F	ENDP
-	EXTRN	___ltdf2 : NEAR
+	EXTRN	___ltdf2 : FAR
 FMIN_PR	ENDS
 	END

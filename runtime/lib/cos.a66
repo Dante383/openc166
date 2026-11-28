@@ -164,7 +164,7 @@ __ZN16__llvm_libc_c1664math3cosEd?F	PROC	FAR
 	JNB	R10.0, ?LBB1_19
 ; %bb.18:                               ; %if.then37
 	MOV	R5, #33
-	MOV	SOF _errno, R5
+	MOV	NOF _errno, R5
 	MOV	R6, #0
 ?LBB1_19:
 	MOV	R5, R6
@@ -235,13 +235,13 @@ __ZN16__llvm_libc_c1664math3cosEd?F	PROC	FAR
 	MOV	R5, R4
 ?LBB1_24:
 	SHL	R5, #4
-	MOV	R2, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+6)]
+	MOV	R2, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+6)]
 	JB	R6.7, ?LBB1_26
 ; %bb.25:
 	XOR	R2, #32768
 ?LBB1_26:
 	MOV	[R0+#54], R2
-	MOV	R2, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+14)]
+	MOV	R2, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+14)]
 	JB	R6.7, ?LBB1_28
 ; %bb.27:
 	XOR	R2, #32768
@@ -254,36 +254,36 @@ __ZN16__llvm_libc_c1664math3cosEd?F	PROC	FAR
 	MOV	R4, R1
 ?LBB1_30:
 	SHL	R4, #4
-	MOV	R1, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+6)]
+	MOV	R1, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+6)]
 	JNB	R2.7, ?LBB1_32
 ; %bb.31:                               ; %if.end46
 	XOR	R1, #32768
 ?LBB1_32:
 	MOV	[R0+#38], R1
-	MOV	R3, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+14)]
-	MOV	R1, [R5+#SOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E]
+	MOV	R3, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+14)]
+	MOV	R1, [R5+#NOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E]
 	MOV	[R0+#52], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+2)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+2)]
 	MOV	[R0+#50], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+4)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+4)]
 	MOV	[R0+#48], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+8)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+8)]
 	MOV	[R0+#104], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+10)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+10)]
 	MOV	[R0+#102], R1
-	MOV	R5, [R5+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+12)]
+	MOV	R5, [R5+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+12)]
 	MOV	[R0+#100], R5
-	MOV	R5, [R4+#SOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E]
+	MOV	R5, [R4+#NOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E]
 	MOV	[R0+#36], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+2)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+2)]
 	MOV	[R0+#34], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+4)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+4)]
 	MOV	[R0+#32], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+8)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+8)]
 	MOV	[R0+#94], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+10)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+10)]
 	MOV	[R0+#92], R5
-	MOV	R4, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+12)]
+	MOV	R4, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E+12)]
 	MOV	[R0+#90], R4
 	MOV	[R0+#56], R7
 	JNB	R2.7, ?LBB1_34
@@ -1991,10 +1991,10 @@ __ZN16__llvm_libc_c1664math31range_reduction_double_internal19LargeRangeReductio
 	MOV	R4, [R0+#108]
 	SHL	R4, #5
 	MOV	[R0+#108], R4
-	MOV	R6, [R4+#SOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE]
-	MOV	R7, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+2)]
-	MOV	R8, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+4)]
-	MOV	R9, [R4+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+6)]
+	MOV	R6, [R4+#NOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE]
+	MOV	R7, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+2)]
+	MOV	R8, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+4)]
+	MOV	R9, [R4+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+6)]
 	MOV	R4, #16816
 	MOV	[R0+#14], R4
 	MOV	R5, [R0+#122]
@@ -2253,10 +2253,10 @@ __ZN16__llvm_libc_c1664math31range_reduction_double_internal19LargeRangeReductio
 	MOV	R8, [R0+#18]
 	MOV	R9, [R0+#20]
 	MOV	R7, [R0+#22]
-	MOV	R4, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+8)]
-	MOV	R2, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+10)]
-	MOV	R5, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+12)]
-	MOV	R1, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+14)]
+	MOV	R4, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+8)]
+	MOV	R2, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+10)]
+	MOV	R5, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+12)]
+	MOV	R1, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+14)]
 	MOV	R3, [R0+#114]
 	MOV	[R0+#12], R3
 	MOV	R3, [R0+#110]
@@ -2278,13 +2278,13 @@ __ZN16__llvm_libc_c1664math31range_reduction_double_internal19LargeRangeReductio
 	MOV	R2, [R0+#18]
 	MOV	R5, [R0+#20]
 	MOV	R1, [R0+#22]
-	MOV	R3, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+22)]
+	MOV	R3, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+22)]
 	MOV	[R0+#84], R3
-	MOV	R3, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+20)]
+	MOV	R3, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+20)]
 	MOV	[R0+#66], R3
-	MOV	R3, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+18)]
+	MOV	R3, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+18)]
 	MOV	[R0+#62], R3
-	MOV	R3, [R6+#SOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+16)]
+	MOV	R3, [R6+#NOF (__ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE+16)]
 	MOV	[R0+#64], R3
 	MOV	[R0+#76], R1
 	MOV	[R0+#6], R1
@@ -2327,7 +2327,7 @@ __ZN16__llvm_libc_c1664math31range_reduction_double_internal19LargeRangeReductio
 ; %bb.1:                                ; %entry
 	MOV	R2, R9
 ?LBB3_2:
-	MOV	R1, #SOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE
+	MOV	R1, #NOF __ZN16__llvm_libc_c1664math31range_reduction_double_internal24ONE_TWENTY_EIGHT_OVER_PIE
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB3_4
 ; %bb.3:                                ; %entry
@@ -6319,13 +6319,13 @@ __ZN16__llvm_libc_c1664math31range_reduction_double_internal17SIN_K_PI_OVER_128E
 	DW	0
 	DW	16368
 
-	EXTRN	___eqdf2 : NEAR
+	EXTRN	___eqdf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___fixdfdi : NEAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___fixdfdi : FAR
 COS_NC	ENDS
 	END

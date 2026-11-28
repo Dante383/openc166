@@ -234,7 +234,7 @@ _floor?F	PROC	FAR
 	MOV	R9, [R0+#16]
 	JMP	cc_UC, ?LBB0_13
 _floor?F	ENDP
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___adddf3 : FAR
 FLOOR_PR	ENDS
 	END

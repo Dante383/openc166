@@ -9,8 +9,8 @@ RAND_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
 _rand:
 _rand?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOV	R4, SOF (_next+2)
-	MOV	R5, SOF _next
+	MOV	R4, NOF (_next+2)
+	MOV	R5, NOF _next
 	MOV	R1, #16838
 	MUL	R5, R1
 	MOV	R1, MDL
@@ -25,8 +25,8 @@ _rand?F	PROC	FAR
 	MOV	R5, MDL
 	ADD	R5, #12345
 	ADDC	R4, #0
-	MOV	SOF _next, R5
-	MOV	SOF (_next+2), R4
+	MOV	NOF _next, R5
+	MOV	NOF (_next+2), R4
 	AND	R4, #32767
 	RETS
 _rand?F	ENDP
@@ -35,8 +35,8 @@ _srand:
 _srand?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R4, #0
-	MOV	SOF (_next+2), R4
-	MOV	SOF _next, R12
+	MOV	NOF (_next+2), R4
+	MOV	NOF _next, R12
 	RETS
 _srand?F	ENDP
 RAND_PR	ENDS

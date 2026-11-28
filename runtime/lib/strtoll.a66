@@ -31,7 +31,7 @@ _strtoull?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_2
 ; %bb.1:                                ; %if.then
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R5, #65535
 	MOV	R2, R5
 	MOV	R1, R5
@@ -534,7 +534,7 @@ _strtoll?F	PROC	FAR
 	JB	R12.0, ?LBB2_24
 ?LBB2_16:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R4, #32767
 	CMP	R3, #0
 	JMP	cc_EQ, ?LBB2_18
@@ -653,11 +653,11 @@ _atoll?F	PROC	FAR
 	RETS
 _atoll?F	ENDP
 	EXTRN	_errno : WORD
-	EXTRN	_isspace : NEAR
-	EXTRN	_isxdigit : NEAR
-	EXTRN	___udivdi3 : NEAR
-	EXTRN	_isdigit : NEAR
-	EXTRN	_isalpha : NEAR
-	EXTRN	___muldi3 : NEAR
+	EXTRN	_isspace : FAR
+	EXTRN	_isxdigit : FAR
+	EXTRN	___udivdi3 : FAR
+	EXTRN	_isdigit : FAR
+	EXTRN	_isalpha : FAR
+	EXTRN	___muldi3 : FAR
 STRTOLL_PR	ENDS
 	END

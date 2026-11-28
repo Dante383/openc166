@@ -60,8 +60,8 @@ __ZN16__llvm_libc_c1664math6expm1fEf?F	PROC	FAR
 ; %bb.7:                                ; %if.then19
 	MOV	[R0+#58], R7
 	MOV	[R0+#60], R6
-	MOV	R8, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
-	MOV	R9, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R8, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R9, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -107,7 +107,7 @@ __ZN16__llvm_libc_c1664math6expm1fEf?F	PROC	FAR
 	JMP	cc_EQ, ?LBB1_46
 ; %bb.9:                                ; %cleanup28
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R6, [R0+#60]
 	MOV	R7, [R0+#58]
 ?LBB1_10:
@@ -629,16 +629,16 @@ __ZN16__llvm_libc_c1664math6expm1fEf?F	PROC	FAR
 	MOV	R4, R8
 	ASHR	R4, #7
 	SHL	R4, #3
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+832)]
-	MOV	R1, [R4+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+834)]
-	MOV	R2, [R4+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+836)]
-	MOV	R4, [R4+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+838)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+832)]
+	MOV	R1, [R4+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+834)]
+	MOV	R2, [R4+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+836)]
+	MOV	R4, [R4+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M1E+838)]
 	SHL	R8, #3
 	AND	R8, #1016
-	MOV	R3, [R8+#SOF __ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E]
-	MOV	R10, [R8+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+2)]
-	MOV	R11, [R8+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+4)]
-	MOV	R12, [R8+#SOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+6)]
+	MOV	R3, [R8+#NOF __ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E]
+	MOV	R10, [R8+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+2)]
+	MOV	R11, [R8+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+4)]
+	MOV	R12, [R8+#NOF (__ZN16__llvm_libc_c16625common_constants_internal6EXP_M2E+6)]
 	MOV	[R0+#14], R12
 	MOV	[R0+#12], R11
 	MOV	[R0+#10], R10
@@ -855,8 +855,8 @@ __ZN16__llvm_libc_c1664math6expm1fEf?F	PROC	FAR
 	MOV	R5, R1
 	JB	R5.0, ?LBB1_46
 ?LBB1_54:
-	MOV	R6, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R7, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R6, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R7, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -2239,17 +2239,17 @@ C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
 	EVEN
 	DW	0
 	DW	13184
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___ltsf2 : NEAR
-	EXTRN	___gtsf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___fixsfsi : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___ltsf2 : FAR
+	EXTRN	___gtsf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___fixsfsi : FAR
+	EXTRN	___truncdfsf2 : FAR
 C166_DATA_INIT	ENDS
 	END

@@ -52,6 +52,6 @@ _truncf?F	PROC	FAR
 	MOV	R7, [R0+]
 	RETS
 _truncf?F	ENDP
-	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___ashlsi3 : FAR
 TRUNCF_PR	ENDS
 	END

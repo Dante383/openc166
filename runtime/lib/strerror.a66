@@ -18,7 +18,7 @@ _strerror?F	PROC	FAR
 	CMP	R12, #33
 	JMP	cc_NE, ?LBB0_7
 ; %bb.3:                                ; %sw.bb1
-	MOV	R4, #SOF L_?str?1
+	MOV	R4, #NOF L_?str?1
 	RETS
 ?LBB0_4:
 	CMP	R12, #34
@@ -27,16 +27,16 @@ _strerror?F	PROC	FAR
 	CMP	R12, #84
 	JMP	cc_NE, ?LBB0_7
 ; %bb.6:                                ; %sw.bb3
-	MOV	R4, #SOF L_?str?3
+	MOV	R4, #NOF L_?str?3
 	RETS
 ?LBB0_7:
-	MOV	R4, #SOF L_?str?4
+	MOV	R4, #NOF L_?str?4
 	RETS
 ?LBB0_8:
-	MOV	R4, #SOF L_?str
+	MOV	R4, #NOF L_?str
 	RETS
 ?LBB0_9:
-	MOV	R4, #SOF L_?str?2
+	MOV	R4, #NOF L_?str?2
 	RETS
 _strerror?F	ENDP
 STRERROR_PR	ENDS

@@ -1881,6 +1881,6 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIdyNS1_24FModDivisionSimpleHelperIyEEE
 	RETS
 __ZN16__llvm_libc_c1666fputil7generic4FModIdyNS1_24FModDivisionSimpleHelperIyEEE13eval_internalENS0_6FPBitsIdEES7_?F	ENDP
 	EXTRN	_errno : WORD
-	EXTRN	___umoddi3 : NEAR
+	EXTRN	___umoddi3 : FAR
 FMOD_PR	ENDS
 	END

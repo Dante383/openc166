@@ -92,8 +92,8 @@ _ceilf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _ceilf?F	ENDP
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___addsf3 : NEAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___addsf3 : FAR
 CEILF_PR	ENDS
 	END

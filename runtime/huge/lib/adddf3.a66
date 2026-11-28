@@ -1564,7 +1564,7 @@ ___adddf3?F	PROC	FAR
 	MOV	R7, R8
 	JMP	cc_UC, ?LBB0_91
 ___adddf3?F	ENDP
-	EXTRN	___fe_getround : NEAR
-	EXTRN	___fe_raise_inexact : NEAR
+	EXTRN	___fe_getround : FAR
+	EXTRN	___fe_raise_inexact : FAR
 ADDDF3_PR	ENDS
 	END

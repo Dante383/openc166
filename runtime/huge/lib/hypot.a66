@@ -2939,13 +2939,13 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILm64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	MOV	R9, [R0+]
 	RETS
 __ZNK16__llvm_libc_c1666fputil11DyadicFloatILm64EE7fast_asIdLb1EvEET_v?F	ENDP
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___nedf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___divdf3 : NEAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___nedf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___divdf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatunsidf : NEAR
+	EXTRN	___floatunsidf : FAR
 HYPOT_PR	ENDS
 	END

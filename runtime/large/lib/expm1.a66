@@ -5200,15 +5200,15 @@ L___const?_ZN16__llvm_libc_c1664math14expm1_internal14poly_approx_ddERKNS_10Numb
 	DW	6657
 	DW	416
 	DW	16170
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	_memcpy : NEAR
+	EXTRN	_memcpy : FAR
 EXPM1_HC	ENDS
 	END

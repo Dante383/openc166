@@ -1662,6 +1662,6 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#42], R13
 	JMP	cc_UC, ?LBB0_3
 ___divdf3?F	ENDP
-	EXTRN	___muldi3 : NEAR
+	EXTRN	___muldi3 : FAR
 DIVDF3_PR	ENDS
 	END

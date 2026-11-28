@@ -114,7 +114,7 @@ _ungetc?F	PROC	FAR
 	MOVB	[R13], RL5
 	RETS
 _ungetc?F	ENDP
-	EXTRN	__read : NEAR
+	EXTRN	__read : FAR
 	EXTRN	___c166_iob : WORD
 FGETC_PR	ENDS
 	END

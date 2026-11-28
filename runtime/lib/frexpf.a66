@@ -89,7 +89,7 @@ _frexpf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _frexpf?F	ENDP
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___ashlsi3 : FAR
 FREXPF_PR	ENDS
 	END

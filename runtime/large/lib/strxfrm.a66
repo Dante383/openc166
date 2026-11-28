@@ -47,7 +47,7 @@ _strxfrm?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _strxfrm?F	ENDP
-	EXTRN	_strlen : NEAR
-	EXTRN	_memcpy : NEAR
+	EXTRN	_strlen : FAR
+	EXTRN	_memcpy : FAR
 STRXFRM_PR	ENDS
 	END

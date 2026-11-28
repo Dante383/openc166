@@ -35,7 +35,7 @@ _cosf?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_6
 ; %bb.4:                                ; %if.then8.i
 	MOV	R1, #33
-	MOV	SOF _errno, R1
+	MOV	NOF _errno, R1
 	JMP	cc_UC, ?LBB0_6
 ?LBB0_5:
 	MOV	[R0+#2], R6
@@ -628,10 +628,10 @@ __ZN16__llvm_libc_c1664math22sincosf_utils_internal12sincosf_evalEdmRdS2_S2_S2_?
 	MOV	R5, R4
 	SHL	R5, #3
 	AND	R5, #504
-	MOV	R1, [R5+#SOF __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E]
-	MOV	R2, [R5+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+2)]
-	MOV	R3, [R5+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+4)]
-	MOV	R5, [R5+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+6)]
+	MOV	R1, [R5+#NOF __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E]
+	MOV	R2, [R5+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+2)]
+	MOV	R3, [R5+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+4)]
+	MOV	R5, [R5+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+6)]
 	MOV	[R7+#6], R5
 	MOV	[R7+#4], R3
 	MOV	[R7+#2], R2
@@ -639,10 +639,10 @@ __ZN16__llvm_libc_c1664math22sincosf_utils_internal12sincosf_evalEdmRdS2_S2_S2_?
 	ADD	R4, #16
 	AND	R4, #63
 	SHL	R4, #3
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+4)]
-	MOV	R1, [R4+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+2)]
-	MOV	R2, [R4+#SOF __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E]
-	MOV	R4, [R4+#SOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+6)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+4)]
+	MOV	R1, [R4+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+2)]
+	MOV	R2, [R4+#NOF __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E]
+	MOV	R4, [R4+#NOF (__ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E+6)]
 	MOV	[R6+#6], R4
 	MOV	[R6], R2
 	MOV	[R6+#2], R1
@@ -892,8 +892,8 @@ __ZN16__llvm_libc_c1664math33trigonometric_func_utils_internal21large_range_redu
 	MOV	[R0+#32], R4
 	MOV	R4, [R0+#280]
 	SUB	R4, #23
-	MOV	R7, #SOF (__ZN16__llvm_libc_c1664math33trigonometric_func_utils_internal20THIRTYTWO_OVER_PI_28E+8)
-	MOV	R5, #SOF __ZN16__llvm_libc_c1664math33trigonometric_func_utils_internal28THIRTYTWO_OVER_PI_28_LSB_EXPE
+	MOV	R7, #NOF (__ZN16__llvm_libc_c1664math33trigonometric_func_utils_internal20THIRTYTWO_OVER_PI_28E+8)
+	MOV	R5, #NOF __ZN16__llvm_libc_c1664math33trigonometric_func_utils_internal28THIRTYTWO_OVER_PI_28_LSB_EXPE
 ?LBB2_1:
 	MOV	R1, [R5+]
 	ADD	R1, R4
@@ -2000,13 +2000,13 @@ __ZN16__llvm_libc_c1664math22sincosf_utils_internal16SIN_K_PI_OVER_32E:
 	DW	49081
 
 	EXTRN	_errno : WORD
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___fixdfdi : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___fixdfdi : FAR
 COSF_NC	ENDS
 	END

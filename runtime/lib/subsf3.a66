@@ -27,6 +27,6 @@ ___subsf3?F	PROC	FAR
 	ADD	R0, #8
 	RETS
 ___subsf3?F	ENDP
-	EXTRN	___addsf3 : NEAR
+	EXTRN	___addsf3 : FAR
 SUBSF3_PR	ENDS
 	END

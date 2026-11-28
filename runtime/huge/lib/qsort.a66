@@ -328,7 +328,7 @@ _qsort?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _qsort?F	ENDP
-	EXTRN	___udivsi3 : NEAR
-	EXTRN	___c166_icall : NEAR
+	EXTRN	___udivsi3 : FAR
+	EXTRN	___c166_icall : FAR
 QSORT_PR	ENDS
 	END

@@ -78,7 +78,7 @@ _count:
 	EVEN
 _handlers:
 	DSB	32
-	EXTRN	___c166_icall : NEAR
-	EXTRN	__exit : NEAR
+	EXTRN	___c166_icall : FAR
+	EXTRN	__exit : FAR
 C166_HBSS	ENDS
 	END

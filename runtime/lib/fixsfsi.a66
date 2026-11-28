@@ -79,7 +79,7 @@ ___fixsfsi?F	PROC	FAR
 	MOV	R7, [R0+]
 	RETS
 ___fixsfsi?F	ENDP
-	EXTRN	___lshrsi3 : NEAR
-	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___lshrsi3 : FAR
+	EXTRN	___ashlsi3 : FAR
 FIXSFSI_PR	ENDS
 	END

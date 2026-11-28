@@ -166,11 +166,11 @@ _cosh?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _cosh?F	ENDP
-	EXTRN	_fabs : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	_exp : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___muldf3 : NEAR
+	EXTRN	_fabs : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	_exp : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___muldf3 : FAR
 COSH_PR	ENDS
 	END

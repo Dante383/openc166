@@ -423,14 +423,14 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	MOV	R5, [R0+#18]
 	MOV	R1, [R0+#20]
 	MOV	R2, [R0+#22]
-	MOV	R3, [R6+#SOF __ZN16__llvm_libc_c16625common_constants_internal2RDE]
-	MOV	R10, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+2)]
-	MOV	R11, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+4)]
-	MOV	R12, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+6)]
-	MOV	R7, [R6+#SOF __ZN16__llvm_libc_c16625common_constants_internal2CDE]
-	MOV	R8, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+2)]
-	MOV	R9, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+4)]
-	MOV	R6, [R6+#SOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+6)]
+	MOV	R3, [R6+#NOF __ZN16__llvm_libc_c16625common_constants_internal2RDE]
+	MOV	R10, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+2)]
+	MOV	R11, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+4)]
+	MOV	R12, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2RDE+6)]
+	MOV	R7, [R6+#NOF __ZN16__llvm_libc_c16625common_constants_internal2CDE]
+	MOV	R8, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+2)]
+	MOV	R9, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+4)]
+	MOV	R6, [R6+#NOF (__ZN16__llvm_libc_c16625common_constants_internal2CDE+6)]
 	MOV	[R0+#6], R12
 	MOV	[R0+#4], R11
 	MOV	[R0+#2], R10
@@ -919,10 +919,10 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	MOV	R2, [R0+#98]
 	SHL	R2, #4
 	MOV	[R0+#98], R2
-	MOV	R4, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+8)]
-	MOV	R5, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+10)]
-	MOV	R1, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+12)]
-	MOV	R2, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+14)]
+	MOV	R4, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+8)]
+	MOV	R5, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+10)]
+	MOV	R1, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+12)]
+	MOV	R2, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+14)]
 	MOV	R3, [R0+#48]
 	MOV	[R0+#2], R3
 	MOV	R3, [R0+#46]
@@ -996,10 +996,10 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	MOV	R4, [R0+#22]
 	MOV	[R0+#72], R4
 	MOV	R2, [R0+#98]
-	MOV	R4, [R2+#SOF __ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE]
-	MOV	R5, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+2)]
-	MOV	R1, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+4)]
-	MOV	R2, [R2+#SOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+6)]
+	MOV	R4, [R2+#NOF __ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE]
+	MOV	R5, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+2)]
+	MOV	R1, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+4)]
+	MOV	R2, [R2+#NOF (__ZN16__llvm_libc_c1664math12pow_internal9LOG2_R_DDE+6)]
 	MOV	[R0+#6], R2
 	MOV	[R0+#4], R1
 	MOV	[R0+#2], R5
@@ -2048,8 +2048,8 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	MOV	R1, #24
 	MUL	R5, R1
 	MOV	R2, MDL
-	MOV	R11, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+14)]
-	MOV	R12, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+12)]
+	MOV	R11, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+14)]
+	MOV	R12, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+12)]
 	MOV	R1, #0
 	MOV	R3, R1
 	MOV	R10, R4
@@ -2062,8 +2062,8 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 ; %bb.135:                              ; %_ZN16__llvm_libc_c1666fputilL15nearest_integerEd.exit
 	MOV	R13, R10
 ?LBB1_136:
-	MOV	R12, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+22)]
-	MOV	R11, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+20)]
+	MOV	R12, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+22)]
+	MOV	R11, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+20)]
 	MOV	R14, R1
 	MOV	R10, [R0+#42]
 	CMP	R5, #0
@@ -2077,12 +2077,12 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB1_140
 ; %bb.139:                              ; %_ZN16__llvm_libc_c1666fputilL15nearest_integerEd.exit
-	MOV	R3, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+8)]
+	MOV	R3, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+8)]
 ?LBB1_140:
 	MOV	[R0+#76], R3
-	MOV	R3, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+16)]
+	MOV	R3, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+16)]
 	MOV	[R0+#78], R3
-	MOV	R3, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+18)]
+	MOV	R3, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+18)]
 	MOV	[R0+#88], R3
 	ADD	R11, R1
 	ADDC	R12, R4
@@ -2092,7 +2092,7 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB1_142
 ; %bb.141:                              ; %_ZN16__llvm_libc_c1666fputilL15nearest_integerEd.exit
-	MOV	R4, [R2+#SOF (__ZN16__llvm_libc_c1669EXP2_MID1E+10)]
+	MOV	R4, [R2+#NOF (__ZN16__llvm_libc_c1669EXP2_MID1E+10)]
 ?LBB1_142:
 	MOV	[R0+#70], R4
 	ADD	R14, R1
@@ -2694,7 +2694,7 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	JMP	cc_UC, ?LBB1_238
 ?LBB1_201:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R5, #32752
 	MOV	R7, #0
 	MOV	R9, R7
@@ -2806,7 +2806,7 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	JMP	cc_UC, ?LBB1_21
 ?LBB1_213:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R5, #65520
 	JB	R6.0, ?LBB1_215
 ?LBB1_214:
@@ -3149,7 +3149,7 @@ __ZN16__llvm_libc_c1664math3powEdd?F	PROC	FAR
 	JMP	cc_UC, ?LBB1_224
 ?LBB1_254:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R7, #0
 	JMP	cc_UC, ?LBB1_32
 __ZN16__llvm_libc_c1664math3powEdd?F	ENDP
@@ -4132,7 +4132,7 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	JMP	cc_NE, ?LBB3_47
 ; %bb.5:                                ; %if.then12
 	MOV	R3, #34
-	MOV	SOF _errno, R3
+	MOV	NOF _errno, R3
 	JMP	cc_UC, ?LBB3_47
 ?LBB3_6:
 	MOVB	RL4, [R12]
@@ -4527,7 +4527,7 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	JMP	cc_EQ, ?LBB3_46
 ; %bb.45:                               ; %if.then104
 	MOV	R3, #34
-	MOV	SOF _errno, R3
+	MOV	NOF _errno, R3
 ?LBB3_46:
 	MOV	R6, [R0+#34]
 ?LBB3_47:
@@ -7367,18 +7367,18 @@ __ZN16__llvm_libc_c1669EXP2_MID1E:
 	DW	42945
 	DW	16383
 
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___gedf2 : NEAR
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___nedf2 : NEAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___gedf2 : FAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___nedf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatunsidf : NEAR
+	EXTRN	___floatunsidf : FAR
 POW_NC	ENDS
 	END

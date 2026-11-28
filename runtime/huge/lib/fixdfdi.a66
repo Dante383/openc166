@@ -125,7 +125,7 @@ ___fixdfdi?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_8
 	JMP	cc_UC, ?LBB0_9
 ___fixdfdi?F	ENDP
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___fixunsdfdi : NEAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___fixunsdfdi : FAR
 FIXDFDI_PR	ENDS
 	END

@@ -65,6 +65,6 @@ ___floatundidf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 ___floatundidf?F	ENDP
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___adddf3 : FAR
 FLOATUNDIDF_PR	ENDS
 	END

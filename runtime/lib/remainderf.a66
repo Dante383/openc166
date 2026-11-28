@@ -799,11 +799,11 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIfEcvfEv?F	PROC	FAR
 	OR	R5, R2
 	JMP	cc_UC, ?LBB3_28
 __ZNK16__llvm_libc_c1666fputil11NormalFloatIfEcvfEv?F	ENDP
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___gesf2 : NEAR
-	EXTRN	___ltsf2 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___lshrsi3 : NEAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___gesf2 : FAR
+	EXTRN	___ltsf2 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___lshrsi3 : FAR
 REMAINDERF_PR	ENDS
 	END

@@ -120,8 +120,8 @@ __ZN16__llvm_libc_c1664math4expfEf?F	PROC	FAR
 	JNB	R1.0, ?LBB1_20
 	JMP	cc_UC, ?LBB1_52
 ?LBB1_20:
-	MOV	R4, SOF __ZZN16__llvm_libc_c1666fputil7generic16fenv_is_round_upEvE1x
-	MOV	R5, SOF (__ZZN16__llvm_libc_c1666fputil7generic16fenv_is_round_upEvE1x+2)
+	MOV	R4, NOF __ZZN16__llvm_libc_c1666fputil7generic16fenv_is_round_upEvE1x
+	MOV	R5, NOF (__ZZN16__llvm_libc_c1666fputil7generic16fenv_is_round_upEvE1x+2)
 	MOV	R7, #16256
 	MOV	[R0+#6], R7
 	MOV	R6, #0
@@ -355,23 +355,23 @@ __ZN16__llvm_libc_c1664math4expfEf?F	PROC	FAR
 	MOV	R5, R4
 	ASHR	R5, #7
 	SHL	R5, #3
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math6EXP_M1E+832)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math6EXP_M1E+832)]
 	MOV	[R0+#44], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math6EXP_M1E+834)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math6EXP_M1E+834)]
 	MOV	[R0+#42], R1
-	MOV	R1, [R5+#SOF (__ZN16__llvm_libc_c1664math6EXP_M1E+836)]
+	MOV	R1, [R5+#NOF (__ZN16__llvm_libc_c1664math6EXP_M1E+836)]
 	MOV	[R0+#40], R1
-	MOV	R5, [R5+#SOF (__ZN16__llvm_libc_c1664math6EXP_M1E+838)]
+	MOV	R5, [R5+#NOF (__ZN16__llvm_libc_c1664math6EXP_M1E+838)]
 	MOV	[R0+#38], R5
 	SHL	R4, #3
 	AND	R4, #1016
-	MOV	R5, [R4+#SOF __ZN16__llvm_libc_c1664math6EXP_M2E]
+	MOV	R5, [R4+#NOF __ZN16__llvm_libc_c1664math6EXP_M2E]
 	MOV	[R0+#36], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math6EXP_M2E+2)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math6EXP_M2E+2)]
 	MOV	[R0+#34], R5
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c1664math6EXP_M2E+4)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c1664math6EXP_M2E+4)]
 	MOV	[R0+#32], R5
-	MOV	R4, [R4+#SOF (__ZN16__llvm_libc_c1664math6EXP_M2E+6)]
+	MOV	R4, [R4+#NOF (__ZN16__llvm_libc_c1664math6EXP_M2E+6)]
 	MOV	[R0+#30], R4
 	MOV	R4, #16293
 	MOV	[R0+#14], R4
@@ -557,13 +557,13 @@ __ZN16__llvm_libc_c1664math4expfEf?F	PROC	FAR
 	JMP	cc_UC, ?LBB1_19
 ?LBB1_55:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 ?LBB1_56:
 	MOV	R4, #32640
 	JMP	cc_UC, ?LBB1_9
 ?LBB1_57:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R4, #0
 	MOV	R6, R4
 	JMP	cc_UC, ?LBB1_52
@@ -576,8 +576,8 @@ __ZN16__llvm_libc_c1666fputil15quick_get_roundEv?F	PROC	FAR
 	MOV	[-R0], R7
 	MOV	[-R0], R6
 	SUB	R0, #10
-	MOV	R8, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R9, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R8, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R9, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -1971,18 +1971,18 @@ C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
 	EVEN
 	DW	0
 	DW	13184
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___ltsf2 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___gtsf2 : NEAR
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___fixsfsi : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___ltsf2 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___gtsf2 : FAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___fixsfsi : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___eqsf2 : NEAR
+	EXTRN	___eqsf2 : FAR
 C166_DATA_INIT	ENDS
 	END

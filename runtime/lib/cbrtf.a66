@@ -111,10 +111,10 @@ __ZN16__llvm_libc_c1664math5cbrtfEf?F	PROC	FAR
 	MOV	R4, #56
 	MUL	R8, R4
 	MOV	R8, MDL
-	MOV	R4, [R8+#SOF L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS]
-	MOV	R5, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+2)]
-	MOV	R1, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+4)]
-	MOV	R2, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+6)]
+	MOV	R4, [R8+#NOF L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS]
+	MOV	R5, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+2)]
+	MOV	R1, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+4)]
+	MOV	R2, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+6)]
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
@@ -148,17 +148,17 @@ __ZN16__llvm_libc_c1664math5cbrtfEf?F	PROC	FAR
 	MOV	[R0+#50], R4
 	MOV	R4, [R0+#22]
 	MOV	[R0+#48], R4
-	MOV	R4, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+16)]
-	MOV	R5, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+18)]
-	MOV	R1, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+20)]
-	MOV	R2, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+22)]
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+8)]
+	MOV	R4, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+16)]
+	MOV	R5, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+18)]
+	MOV	R1, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+20)]
+	MOV	R2, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+22)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+8)]
 	MOV	[R0+#46], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+10)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+10)]
 	MOV	[R0+#44], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+12)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+12)]
 	MOV	[R0+#42], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+14)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+14)]
 	MOV	[R0+#40], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
@@ -198,17 +198,17 @@ __ZN16__llvm_libc_c1664math5cbrtfEf?F	PROC	FAR
 	MOV	[R0+#38], R4
 	MOV	R4, [R0+#22]
 	MOV	[R0+#34], R4
-	MOV	R4, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+32)]
-	MOV	R5, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+34)]
-	MOV	R1, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+36)]
-	MOV	R2, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+38)]
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+24)]
+	MOV	R4, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+32)]
+	MOV	R5, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+34)]
+	MOV	R1, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+36)]
+	MOV	R2, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+38)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+24)]
 	MOV	[R0+#44], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+26)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+26)]
 	MOV	[R0+#40], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+28)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+28)]
 	MOV	[R0+#36], R3
-	MOV	R3, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+30)]
+	MOV	R3, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+30)]
 	MOV	[R0+#32], R3
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
@@ -245,14 +245,14 @@ __ZN16__llvm_libc_c1664math5cbrtfEf?F	PROC	FAR
 	MOV	[R0+#36], R4
 	MOV	R4, [R0+#22]
 	MOV	[R0+#32], R4
-	MOV	R4, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+48)]
-	MOV	R5, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+50)]
-	MOV	R1, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+52)]
-	MOV	R2, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+54)]
-	MOV	R6, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+40)]
-	MOV	R7, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+42)]
-	MOV	R9, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+44)]
-	MOV	R8, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+46)]
+	MOV	R4, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+48)]
+	MOV	R5, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+50)]
+	MOV	R1, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+52)]
+	MOV	R2, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+54)]
+	MOV	R6, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+40)]
+	MOV	R7, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+42)]
+	MOV	R9, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+44)]
+	MOV	R8, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS+46)]
 	MOV	[R0+#14], R2
 	MOV	[R0+#12], R1
 	MOV	[R0+#10], R5
@@ -417,10 +417,10 @@ __ZN16__llvm_libc_c1664math5cbrtfEf?F	PROC	FAR
 	MOV	R2, [R0+#22]
 	MOV	R12, [R0+#64]
 	SHL	R12, #3
-	MOV	R3, [R12+#SOF L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2]
-	MOV	R10, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+2)]
-	MOV	R11, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+4)]
-	MOV	R12, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+6)]
+	MOV	R3, [R12+#NOF L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2]
+	MOV	R10, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+2)]
+	MOV	R11, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+4)]
+	MOV	R12, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?CBRT2+6)]
 	MOV	[R0+#6], R12
 	MOV	[R0+#4], R11
 	MOV	[R0+#2], R10
@@ -1062,11 +1062,11 @@ L___const?_ZN16__llvm_libc_c1664math5cbrtfEf?COEFFS:
 	DW	20599
 	DW	16183
 
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
 CBRTF_NC	ENDS
 	END

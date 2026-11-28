@@ -1501,9 +1501,9 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIdEcvdEv?F	PROC	FAR
 	OR	R12, R5
 	JMP	cc_UC, ?LBB3_38
 __ZNK16__llvm_libc_c1666fputil11NormalFloatIdEcvdEv?F	ENDP
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___gedf2 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___eqdf2 : NEAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___gedf2 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___eqdf2 : FAR
 REMAINDER_PR	ENDS
 	END

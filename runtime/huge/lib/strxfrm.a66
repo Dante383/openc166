@@ -81,7 +81,7 @@ _strxfrm?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_4
 	JMP	cc_UC, ?LBB0_5
 _strxfrm?F	ENDP
-	EXTRN	_strlen : NEAR
-	EXTRN	_memcpy : NEAR
+	EXTRN	_strlen : FAR
+	EXTRN	_memcpy : FAR
 STRXFRM_PR	ENDS
 	END

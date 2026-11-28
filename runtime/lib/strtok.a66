@@ -16,7 +16,7 @@ _strtok?F	PROC	FAR
 	MOV	R8, R12
 	JMP	cc_NE, ?LBB0_2
 ; %bb.1:
-	MOV	R8, SOF _strtok?next
+	MOV	R8, NOF _strtok?next
 ?LBB0_2:
 	CMP	R8, #0
 	JMP	cc_EQ, ?LBB0_6
@@ -54,7 +54,7 @@ _strtok?F	PROC	FAR
 ?LBB0_8:
 	MOV	R4, R8
 ?LBB0_9:
-	MOV	SOF _strtok?next, R4
+	MOV	NOF _strtok?next, R4
 ?LBB0_10:
 	MOV	R4, R6
 	MOV	R6, [R0+]
@@ -67,7 +67,7 @@ C166_BSS	SECTION	DATA WORD PUBLIC 'CNEAR'
 	EVEN
 _strtok?next:
 	DSB	2
-	EXTRN	_strspn : NEAR
-	EXTRN	_strcspn : NEAR
+	EXTRN	_strspn : FAR
+	EXTRN	_strcspn : FAR
 C166_BSS	ENDS
 	END

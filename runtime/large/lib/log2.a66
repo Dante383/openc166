@@ -3140,11 +3140,11 @@ __ZN16__llvm_libc_c1664math13log2_internal6LOG_R1E:
 	DW	61058
 	DW	16357
 	DB	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	EXTRN	___nedf2 : NEAR
+	EXTRN	___nedf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___adddf3 : FAR
 LOG2_HC	ENDS
 	END

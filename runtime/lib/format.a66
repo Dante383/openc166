@@ -284,13 +284,13 @@ ___c166_format?F	PROC	FAR
 	ADD	R5, #2
 	MOV	[R0+#108], R5
 	MOV	R4, [R4]
-	MOV	R7, #SOF L_?str?2
+	MOV	R7, #NOF L_?str?2
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_59
 ; %bb.58:                               ; %sw.bb146
 	MOV	R7, R4
 ?LBB0_59:
-	MOV	R12, #SOF L_?str
+	MOV	R12, #NOF L_?str
 	MOV	[R0+#28], R11
 	CMP	R8, #0
 	JMP	cc_EQ, ?LBB0_86
@@ -325,7 +325,7 @@ ___c166_format?F	PROC	FAR
 	MOV	[R0+#108], R5
 	MOV	R4, [R4]
 	MOVB	[R0+#76], RL4
-	MOV	R12, #SOF L_?str
+	MOV	R12, #NOF L_?str
 	MOV	R8, #1
 	MOV	R7, [R0+#26]
 	JMP	cc_UC, ?LBB0_181
@@ -349,7 +349,7 @@ ___c166_format?F	PROC	FAR
 	MOV	[R5], R7
 	JMP	cc_UC, ?LBB0_1
 ?LBB0_70:
-	MOV	R13, #SOF L_?str?1
+	MOV	R13, #NOF L_?str?1
 	MOV	R14, #1
 	MOV	R12, [R0+#58]
 	MOV	R4, [R0+#54]
@@ -459,8 +459,8 @@ ___c166_format?F	PROC	FAR
 	MOV	R4, #16
 	MOV	[R0+#50], R4
 	MOV	R15, #1
-	MOV	R12, #SOF L_?str
-	MOV	R4, #SOF L_?str?7
+	MOV	R12, #NOF L_?str
+	MOV	R4, #NOF L_?str?7
 	MOV	[R0+#42], R4
 	MOV	R13, R15
 	MOV	[R0+#20], R14
@@ -589,13 +589,13 @@ ___c166_format?F	PROC	FAR
 ; %bb.118:                              ; %if.else300
 	JB	R11.1, ?LBB0_129
 ; %bb.119:                              ; %if.else303
-	MOV	R12, #SOF L_?str
+	MOV	R12, #NOF L_?str
 	JNB	R11.2, ?LBB0_130
 ; %bb.120:                              ; %if.else303
-	MOV	R12, #SOF L_?str?5
+	MOV	R12, #NOF L_?str?5
 	JMP	cc_UC, ?LBB0_130
 ?LBB0_121:
-	MOV	R12, #SOF L_?str
+	MOV	R12, #NOF L_?str
 	JMP	cc_UC, ?LBB0_130
 ?LBB0_122:
 	MOV	R12, #0
@@ -624,7 +624,7 @@ ___c166_format?F	PROC	FAR
 	SUBC	R4, R5
 	MOV	[R0+#44], R4
 	MOV	R1, R12
-	MOV	R12, #SOF L_?str?3
+	MOV	R12, #NOF L_?str?3
 	JMP	cc_UC, ?LBB0_131
 ?LBB0_127:
 	CMP	R5, #0
@@ -635,18 +635,18 @@ ___c166_format?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_125
 	JMP	cc_UC, ?LBB0_126
 ?LBB0_129:
-	MOV	R12, #SOF L_?str?4
+	MOV	R12, #NOF L_?str?4
 ?LBB0_130:
 	MOV	R10, R1
 	MOV	[R0+#44], R5
 	MOV	R1, R2
 	MOV	R15, R3
 ?LBB0_131:
-	MOV	R4, #SOF L_?str?7
+	MOV	R4, #NOF L_?str?7
 	MOV	[R0+#42], R4
 	JB	R13.0, ?LBB0_133
 ; %bb.132:                              ; %if.end310
-	MOV	R4, #SOF L_?str?6
+	MOV	R4, #NOF L_?str?6
 	MOV	[R0+#42], R4
 ?LBB0_133:
 	MOV	R2, #0
@@ -853,10 +853,10 @@ ___c166_format?F	PROC	FAR
 	CMP	R15, #1
 	JMP	cc_NE, ?LBB0_165
 ; %bb.163:                              ; %if.then351
-	MOV	R12, #SOF L_?str?9
+	MOV	R12, #NOF L_?str?9
 	JB	R13.0, ?LBB0_171
 ; %bb.164:                              ; %if.then351
-	MOV	R12, #SOF L_?str?8
+	MOV	R12, #NOF L_?str?8
 	JMP	cc_UC, ?LBB0_171
 ?LBB0_165:
 	CMP	R2, R4
@@ -943,7 +943,7 @@ ___c166_format?F	PROC	FAR
 ; %bb.186:                              ; %for.body.i602
 	MOV	R14, #8
 ?LBB0_187:
-	MOV	R13, #SOF _pad?zeros
+	MOV	R13, #NOF _pad?zeros
 	MOV	R12, [R0+#58]
 	MOV	R4, [R0+#54]
 	MOV	R5, [R0+#56]
@@ -967,7 +967,7 @@ ___c166_format?F	PROC	FAR
 ; %bb.191:                              ; %for.body.i
 	MOV	R14, #8
 ?LBB0_192:
-	MOV	R13, #SOF _pad?spaces
+	MOV	R13, #NOF _pad?spaces
 	MOV	R12, [R0+#58]
 	MOV	R4, [R0+#54]
 	MOV	R5, [R0+#56]
@@ -1005,7 +1005,7 @@ ___c166_format?F	PROC	FAR
 ; %bb.198:                              ; %for.body.i608
 	MOV	R14, #8
 ?LBB0_199:
-	MOV	R13, #SOF _pad?spaces
+	MOV	R13, #NOF _pad?spaces
 	MOV	R12, [R0+#58]
 	MOV	R4, [R0+#54]
 	MOV	R5, [R0+#56]
@@ -1118,10 +1118,10 @@ _pad?spaces:
 _pad?zeros:
 	DB	48,48,48,48,48,48,48,48
 
-	EXTRN	___c166_icall : NEAR
-	EXTRN	___udivsi3 : NEAR
-	EXTRN	___udivdi3 : NEAR
-	EXTRN	___muldi3 : NEAR
-	EXTRN	_strlen : NEAR
+	EXTRN	___c166_icall : FAR
+	EXTRN	___udivsi3 : FAR
+	EXTRN	___udivdi3 : FAR
+	EXTRN	___muldi3 : FAR
+	EXTRN	_strlen : FAR
 FORMAT_NC	ENDS
 	END

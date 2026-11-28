@@ -102,7 +102,7 @@ C166_HBSS	SECTION	HDATA WORD PUBLIC 'CHUGE'
 	EVEN
 _strtok?next:
 	DSB	4
-	EXTRN	_strspn : NEAR
-	EXTRN	_strcspn : NEAR
+	EXTRN	_strspn : FAR
+	EXTRN	_strcspn : FAR
 C166_HBSS	ENDS
 	END

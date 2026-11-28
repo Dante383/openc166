@@ -172,11 +172,11 @@ __ZN16__llvm_libc_c1664math6atan2fEff?F	PROC	FAR
 ; %bb.29:                               ; %if.end54
 	MOV	R3, R4
 ?LBB1_30:
-	MOV	R4, #SOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?CONST_ADJ+64)
+	MOV	R4, #NOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?CONST_ADJ+64)
 	MOV	R9, [R0+#42]
 	JMP	cc_NE, ?LBB1_32
 ; %bb.31:                               ; %if.end54
-	MOV	R4, #SOF L___const?_ZN16__llvm_libc_c1664math6atan2fEff?CONST_ADJ
+	MOV	R4, #NOF L___const?_ZN16__llvm_libc_c1664math6atan2fEff?CONST_ADJ
 ?LBB1_32:
 	MOV	[R0+#46], R2
 	SHR	R5, #10
@@ -557,10 +557,10 @@ __ZN16__llvm_libc_c1664math6atan2fEff?F	PROC	FAR
 	MOV	R4, R7
 ?LBB1_79:
 	OR	R8, R4
-	MOV	R4, [R8+#SOF L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS]
-	MOV	R5, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+2)]
-	MOV	R2, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+4)]
-	MOV	R1, [R8+#SOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+6)]
+	MOV	R4, [R8+#NOF L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS]
+	MOV	R5, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+2)]
+	MOV	R2, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+4)]
+	MOV	R1, [R8+#NOF (L___const?_ZN16__llvm_libc_c1664math6atan2fEff?EXCEPTS+6)]
 	MOV	R3, [R0+#68]
 	JMP	cc_NE, ?LBB1_90
 	JMP	cc_UC, ?LBB1_91
@@ -927,10 +927,10 @@ __ZN16__llvm_libc_c1664math6atan2fEff?F	PROC	FAR
 	MOV	R9, [R0+#22]
 	MOV	R2, [R0+#58]
 	SHL	R2, #3
-	MOV	R4, [R2+#SOF __ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E]
-	MOV	R5, [R2+#SOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+2)]
-	MOV	R1, [R2+#SOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+4)]
-	MOV	R2, [R2+#SOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+6)]
+	MOV	R4, [R2+#NOF __ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E]
+	MOV	R5, [R2+#NOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+2)]
+	MOV	R1, [R2+#NOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+4)]
+	MOV	R2, [R2+#NOF (__ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E+6)]
 	MOV	R3, [R0+#36]
 	MOV	[R0+#2], R3
 	MOV	R3, [R0+#38]
@@ -1195,16 +1195,16 @@ __ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E:
 	DW	8699
 	DW	16361
 
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___truncdfsf2 : FAR
 ATAN2F_NC	ENDS
 	END

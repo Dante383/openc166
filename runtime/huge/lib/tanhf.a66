@@ -1068,14 +1068,14 @@ __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE:
 	DW	23406
 	DW	20598
 	DW	16383
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
 TANHF_XC	ENDS
 	END

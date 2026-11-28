@@ -2738,13 +2738,13 @@ L___const?_ZN16__llvm_libc_c1664math5asinfEf?TWO:
 	DW	0
 	DW	0
 	DW	16384
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
-	EXTRN	___floatunsidf : NEAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
+	EXTRN	___floatunsidf : FAR
 ASINF_HC	ENDS
 	END

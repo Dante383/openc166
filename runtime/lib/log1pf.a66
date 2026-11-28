@@ -370,7 +370,7 @@ __ZN16__llvm_libc_c1664math6log1pfEf?F	PROC	FAR
 	JMP	cc_NE, ?LBB1_14
 ; %bb.11:                               ; %if.then22
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #65408
 	JMP	cc_UC, ?LBB1_38
 ?LBB1_12:
@@ -898,7 +898,7 @@ __ZN16__llvm_libc_c1664math6log1pfEf?F	PROC	FAR
 	JB	R2.0, ?LBB1_39
 ?LBB1_37:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #32704
 ?LBB1_38:
 	MOV	R6, #0
@@ -912,13 +912,13 @@ __ZN16__llvm_libc_c1664math6log1pfEf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 __ZN16__llvm_libc_c1664math6log1pfEf?F	ENDP
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___nesf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___nesf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___truncdfsf2 : NEAR
-	EXTRN	___ltsf2 : NEAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___truncdfsf2 : FAR
+	EXTRN	___ltsf2 : FAR
 LOG1PF_PR	ENDS
 	END

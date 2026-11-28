@@ -43,6 +43,6 @@ _fwrite?F	PROC	FAR
 	MOV	R8, [R0+]
 	RETS
 _fwrite?F	ENDP
-	EXTRN	__write : NEAR
+	EXTRN	__write : FAR
 FWRITE_PR	ENDS
 	END

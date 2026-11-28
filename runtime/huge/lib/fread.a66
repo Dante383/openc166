@@ -108,7 +108,7 @@ _fread?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _fread?F	ENDP
-	EXTRN	_fgetc : NEAR
-	EXTRN	___udivsi3 : NEAR
+	EXTRN	_fgetc : FAR
+	EXTRN	___udivsi3 : FAR
 FREAD_PR	ENDS
 	END

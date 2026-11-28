@@ -665,8 +665,8 @@ ___divsf3?F	PROC	FAR
 	MOV	R14, [R0+#30]
 	JMP	cc_UC, ?LBB0_3
 ___divsf3?F	ENDP
-	EXTRN	___muldi3 : NEAR
-	EXTRN	___lshrsi3 : NEAR
-	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___muldi3 : FAR
+	EXTRN	___lshrsi3 : FAR
+	EXTRN	___ashlsi3 : FAR
 DIVSF3_PR	ENDS
 	END

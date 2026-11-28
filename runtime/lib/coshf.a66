@@ -155,24 +155,24 @@ __ZN16__llvm_libc_c1664math5coshfEf?F	PROC	FAR
 	SHL	R5, #4
 	SHL	R7, #3
 	MOVBZ	R1, RL7
-	MOV	R2, [R1+#SOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
+	MOV	R2, [R1+#NOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
 	MOV	[R0+#50], R2
-	MOV	R3, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
+	MOV	R3, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
 	MOV	[R0+#48], R3
-	MOV	R8, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
-	MOV	R7, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
+	MOV	R8, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
+	MOV	R7, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
 	MOV	R1, R9
 	MOV	[R0+#60], R1
 	ADD	R7, R1
 	ADDC	R8, R4
 	AND	R6, #31
 	SHL	R6, #3
-	MOV	R4, [R6+#SOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
+	MOV	R4, [R6+#NOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
 	MOV	[R0+#46], R4
-	MOV	R10, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
+	MOV	R10, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
 	MOV	[R0+#44], R10
-	MOV	R9, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
-	MOV	R6, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
+	MOV	R9, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
+	MOV	R6, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
 	ADD	R6, R1
 	ADDC	R9, R5
 	MOV	[R0+#2], R3
@@ -548,8 +548,8 @@ __ZN16__llvm_libc_c1664math5coshfEf?F	PROC	FAR
 	AND	R4, #32640
 	JMP	cc_EQ, ?LBB1_22
 ; %bb.19:                               ; %if.end11
-	MOV	R6, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
-	MOV	R7, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R6, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R7, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -600,7 +600,7 @@ __ZN16__llvm_libc_c1664math5coshfEf?F	PROC	FAR
 	JMP	cc_EQ, ?LBB1_25
 ; %bb.21:                               ; %if.end22
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 ?LBB1_22:
 	MOV	R4, #32640
 ?LBB1_23:
@@ -766,16 +766,16 @@ __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE:
 	DW	20598
 	DW	16383
 
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___truncdfsf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
 	EXTRN	_errno : WORD
 COSHF_NC	ENDS
 	END

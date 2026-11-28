@@ -149,10 +149,10 @@ ___fixunsdfdi?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 ___fixunsdfdi?F	ENDP
-	EXTRN	___ledf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___fixunsdfsi : NEAR
-	EXTRN	___floatunsidf : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___ledf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___fixunsdfsi : FAR
+	EXTRN	___floatunsidf : FAR
+	EXTRN	___adddf3 : FAR
 FIXUNSDFDI_PR	ENDS
 	END

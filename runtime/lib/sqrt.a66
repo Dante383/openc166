@@ -991,7 +991,7 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	JMP	cc_NE, ?LBB1_47
 ; %bb.5:                                ; %if.then12
 	MOV	R3, #34
-	MOV	SOF _errno, R3
+	MOV	NOF _errno, R3
 	JMP	cc_UC, ?LBB1_47
 ?LBB1_6:
 	MOVB	RL4, [R12]
@@ -1386,7 +1386,7 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	JMP	cc_EQ, ?LBB1_46
 ; %bb.45:                               ; %if.then104
 	MOV	R3, #34
-	MOV	SOF _errno, R3
+	MOV	NOF _errno, R3
 ?LBB1_46:
 	MOV	R6, [R0+#34]
 ?LBB1_47:
@@ -1403,9 +1403,9 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	PROC	FA
 	MOV	R9, [R0+]
 	RETS
 __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj64EE7fast_asIdLb1EvEET_v?F	ENDP
-	EXTRN	___muldf3 : NEAR
+	EXTRN	___muldf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatunsidf : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___floatunsidf : FAR
+	EXTRN	___adddf3 : FAR
 SQRT_PR	ENDS
 	END

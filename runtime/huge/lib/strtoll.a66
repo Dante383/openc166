@@ -771,11 +771,11 @@ _atoll?F	PROC	FAR
 	RETS
 _atoll?F	ENDP
 	EXTRN	_errno : WORD
-	EXTRN	_isspace : NEAR
-	EXTRN	_isxdigit : NEAR
-	EXTRN	___udivdi3 : NEAR
-	EXTRN	_isdigit : NEAR
-	EXTRN	_isalpha : NEAR
-	EXTRN	___muldi3 : NEAR
+	EXTRN	_isspace : FAR
+	EXTRN	_isxdigit : FAR
+	EXTRN	___udivdi3 : FAR
+	EXTRN	_isdigit : FAR
+	EXTRN	_isalpha : FAR
+	EXTRN	___muldi3 : FAR
 STRTOLL_PR	ENDS
 	END

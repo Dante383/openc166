@@ -62,8 +62,8 @@ __ZN16__llvm_libc_c1666fputil33round_using_current_rounding_modeIdEENS_3cpp9enab
 	MOV	[R0+#48], R4
 	MOV	R4, [R0+#186]
 	MOV	[R0+#42], R4
-	MOV	R6, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R9, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R6, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R9, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -894,10 +894,10 @@ C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
 	EVEN
 	DW	0
 	DW	13184
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___adddf3 : FAR
 C166_DATA_INIT	ENDS
 	END

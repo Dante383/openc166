@@ -46,11 +46,11 @@ _putc?F	ENDP
 _putchar:
 _putchar?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOV	R13, #SOF (___c166_iob+6)
+	MOV	R13, #NOF (___c166_iob+6)
 	CALLS	SEG _fputc, SOF _fputc
 	RETS
 _putchar?F	ENDP
-	EXTRN	__write : NEAR
+	EXTRN	__write : FAR
 	EXTRN	___c166_iob : WORD
 FPUTC_PR	ENDS
 	END

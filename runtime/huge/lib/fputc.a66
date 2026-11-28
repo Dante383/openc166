@@ -73,7 +73,7 @@ _putchar?F	PROC	FAR
 	CALLS	SEG _fputc, SOF _fputc
 	RETS
 _putchar?F	ENDP
-	EXTRN	__write : NEAR
+	EXTRN	__write : FAR
 	EXTRN	___c166_iob : WORD
 FPUTC_PR	ENDS
 	END

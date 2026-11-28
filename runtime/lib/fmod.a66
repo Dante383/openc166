@@ -284,7 +284,7 @@ _fmod?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_61
 ?LBB0_59:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R13, #32760
 	MOV	R3, #0
 ?LBB0_60:
@@ -1840,6 +1840,6 @@ __ZN16__llvm_libc_c1666fputil7generic4FModIdyNS1_24FModDivisionSimpleHelperIyEEE
 	RETS
 __ZN16__llvm_libc_c1666fputil7generic4FModIdyNS1_24FModDivisionSimpleHelperIyEEE13eval_internalENS0_6FPBitsIdEES7_?F	ENDP
 	EXTRN	_errno : WORD
-	EXTRN	___umoddi3 : NEAR
+	EXTRN	___umoddi3 : FAR
 FMOD_PR	ENDS
 	END

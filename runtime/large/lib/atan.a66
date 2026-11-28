@@ -3727,12 +3727,12 @@ __ZN16__llvm_libc_c16613atan_internal6ATAN_IE:
 	DW	21572
 	DW	8699
 	DW	16361
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___fixunsdfsi : NEAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___fixunsdfsi : FAR
 ATAN_HC	ENDS
 	END

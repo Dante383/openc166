@@ -18,19 +18,20 @@
 ;
 ; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
 ; watchdog: a program that starts from reset must set those up first.
-; The DPPs must map the near data and the user stack (default: DPPn = n,
-; the first 64 KB).
+; The DPPs must hold the pages of the near data and the user stack, as
+; given to openc166 with --dpp (default: DPPn = n, the first 64 KB).
 
 $NOMACRO
 $CASE
 $MOD167
 $SEGMENTED
 $INCLUDE(REG167.INC)
-; Near data is in the first 64 KB with DPPn = n, as in the compiler's output:
-; addresses are written with SOF.
+; Near data is reached through the DPP that holds its page, as in the
+; compiler's output: addresses are written with NOF, which openc166 resolves
+; with --dpp (default DPPn = n, the first 64 KB).
 
         PUBLIC  __cstart, __exit
-        EXTRN   _main : NEAR
+        EXTRN   _main : FAR
         EXTRN   ?SECTION_START?C166_DATA : WORD
         EXTRN   ?SECTION_START?C166_USTACK : WORD
         EXTRN   ?SECTION_SIZE?C166_USTACK : DATA16
@@ -107,11 +108,11 @@ __cstart        PROC    FAR
         PUSH    R9
         ; The top of C166_USTACK, which other modules may make larger
         ; (_ustack in c166.h).
-        MOV     R0, #SOF ?SECTION_START?C166_USTACK
+        MOV     R0, #NOF ?SECTION_START?C166_USTACK
         ADD     R0, #?SECTION_SIZE?C166_USTACK
 
-        MOV     R4, #SOF ?SECTION_START?C166_DATA_INIT
-        MOV     R5, #SOF ?SECTION_START?C166_DATA
+        MOV     R4, #NOF ?SECTION_START?C166_DATA_INIT
+        MOV     R5, #NOF ?SECTION_START?C166_DATA
         MOV     R10, #?SECTION_SIZE?C166_DATA
 ?COPY:  CMP     R10, #0
         JMP     cc_EQ, ?COPIED
@@ -121,7 +122,7 @@ __cstart        PROC    FAR
         SUB     R10, #1
         JMP     cc_UC, ?COPY
 ?COPIED:
-        MOV     R5, #SOF ?SECTION_START?C166_BSS
+        MOV     R5, #NOF ?SECTION_START?C166_BSS
         MOV     R10, #?SECTION_SIZE?C166_BSS
         MOV     R1, #0
 ?CLEAR: CMP     R10, #0
@@ -131,7 +132,7 @@ __cstart        PROC    FAR
         SUB     R10, #1
         JMP     cc_UC, ?CLEAR
 ?CLEARED:
-        MOV     R5, #SOF ?SECTION_START?C166_BITWORD
+        MOV     R5, #NOF ?SECTION_START?C166_BITWORD
         MOV     R10, #?SECTION_SIZE?C166_BITWORD
 ?CLEARBW:
         CMP     R10, #0
@@ -175,7 +176,7 @@ __cstart        PROC    FAR
         MOV     R10, #SOF ?SECTION_END?C166_XBSS
         MOV     R11, #SEG ?SECTION_END?C166_XBSS
         CALL    ?XCLEAR
-        MOV     SOF ?EXIT_SP, SP     ; for _exit
+        MOV     NOF ?EXIT_SP, SP     ; for _exit
         CALLS   SEG _main, SOF _main
 ?MAIN_DONE:
         POP     R9
@@ -191,7 +192,7 @@ __cstart        ENDP
 ; system stack goes back to where it was when main was called.
 __exit          PROC    FAR
         MOV     R4, R12
-        MOV     SP, SOF ?EXIT_SP
+        MOV     SP, NOF ?EXIT_SP
         NOP                             ; SP written: no implicit use next
         JMP     cc_UC, ?MAIN_DONE
 __exit          ENDP

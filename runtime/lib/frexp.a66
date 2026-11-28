@@ -160,6 +160,6 @@ _frexp?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _frexp?F	ENDP
-	EXTRN	___nedf2 : NEAR
+	EXTRN	___nedf2 : FAR
 FREXP_PR	ENDS
 	END

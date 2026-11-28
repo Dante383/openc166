@@ -139,24 +139,24 @@ __ZN16__llvm_libc_c1664math5sinhfEf?F	PROC	FAR
 	SHL	R5, #4
 	SHL	R7, #3
 	MOVBZ	R1, RL7
-	MOV	R2, [R1+#SOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
+	MOV	R2, [R1+#NOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
 	MOV	[R0+#52], R2
-	MOV	R3, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
+	MOV	R3, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
 	MOV	[R0+#48], R3
-	MOV	R7, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
-	MOV	R9, [R1+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
+	MOV	R7, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
+	MOV	R9, [R1+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
 	ADD	R9, R8
 	ADDC	R7, R4
 	AND	R6, #31
 	SHL	R6, #3
-	MOV	R1, [R6+#SOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
+	MOV	R1, [R6+#NOF __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE]
 	MOV	[R0+#44], R1
-	MOV	R10, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
+	MOV	R10, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+2)]
 	MOV	[R0+#40], R10
 	MOV	R4, R8
 	MOV	[R0+#60], R4
-	MOV	R8, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
-	MOV	R6, [R6+#SOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
+	MOV	R8, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+6)]
+	MOV	R6, [R6+#NOF (__ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE+4)]
 	ADD	R6, R4
 	ADDC	R8, R5
 	MOV	[R0+#2], R3
@@ -698,8 +698,8 @@ __ZN16__llvm_libc_c1664math5sinhfEf?F	PROC	FAR
 	OR	R5, R4
 	JMP	cc_EQ, ?LBB1_39
 ; %bb.27:                               ; %if.end32
-	MOV	R8, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R9, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R8, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R9, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -879,7 +879,7 @@ __ZN16__llvm_libc_c1664math5sinhfEf?F	PROC	FAR
 	JMP	cc_UGE, ?LBB1_49
 ?LBB1_48:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R4, R7
 	AND	R4, #32768
 	OR	R4, #32640
@@ -1060,17 +1060,17 @@ __ZN16__llvm_libc_c1667ExpBase9EXP_2_MIDE:
 	DW	20598
 	DW	16383
 
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___ltsf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___ltsf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___truncdfsf2 : FAR
 	EXTRN	_errno : WORD
 SINHF_NC	ENDS
 	END

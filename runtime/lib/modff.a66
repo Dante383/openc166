@@ -111,8 +111,8 @@ _modff?F	PROC	FAR
 	MOV	R6, R5
 	JMP	cc_UC, ?LBB0_11
 _modff?F	ENDP
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___subsf3 : NEAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___subsf3 : FAR
 MODFF_PR	ENDS
 	END

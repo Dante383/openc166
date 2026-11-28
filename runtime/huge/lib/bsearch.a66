@@ -122,6 +122,6 @@ _bsearch?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _bsearch?F	ENDP
-	EXTRN	___c166_icall : NEAR
+	EXTRN	___c166_icall : FAR
 BSEARCH_PR	ENDS
 	END

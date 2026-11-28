@@ -54,8 +54,8 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	CMP	R8, #280
 	JMP	cc_SLT, ?LBB1_7
 ; %bb.4:                                ; %if.then5
-	MOV	R9, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R7, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R9, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R7, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -94,7 +94,7 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	JMP	cc_UC, ?LBB1_20
 ?LBB1_6:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	AND	R6, #32768
 	OR	R6, #32640
 	JMP	cc_UC, ?LBB1_23
@@ -102,8 +102,8 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	CMP	R8, #65256
 	JMP	cc_SGT, ?LBB1_10
 ; %bb.8:                                ; %if.then30
-	MOV	R9, SOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
-	MOV	R7, SOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
+	MOV	R9, NOF (__ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x+2)
+	MOV	R7, NOF __ZZN16__llvm_libc_c1666fputil7generic15quick_get_roundEvE1x
 	MOV	R4, #16256
 	MOV	[R0+#6], R4
 	MOV	R4, #1
@@ -246,7 +246,7 @@ __ZN16__llvm_libc_c1666fputil5ldexpIfiEENS_3cpp9enable_ifIXaasr3cppE19is_floatin
 	JMP	cc_NE, ?LBB1_27
 ?LBB1_22:
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	AND	R6, #32768
 ?LBB1_23:
 	MOV	R7, #0
@@ -376,7 +376,7 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILj32EE7fast_asIfLb1EvEET_v?F	PROC	FA
 	JMP	cc_NE, ?LBB2_42
 ?LBB2_5:
 	MOV	R1, #34
-	MOV	SOF _errno, R1
+	MOV	NOF _errno, R1
 	JMP	cc_UC, ?LBB2_42
 ?LBB2_6:
 	MOVB	RL5, [R6]
@@ -610,14 +610,14 @@ C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
 	EVEN
 	DW	0
 	DW	13184
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___lshrsi3 : NEAR
-	EXTRN	___floatunsisf : NEAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___lshrsi3 : FAR
+	EXTRN	___floatunsisf : FAR
 C166_DATA_INIT	ENDS
 	END

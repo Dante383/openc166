@@ -65,6 +65,6 @@ _fgets?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _fgets?F	ENDP
-	EXTRN	_fgetc : NEAR
+	EXTRN	_fgetc : FAR
 FGETS_PR	ENDS
 	END

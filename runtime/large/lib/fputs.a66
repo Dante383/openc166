@@ -76,9 +76,9 @@ _puts?F	PROC	FAR
 	MOV	R4, #65535
 	RETS
 _puts?F	ENDP
-	EXTRN	_strlen : NEAR
-	EXTRN	__write : NEAR
+	EXTRN	_strlen : FAR
+	EXTRN	__write : FAR
 	EXTRN	___c166_iob : WORD
-	EXTRN	_fputc : NEAR
+	EXTRN	_fputc : FAR
 FPUTS_PR	ENDS
 	END

@@ -469,10 +469,10 @@ __ZN16__llvm_libc_c1664math4cbrtEd?F	PROC	FAR
 	MOV	R2, [R0+#22]
 	MOV	R12, [R0+#144]
 	SHL	R12, #3
-	MOV	R3, [R12+#SOF L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3]
-	MOV	R10, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+2)]
-	MOV	R11, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+4)]
-	MOV	R12, [R12+#SOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+6)]
+	MOV	R3, [R12+#NOF L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3]
+	MOV	R10, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+2)]
+	MOV	R11, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+4)]
+	MOV	R12, [R12+#NOF (L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3+6)]
 	MOV	[R0+#6], R12
 	MOV	[R0+#4], R11
 	MOV	[R0+#2], R10
@@ -2019,9 +2019,9 @@ L___const?_ZN16__llvm_libc_c1664math4cbrtEd?EXP2_M2_OVER_3:
 	DW	26110
 	DW	16345
 
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
 CBRT_NC	ENDS
 	END

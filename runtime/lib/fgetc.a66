@@ -52,7 +52,7 @@ _getc?F	ENDP
 _getchar:
 _getchar?F	PROC	FAR
 ; %bb.0:                                ; %entry
-	MOV	R12, #SOF ___c166_iob
+	MOV	R12, #NOF ___c166_iob
 	CALLS	SEG _fgetc, SOF _fgetc
 	RETS
 _getchar?F	ENDP
@@ -79,7 +79,7 @@ _ungetc?F	PROC	FAR
 	MOVB	[R13+#4], RL5
 	RETS
 _ungetc?F	ENDP
-	EXTRN	__read : NEAR
+	EXTRN	__read : FAR
 	EXTRN	___c166_iob : WORD
 FGETC_PR	ENDS
 	END

@@ -1911,10 +1911,10 @@ __ZNK16__llvm_libc_c1666fputil11NormalFloatIdE3cmpERKS2_?F	PROC	FAR
 	JMP	cc_NE, ?LBB5_22
 	JMP	cc_UC, ?LBB5_23
 __ZNK16__llvm_libc_c1666fputil11NormalFloatIdE3cmpERKS2_?F	ENDP
-	EXTRN	_memcpy : NEAR
-	EXTRN	___gedf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___eqdf2 : NEAR
+	EXTRN	_memcpy : FAR
+	EXTRN	___gedf2 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___eqdf2 : FAR
 REMAINDER_PR	ENDS
 	END

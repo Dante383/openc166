@@ -57,9 +57,9 @@ L_?str:
 	DB	32
 	DB	0
 	EXTRN	___c166_iob : WORD
-	EXTRN	_fputs : NEAR
+	EXTRN	_fputs : FAR
 	EXTRN	_errno : WORD
-	EXTRN	_strerror : NEAR
-	EXTRN	_fputc : NEAR
+	EXTRN	_strerror : FAR
+	EXTRN	_fputc : FAR
 PERROR_XC	ENDS
 	END

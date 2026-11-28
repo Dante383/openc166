@@ -38,20 +38,20 @@ ___assert?F	PROC	FAR
 	CMP	R4, #9
 	JMP	cc_UGT, ?LBB0_1
 ; %bb.2:                                ; %do.end
-	MOV	R12, #SOF L_?str
-	MOV	R9, #SOF (___c166_iob+12)
+	MOV	R12, #NOF L_?str
+	MOV	R9, #NOF (___c166_iob+12)
 	MOV	R13, R9
 	CALLS	SEG _fputs, SOF _fputs
 	MOV	R12, R8
 	MOV	R13, R9
 	CALLS	SEG _fputs, SOF _fputs
-	MOV	R12, #SOF L_?str?1
+	MOV	R12, #NOF L_?str?1
 	MOV	R13, R9
 	CALLS	SEG _fputs, SOF _fputs
 	MOV	R12, R7
 	MOV	R13, R9
 	CALLS	SEG _fputs, SOF _fputs
-	MOV	R12, #SOF L_?str?2
+	MOV	R12, #NOF L_?str?2
 	MOV	R13, R9
 	CALLS	SEG _fputs, SOF _fputs
 	MOV	R12, R6
@@ -106,8 +106,8 @@ L_?str?2:
 	DB	0
 
 	EXTRN	___c166_iob : WORD
-	EXTRN	_fputs : NEAR
-	EXTRN	_fputc : NEAR
-	EXTRN	_abort : NEAR
+	EXTRN	_fputs : FAR
+	EXTRN	_fputc : FAR
+	EXTRN	_abort : FAR
 ASSERT_NC	ENDS
 	END

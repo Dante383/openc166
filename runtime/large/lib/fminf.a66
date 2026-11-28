@@ -124,6 +124,6 @@ _fminf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _fminf?F	ENDP
-	EXTRN	___ltsf2 : NEAR
+	EXTRN	___ltsf2 : FAR
 FMINF_PR	ENDS
 	END

@@ -80,7 +80,7 @@ _fwrite?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _fwrite?F	ENDP
-	EXTRN	__write : NEAR
-	EXTRN	___udivsi3 : NEAR
+	EXTRN	__write : FAR
+	EXTRN	___udivsi3 : FAR
 FWRITE_PR	ENDS
 	END

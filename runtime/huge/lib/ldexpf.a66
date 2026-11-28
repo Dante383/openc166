@@ -686,13 +686,13 @@ C166_XDATA_INIT	SECTION	XCONST WORD PUBLIC 'CHUGEROM'
 	EVEN
 	DW	0
 	DW	13184
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___subsf3 : NEAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___subsf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___floatunsisf : NEAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___floatunsisf : FAR
 C166_XDATA_INIT	ENDS
 	END

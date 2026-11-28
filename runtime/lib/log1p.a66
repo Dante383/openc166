@@ -109,7 +109,7 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	JMP	cc_NE, ?LBB1_39
 ; %bb.12:                               ; %if.then10
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #65520
 	JMP	cc_UC, ?LBB1_56
 ?LBB1_13:
@@ -366,11 +366,11 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	MOV	[R0+#76], R3
 	MOV	[R0+#88], R7
 	SHL	R7, #4
-	MOV	R4, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+8)]
+	MOV	R4, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+8)]
 	MOV	[R0+#74], R4
-	MOV	R6, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+10)]
-	MOV	R9, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+12)]
-	MOV	R8, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+14)]
+	MOV	R6, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+10)]
+	MOV	R9, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+12)]
+	MOV	R8, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+14)]
 	MOV	R4, #16358
 	MOV	[R0+#14], R4
 	MOV	R4, #11842
@@ -407,10 +407,10 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	MOV	[R0+#38], R4
 	MOV	R4, [R0+#22]
 	MOV	[R0+#36], R4
-	MOV	R6, [R7+#SOF __ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE]
-	MOV	R8, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+2)]
-	MOV	R9, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+4)]
-	MOV	R7, [R7+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+6)]
+	MOV	R6, [R7+#NOF __ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE]
+	MOV	R8, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+2)]
+	MOV	R9, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+4)]
+	MOV	R7, [R7+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal9LOG_R1_DDE+6)]
 	MOV	R4, #15662
 	MOV	[R0+#14], R4
 	MOV	R4, #62295
@@ -530,13 +530,13 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	MOV	R4, [R0+#88]
 	SHL	R4, #3
 	MOV	[R0+#88], R4
-	MOV	R1, [R4+#SOF __ZN16__llvm_libc_c1664math14log1p_internal2R1E]
+	MOV	R1, [R4+#NOF __ZN16__llvm_libc_c1664math14log1p_internal2R1E]
 	MOV	[R0+#96], R1
-	MOV	R1, [R4+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+2)]
+	MOV	R1, [R4+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+2)]
 	MOV	[R0+#82], R1
-	MOV	R1, [R4+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+4)]
+	MOV	R1, [R4+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+4)]
 	MOV	[R0+#80], R1
-	MOV	R4, [R4+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+6)]
+	MOV	R4, [R4+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal2R1E+6)]
 	MOV	[R0+#78], R4
 	MOV	R4, #16800
 	MOV	[R0+#68], R4
@@ -887,10 +887,10 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	MOV	R1, [R0+#20]
 	MOV	R2, [R0+#22]
 	MOV	R3, [R0+#88]
-	MOV	R6, [R3+#SOF __ZN16__llvm_libc_c1664math14log1p_internal4RCM1E]
-	MOV	R7, [R3+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+2)]
-	MOV	R8, [R3+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+4)]
-	MOV	R9, [R3+#SOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+6)]
+	MOV	R6, [R3+#NOF __ZN16__llvm_libc_c1664math14log1p_internal4RCM1E]
+	MOV	R7, [R3+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+2)]
+	MOV	R8, [R3+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+4)]
+	MOV	R9, [R3+#NOF (__ZN16__llvm_libc_c1664math14log1p_internal4RCM1E+6)]
 	MOV	R3, [R0+#78]
 	MOV	[R0+#6], R3
 	MOV	R3, [R0+#80]
@@ -1423,7 +1423,7 @@ __ZN16__llvm_libc_c1664math5log1pEd?F	PROC	FAR
 	JMP	cc_UC, ?LBB1_71
 ?LBB1_55:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #32760
 ?LBB1_56:
 	MOV	R6, #0
@@ -3679,14 +3679,14 @@ __ZN16__llvm_libc_c1664math14log1p_internal4RCM1E:
 	DW	0
 
 	EXTRN	_errno : WORD
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___ltdf2 : NEAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___ltdf2 : FAR
 LOG1P_NC	ENDS
 	END

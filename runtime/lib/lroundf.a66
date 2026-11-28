@@ -75,7 +75,7 @@ _lroundf?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_14
 ?LBB0_12:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	ASHR	R6, #15
 	MOV	R5, R6
 	XOR	R5, #32767
@@ -137,11 +137,11 @@ _lroundf?F	PROC	FAR
 	MOV	R6, R9
 	JMP	cc_UC, ?LBB0_8
 _lroundf?F	ENDP
-	EXTRN	___eqsf2 : NEAR
+	EXTRN	___eqsf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___fixsfsi : NEAR
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___lshrsi3 : NEAR
-	EXTRN	___addsf3 : NEAR
+	EXTRN	___fixsfsi : FAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___lshrsi3 : FAR
+	EXTRN	___addsf3 : FAR
 LROUNDF_PR	ENDS
 	END

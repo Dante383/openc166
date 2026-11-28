@@ -130,8 +130,8 @@ L_?str?2:
 	DB	32
 	DB	0
 	EXTRN	___c166_iob : WORD
-	EXTRN	_fputs : NEAR
-	EXTRN	_fputc : NEAR
-	EXTRN	_abort : NEAR
+	EXTRN	_fputs : FAR
+	EXTRN	_fputc : FAR
+	EXTRN	_abort : FAR
 ASSERT_XC	ENDS
 	END

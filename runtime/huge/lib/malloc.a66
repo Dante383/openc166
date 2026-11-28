@@ -671,7 +671,7 @@ _free_list:
 	DSB	4
 	EXTRN	___c166_heap : WORD
 	EXTRN	___c166_heap_size : WORD
-	EXTRN	_memset : NEAR
-	EXTRN	_memcpy : NEAR
+	EXTRN	_memset : FAR
+	EXTRN	_memcpy : FAR
 C166_XBSS	ENDS
 	END

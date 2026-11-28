@@ -1471,13 +1471,13 @@ __ZN16__llvm_libc_c16625common_constants_internal6LOG2_RE:
 	DW	0
 	DW	0
 	DW	16368
-	EXTRN	___nesf2 : NEAR
+	EXTRN	___nesf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___truncdfsf2 : FAR
 LOG2F_XC	ENDS
 	END

@@ -182,7 +182,7 @@ _ceil?F	PROC	FAR
 	MOV	R1, R9
 	JMP	cc_UC, ?LBB0_4
 _ceil?F	ENDP
-	EXTRN	___eqdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
+	EXTRN	___eqdf2 : FAR
+	EXTRN	___adddf3 : FAR
 CEIL_PR	ENDS
 	END

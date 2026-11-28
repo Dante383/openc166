@@ -1225,14 +1225,14 @@ __ZN16__llvm_libc_c1664math4atanEd?F	PROC	FAR
 	MOV	R2, [R0+#22]
 	MOV	R12, [R0+#46]
 	SHL	R12, #4
-	MOV	R6, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+8)]
-	MOV	R7, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+10)]
-	MOV	R8, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+12)]
-	MOV	R9, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+14)]
-	MOV	R3, [R12+#SOF __ZN16__llvm_libc_c16613atan_internal6ATAN_IE]
-	MOV	R10, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+2)]
-	MOV	R11, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+4)]
-	MOV	R12, [R12+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+6)]
+	MOV	R6, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+8)]
+	MOV	R7, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+10)]
+	MOV	R8, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+12)]
+	MOV	R9, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+14)]
+	MOV	R3, [R12+#NOF __ZN16__llvm_libc_c16613atan_internal6ATAN_IE]
+	MOV	R10, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+2)]
+	MOV	R11, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+4)]
+	MOV	R12, [R12+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+6)]
 	MOV	[R0+#6], R12
 	MOV	[R0+#4], R11
 	MOV	[R0+#2], R10
@@ -2095,10 +2095,10 @@ __ZN16__llvm_libc_c1664math4atanEd?F	PROC	FAR
 	MOV	R2, [R0+#22]
 	MOV	R6, [R0+#46]
 	SHL	R6, #4
-	MOV	R3, [R6+#SOF __ZN16__llvm_libc_c16613atan_internal6ATAN_IE]
-	MOV	R10, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+2)]
-	MOV	R11, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+4)]
-	MOV	R12, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+6)]
+	MOV	R3, [R6+#NOF __ZN16__llvm_libc_c16613atan_internal6ATAN_IE]
+	MOV	R10, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+2)]
+	MOV	R11, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+4)]
+	MOV	R12, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+6)]
 	MOV	[R0+#6], R12
 	MOV	[R0+#4], R11
 	MOV	[R0+#2], R10
@@ -2133,10 +2133,10 @@ __ZN16__llvm_libc_c1664math4atanEd?F	PROC	FAR
 	MOV	[R0+#68], R4
 	MOV	R4, [R0+#22]
 	MOV	[R0+#66], R4
-	MOV	R4, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+8)]
-	MOV	R5, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+10)]
-	MOV	R1, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+12)]
-	MOV	R2, [R6+#SOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+14)]
+	MOV	R4, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+8)]
+	MOV	R5, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+10)]
+	MOV	R1, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+12)]
+	MOV	R2, [R6+#NOF (__ZN16__llvm_libc_c16613atan_internal6ATAN_IE+14)]
 	MOV	R3, #49145
 	MOV	[R0+#14], R3
 	MOV	R3, #8699
@@ -3505,12 +3505,12 @@ __ZN16__llvm_libc_c16613atan_internal6ATAN_IE:
 	DW	8699
 	DW	16361
 
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___fixunsdfsi : NEAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___fixunsdfsi : FAR
 ATAN_NC	ENDS
 	END

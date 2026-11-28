@@ -267,6 +267,6 @@ _fmax?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_51
 	JMP	cc_UC, ?LBB0_52
 _fmax?F	ENDP
-	EXTRN	___gtdf2 : NEAR
+	EXTRN	___gtdf2 : FAR
 FMAX_PR	ENDS
 	END

@@ -689,10 +689,10 @@ __ZNK16__llvm_libc_c1666fputil11DyadicFloatILm32EE7fast_asIfLb1EvEET_v?F	PROC	FA
 	MOV	R9, [R0+]
 	RETS
 __ZNK16__llvm_libc_c1666fputil11DyadicFloatILm32EE7fast_asIfLb1EvEET_v?F	ENDP
-	EXTRN	___ashlsi3 : NEAR
-	EXTRN	___mulsf3 : NEAR
+	EXTRN	___ashlsi3 : FAR
+	EXTRN	___mulsf3 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___floatunsisf : NEAR
-	EXTRN	___addsf3 : NEAR
+	EXTRN	___floatunsisf : FAR
+	EXTRN	___addsf3 : FAR
 SQRTF_PR	ENDS
 	END

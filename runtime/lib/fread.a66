@@ -58,6 +58,6 @@ _fread?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 _fread?F	ENDP
-	EXTRN	_fgetc : NEAR
+	EXTRN	_fgetc : FAR
 FREAD_PR	ENDS
 	END

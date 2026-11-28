@@ -191,7 +191,7 @@ __ZN16__llvm_libc_c1664math6log10fEf?F	PROC	FAR
 	JMP	cc_NE, ?LBB1_41
 ; %bb.34:                               ; %if.then22
 	MOV	R4, #34
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #65408
 	JMP	cc_UC, ?LBB1_55
 ?LBB1_35:
@@ -251,7 +251,7 @@ __ZN16__llvm_libc_c1664math6log10fEf?F	PROC	FAR
 	JB	R5.0, ?LBB1_46
 ?LBB1_51:
 	MOV	R4, #33
-	MOV	SOF _errno, R4
+	MOV	NOF _errno, R4
 	MOV	R9, #32704
 ?LBB1_52:
 	MOV	R8, #0
@@ -288,9 +288,9 @@ __ZN16__llvm_libc_c1664math6log10fEf?F	PROC	FAR
 	MOV	R6, [R0+#10]
 	MOV	R4, R9
 	SHL	R4, #2
-	MOV	R5, [R4+#SOF (__ZN16__llvm_libc_c16625common_constants_internal1RE+2)]
+	MOV	R5, [R4+#NOF (__ZN16__llvm_libc_c16625common_constants_internal1RE+2)]
 	MOV	[R0+#2], R5
-	MOV	R4, [R4+#SOF __ZN16__llvm_libc_c16625common_constants_internal1RE]
+	MOV	R4, [R4+#NOF __ZN16__llvm_libc_c16625common_constants_internal1RE]
 	MOV	[R0], R4
 	CALLS	SEG ___extendsfdf2, SOF ___extendsfdf2
 	MOV	R4, [R0+#4]
@@ -428,11 +428,11 @@ __ZN16__llvm_libc_c1664math6log10fEf?F	PROC	FAR
 	MOV	[R0+#32], R4
 	MOV	R4, [R0+#50]
 	SHL	R4, #3
-	MOV	R5, [R4+#SOF L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R]
+	MOV	R5, [R4+#NOF L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R]
 	MOV	[R0+#50], R5
-	MOV	R8, [R4+#SOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+2)]
-	MOV	R7, [R4+#SOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+4)]
-	MOV	R9, [R4+#SOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+6)]
+	MOV	R8, [R4+#NOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+2)]
+	MOV	R7, [R4+#NOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+4)]
+	MOV	R9, [R4+#NOF (L___const?_ZN16__llvm_libc_c1664math6log10fEf?LOG10_R+6)]
 	MOV	R4, #16347
 	MOV	[R0+#14], R4
 	MOV	[R0+#12], R6
@@ -1378,13 +1378,13 @@ __ZN16__llvm_libc_c16625common_constants_internal1RE:
 	DW	0
 	DW	16128
 
-	EXTRN	___nesf2 : NEAR
+	EXTRN	___nesf2 : FAR
 	EXTRN	_errno : WORD
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___floatsidf : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___floatsidf : FAR
+	EXTRN	___truncdfsf2 : FAR
 LOG10F_NC	ENDS
 	END

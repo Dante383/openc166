@@ -2308,21 +2308,21 @@ __ZN16__llvm_libc_c16624inv_trigf_utils_internal11ATAN_COEFFSE:
 	DW	26183
 	DW	43450
 	DW	48975
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___addsf3 : NEAR
-	EXTRN	___mulsf3 : NEAR
-	EXTRN	___gesf2 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___subsf3 : NEAR
-	EXTRN	___gtsf2 : NEAR
-	EXTRN	___ltsf2 : NEAR
-	EXTRN	___fixsfsi : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___addsf3 : FAR
+	EXTRN	___mulsf3 : FAR
+	EXTRN	___gesf2 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___subsf3 : FAR
+	EXTRN	___gtsf2 : FAR
+	EXTRN	___ltsf2 : FAR
+	EXTRN	___fixsfsi : FAR
+	EXTRN	___truncdfsf2 : FAR
 ATANF_HC	ENDS
 	END

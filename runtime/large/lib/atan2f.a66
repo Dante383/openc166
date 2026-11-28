@@ -1265,16 +1265,16 @@ __ZN16__llvm_libc_c16624inv_trigf_utils_internal14ATAN_K_OVER_16E:
 	DW	21572
 	DW	8699
 	DW	16361
-	EXTRN	___extendsfdf2 : NEAR
-	EXTRN	___nesf2 : NEAR
-	EXTRN	___divdf3 : NEAR
-	EXTRN	___muldf3 : NEAR
-	EXTRN	___ltdf2 : NEAR
-	EXTRN	___adddf3 : NEAR
-	EXTRN	___subdf3 : NEAR
-	EXTRN	___gtdf2 : NEAR
-	EXTRN	___eqsf2 : NEAR
-	EXTRN	___fixdfsi : NEAR
-	EXTRN	___truncdfsf2 : NEAR
+	EXTRN	___extendsfdf2 : FAR
+	EXTRN	___nesf2 : FAR
+	EXTRN	___divdf3 : FAR
+	EXTRN	___muldf3 : FAR
+	EXTRN	___ltdf2 : FAR
+	EXTRN	___adddf3 : FAR
+	EXTRN	___subdf3 : FAR
+	EXTRN	___gtdf2 : FAR
+	EXTRN	___eqsf2 : FAR
+	EXTRN	___fixdfsi : FAR
+	EXTRN	___truncdfsf2 : FAR
 ATAN2F_HC	ENDS
 	END
