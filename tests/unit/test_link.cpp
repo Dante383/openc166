@@ -108,6 +108,24 @@ TEST_CASE("unresolved, duplicate and slightly different externals") {
     CHECK_FALSE(r.ok());
 }
 
+TEST_CASE("an unresolved external that differs only in case says so") {
+    // A C module ($CASE) and an assembly module without it: the assembly's
+    // names reach the linker in upper case, the C module's as written.
+    auto r = link({{"c.a66",
+                    "$MOD167\n$CASE\nEXTERN Sat_Add:NEAR\nPUBLIC c_func\n"
+                    "P SECTION CODE\nc_func PROC NEAR\n CALL Sat_Add\n RET\nc_func ENDP\nP ENDS\nEND\n"},
+                   {"asm.a66",
+                    "$MOD167\nEXTERN c_func:NEAR\nPUBLIC Sat_Add\n"
+                    "Q SECTION CODE\nSat_Add PROC NEAR\n CALL c_func\n RET\nSat_Add ENDP\nQ ENDS\nEND\n"}});
+    CHECK(diags(r) == "c.a66:3:OC15E asm.a66:2:OC15E");
+    REQUIRE(r.diagnostics.size() == 2);
+    CHECK(r.diagnostics[0].message.find("asm.a66 makes 'SAT_ADD' public: a module without $CASE") !=
+          std::string::npos);
+    CHECK(r.diagnostics[0].message.find("spell it 'SAT_ADD' here") != std::string::npos);
+    CHECK(r.diagnostics[1].message.find("c.a66 makes 'c_func' public with $CASE") != std::string::npos);
+    CHECK(r.diagnostics[1].message.find("looks for 'C_FUNC'") != std::string::npos);
+}
+
 TEST_CASE("an external value that does not fit is reported at each use") {
     auto r = link({{"main.a66",
                     "$MOD167\n"

@@ -907,6 +907,11 @@ differs, L15 in L166).
 - **Unresolved names:** an `EXTERN` name that no other module exports is
   error OC15, even if it is never used, as L166 gives L127. A name that two
   modules export is error OC16 in the second (L104).
+  As in L166, a module without `$CASE` gives the linker its names in upper
+  case and one with `$CASE` (C compiler output, say) as written, so
+  `Sat_Add` in a C module does not find `Sat_Add` in an assembly module:
+  that one is `SAT_ADD`. When the only difference is case, OC15 says
+  which module exports the name and how to spell it.
 - **Wrong types:** a `NEAR` or `FAR` external that is not a code label in
   its own module gives warning OC17 (L21). A value that does not suit the
   type gives error OC18 at each place it is used, as L166 gives L121 at

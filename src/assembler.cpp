@@ -3699,6 +3699,22 @@ void Assembler::declare_extern(const Token& name, const std::string& type, int d
                           ? "there is no section '" + what + "' (BIT sections and register banks have none)"
                           : "no section has class '" + what + "' (BIT sections and register banks count in none)";
             }
+        // The same name in another case: a module without $CASE has its
+        // names in upper case for the linker, one with $CASE as written,
+        // so they only meet if they are spelled the same (as in L166).
+        for (const auto& [k2, def] : link_.publics) {
+            if (def.module == module_ || def.module == kLinkerModule || upper(k2) != u) continue;
+            const std::string where = def.module < link_.modules.size() ? link_.modules[def.module] : "another module";
+            if (k2 == u)
+                why = where + " makes '" + k2 + "' public: a module without $CASE gives the linker its names in "
+                              "upper case, so spell it '" + k2 + "' here";
+            else if (case_)
+                why = where + " makes '" + k2 + "' public, which differs in case (both modules use $CASE)";
+            else
+                why = where + " makes '" + k2 + "' public with $CASE, and this module, without $CASE, looks for '" +
+                      u + "': use $CASE here or make the name upper case there";
+            break;
+        }
         rep.error("OC15", "unresolved external " + who + ": " + why, name.column);
     }
 

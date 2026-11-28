@@ -165,6 +165,13 @@ including the stock 5WY19 firmware:
   system stack holds only return addresses;
 - C names get a leading underscore (`main` is `_main`).
 
+C modules use `$CASE`, so their names reach the linker as written. An
+assembly module without `$CASE` gives the linker its names in upper case,
+as Keil's L166 does: to call its `Sat_Add` from C, declare it under that
+name (`int sat_add(int, int) __asm__("SAT_ADD");`), and a C function that
+such a module calls needs an upper-case name too (`__asm__("C_FUNC")`).
+When a name differs only in case, error OC15 says so.
+
 Stack arguments are laid out first argument lowest, starting at R0 on
 entry, as the stock 5WY19 firmware's callees read them (its non-leaf
 functions push R15..R12 at entry, putting the register arguments in the
