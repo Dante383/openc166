@@ -88,6 +88,12 @@ Early development (version 0.x). What works today:
   carries its source lines into the debug information and the ELF's DWARF
   line table.
 - A Python package and a C API, for tools that assemble code themselves.
+- **A C compiler**: Clang with a C166 back end, in
+  [openc166-llvm](https://github.com/Dante383/openc166-llvm), with the
+  TASKING C166 Classic dialect and calling convention. openc166 assembles
+  and links its output with the startup code, runtime and C library in
+  `runtime/`. See
+  [docs/c-compiler.md](https://github.com/Dante383/openc166/blob/main/docs/c-compiler.md).
 
 Not done yet:
 

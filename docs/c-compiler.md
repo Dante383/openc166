@@ -1,7 +1,8 @@
 # The C compiler
 
 openc166 has a C compiler: Clang with a C166 back end, in the
-`openc166-llvm` fork of llvm-project (branch `c166`). It compiles C99 with
+[openc166-llvm](https://github.com/Dante383/openc166-llvm) fork of
+llvm-project (branch `c166`). It compiles C99 with
 the TASKING C166/ST10 Classic extensions to A166 assembly, which openc166
 assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
