@@ -22,17 +22,18 @@ include path.
   (`_write`, say) gets its own. Not linked with `-nodefaultlibs` or
   `-nostdlib`.
 - One runtime per memory model, which the driver picks by `-mabi=`: `lib/`
-  for small, `tiny/lib/`, `medium/lib/` and `large/lib/` for the others
-  (calls, returns and pointer sizes differ, so they do not mix). `tiny/`
-  and `medium/` have their own `cstart.a66` (near `__cstart`, `CALL main`);
+  for small, `tiny/lib/`, `medium/lib/`, `large/lib/` and `huge/lib/` for
+  the others (calls, returns and pointer sizes differ, so they do not
+  mix). `tiny/` and `medium/` have their own `cstart.a66` (near
+  `__cstart`, `CALL main`), and so does `huge/` (variables over 64 KB);
   large uses `cstart.a66`, as small does.
 - `src/*.c`: the compiler helpers' source; `libc/`: the C library's;
   `include/`: its headers. `build.py` compiles them into each model's
   `lib/` with the C166 clang. The results are committed, so using the
   compiler does not need that step. `lib/icall.a66` (calls through far
   function pointers) and `libc/setjmp.a66` are hand-written; `build.py`
-  copies the first to `large/lib/` and puts each model's controls in front
-  of the second.
+  copies the first to `large/lib/` and `huge/lib/` and puts each model's
+  controls in front of the second.
 
 ## The C library
 

@@ -1,0 +1,322 @@
+; Compiled from LLVM compiler-rt, lib/builtins/comparesf2.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+COMPARESF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___lesf2
+___lesf2:
+___lesf2?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R2, [R0]
+	MOV	R1, [R0+#2]
+	MOV	R11, R1
+	AND	R11, #32767
+	MOV	R5, #0
+	MOV	R4, #1
+	MOV	R3, R4
+	CMP	R2, #0
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R3, R5
+?LBB0_2:
+	MOV	R10, R4
+	CMP	R11, #32640
+	JMP	cc_ULE, ?LBB0_6
+; %bb.3:                                ; %entry
+	CMP	R11, #32640
+	JMP	cc_NE, ?LBB0_7
+?LBB0_4:
+	JNB	R3.0, ?LBB0_8
+?LBB0_5:
+	RETS
+?LBB0_6:
+	MOV	R10, R5
+	CMP	R11, #32640
+	JMP	cc_EQ, ?LBB0_4
+?LBB0_7:
+	MOV	R3, R10
+	JB	R3.0, ?LBB0_5
+?LBB0_8:
+	MOV	R10, [R0+#4]
+	MOV	R3, [R0+#6]
+	MOV	R12, R3
+	AND	R12, #32767
+	MOV	R15, #0
+	MOV	R14, #1
+	MOV	R13, R14
+	CMP	R10, #0
+	JMP	cc_EQ, ?LBB0_12
+; %bb.9:                                ; %entry
+	CMP	R12, #32640
+	JMP	cc_ULE, ?LBB0_13
+?LBB0_10:
+	CMP	R12, #32640
+	JMP	cc_NE, ?LBB0_14
+?LBB0_11:
+	JB	R13.0, ?LBB0_5
+	JMP	cc_UC, ?LBB0_15
+?LBB0_12:
+	MOV	R13, R15
+	CMP	R12, #32640
+	JMP	cc_UGT, ?LBB0_10
+?LBB0_13:
+	MOV	R14, R15
+	CMP	R12, #32640
+	JMP	cc_EQ, ?LBB0_11
+?LBB0_14:
+	MOV	R13, R14
+	JB	R13.0, ?LBB0_5
+?LBB0_15:
+	MOV	R4, R10
+	OR	R4, R2
+	OR	R12, R11
+	OR	R12, R4
+	JMP	cc_EQ, ?LBB0_26
+; %bb.16:                               ; %if.end6.i
+	MOV	R4, R3
+	MOV	R5, #0
+	AND	R4, R1
+	JB	R4.15, ?LBB0_27
+; %bb.17:                               ; %if.then9.i
+	MOV	R4, #1
+	MOV	R11, R4
+	CMP	R2, R10
+	JMP	cc_ULT, ?LBB0_19
+; %bb.18:                               ; %if.then9.i
+	MOV	R11, R5
+?LBB0_19:
+	CMP	R1, R3
+	JMP	cc_SLT, ?LBB0_21
+?LBB0_20:
+	MOV	R4, R5
+?LBB0_21:
+	CMP	R1, R3
+	JMP	cc_EQ, ?LBB0_23
+; %bb.22:                               ; %if.else15.i
+	MOV	R11, R4
+?LBB0_23:
+	MOV	R4, #65535
+	MOV	R5, R4
+	JB	R11.0, ?LBB0_5
+; %bb.24:                               ; %if.else18.i
+	XOR	R2, R10
+	XOR	R1, R3
+	OR	R1, R2
+	MOV	R5, #0
+	MOV	R4, #1
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_5
+; %bb.25:                               ; %if.else18.i
+	MOV	R4, R5
+	RETS
+?LBB0_26:
+	MOV	R4, #0
+	MOV	R5, R4
+	RETS
+?LBB0_27:
+	MOV	R4, #1
+	MOV	R11, R4
+	CMP	R2, R10
+	JMP	cc_UGT, ?LBB0_29
+; %bb.28:                               ; %if.else15.i
+	MOV	R11, R5
+?LBB0_29:
+	CMP	R1, R3
+	JMP	cc_SLE, ?LBB0_20
+	JMP	cc_UC, ?LBB0_21
+___lesf2?F	ENDP
+	PUBLIC	___gesf2
+___gesf2:
+___gesf2?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R2, [R0]
+	MOV	R1, [R0+#2]
+	MOV	R11, R1
+	AND	R11, #32767
+	MOV	R3, #0
+	MOV	R4, #1
+	MOV	R5, R4
+	CMP	R2, #0
+	JMP	cc_EQ, ?LBB1_21
+; %bb.1:                                ; %entry
+	CMP	R11, #32640
+	JMP	cc_ULE, ?LBB1_22
+?LBB1_2:
+	CMP	R11, #32640
+	JMP	cc_EQ, ?LBB1_4
+?LBB1_3:
+	MOV	R5, R4
+?LBB1_4:
+	MOV	R4, #65535
+	JB	R5.0, ?LBB1_26
+; %bb.5:                                ; %entry
+	MOV	R10, [R0+#4]
+	MOV	R3, [R0+#6]
+	MOV	R12, R3
+	AND	R12, #32767
+	MOV	R14, #0
+	MOV	R5, #1
+	MOV	R13, R5
+	CMP	R10, #0
+	JMP	cc_EQ, ?LBB1_23
+; %bb.6:                                ; %entry
+	CMP	R12, #32640
+	JMP	cc_ULE, ?LBB1_24
+?LBB1_7:
+	CMP	R12, #32640
+	JMP	cc_EQ, ?LBB1_9
+?LBB1_8:
+	MOV	R13, R5
+?LBB1_9:
+	MOV	R5, R4
+	JB	R13.0, ?LBB1_27
+; %bb.10:                               ; %if.end.i
+	MOV	R4, R10
+	OR	R4, R2
+	OR	R12, R11
+	OR	R12, R4
+	JMP	cc_EQ, ?LBB1_25
+; %bb.11:                               ; %if.end6.i
+	MOV	R4, R3
+	MOV	R5, #0
+	AND	R4, R1
+	JB	R4.15, ?LBB1_28
+; %bb.12:                               ; %if.then9.i
+	MOV	R4, #1
+	MOV	R11, R4
+	CMP	R2, R10
+	JMP	cc_ULT, ?LBB1_14
+; %bb.13:                               ; %if.then9.i
+	MOV	R11, R5
+?LBB1_14:
+	CMP	R1, R3
+	JMP	cc_SLT, ?LBB1_16
+?LBB1_15:
+	MOV	R4, R5
+?LBB1_16:
+	CMP	R1, R3
+	JMP	cc_EQ, ?LBB1_18
+; %bb.17:                               ; %if.else15.i
+	MOV	R11, R4
+?LBB1_18:
+	MOV	R4, #65535
+	MOV	R5, R4
+	JB	R11.0, ?LBB1_27
+; %bb.19:                               ; %if.else18.i
+	XOR	R2, R10
+	XOR	R1, R3
+	OR	R1, R2
+	MOV	R5, #0
+	MOV	R4, #1
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB1_27
+; %bb.20:                               ; %if.else18.i
+	MOV	R4, R5
+	RETS
+?LBB1_21:
+	MOV	R5, R3
+	CMP	R11, #32640
+	JMP	cc_UGT, ?LBB1_2
+?LBB1_22:
+	MOV	R4, R3
+	CMP	R11, #32640
+	JMP	cc_NE, ?LBB1_3
+	JMP	cc_UC, ?LBB1_4
+?LBB1_23:
+	MOV	R13, R14
+	CMP	R12, #32640
+	JMP	cc_UGT, ?LBB1_7
+?LBB1_24:
+	MOV	R5, R14
+	CMP	R12, #32640
+	JMP	cc_NE, ?LBB1_8
+	JMP	cc_UC, ?LBB1_9
+?LBB1_25:
+	MOV	R4, #0
+?LBB1_26:
+	MOV	R5, R4
+?LBB1_27:
+	RETS
+?LBB1_28:
+	MOV	R4, #1
+	MOV	R11, R4
+	CMP	R2, R10
+	JMP	cc_UGT, ?LBB1_30
+; %bb.29:                               ; %if.else15.i
+	MOV	R11, R5
+?LBB1_30:
+	CMP	R1, R3
+	JMP	cc_SLE, ?LBB1_15
+	JMP	cc_UC, ?LBB1_16
+___gesf2?F	ENDP
+	PUBLIC	___unordsf2
+___unordsf2:
+___unordsf2?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R2, [R0]
+	MOV	R3, [R0+#2]
+	AND	R3, #32767
+	MOV	R5, #0
+	MOV	R1, #1
+	MOV	R4, R1
+	CMP	R2, #0
+	JMP	cc_NE, ?LBB2_2
+; %bb.1:                                ; %entry
+	MOV	R4, R5
+?LBB2_2:
+	MOV	R11, R1
+	CMP	R3, #32640
+	JMP	cc_UGT, ?LBB2_4
+; %bb.3:                                ; %entry
+	MOV	R11, R5
+?LBB2_4:
+	MOV	R2, [R0+#6]
+	MOV	R10, [R0+#4]
+	CMP	R3, #32640
+	JMP	cc_EQ, ?LBB2_6
+; %bb.5:                                ; %entry
+	MOV	R4, R11
+?LBB2_6:
+	AND	R2, #32767
+	MOV	R3, R1
+	CMP	R10, #0
+	JMP	cc_EQ, ?LBB2_11
+; %bb.7:                                ; %entry
+	CMP	R2, #32640
+	JMP	cc_ULE, ?LBB2_12
+?LBB2_8:
+	CMP	R2, #32640
+	JMP	cc_EQ, ?LBB2_10
+?LBB2_9:
+	MOV	R3, R1
+?LBB2_10:
+	OR	R4, R3
+	RETS
+?LBB2_11:
+	MOV	R3, R5
+	CMP	R2, #32640
+	JMP	cc_UGT, ?LBB2_8
+?LBB2_12:
+	MOV	R1, R5
+	CMP	R2, #32640
+	JMP	cc_NE, ?LBB2_9
+	JMP	cc_UC, ?LBB2_10
+___unordsf2?F	ENDP
+	PUBLIC	___cmpsf2
+___cmpsf2	EQU	___lesf2
+	PUBLIC	___eqsf2
+___eqsf2	EQU	___lesf2
+	PUBLIC	___ltsf2
+___ltsf2	EQU	___lesf2
+	PUBLIC	___nesf2
+___nesf2	EQU	___lesf2
+	PUBLIC	___gtsf2
+___gtsf2	EQU	___gesf2
+COMPARESF2_PR	ENDS
+	END

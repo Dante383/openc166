@@ -1,0 +1,65 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+PERROR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_perror
+_perror:
+_perror?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R4, R12
+	OR	R4, R13
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %land.lhs.true
+	EXTS	R13, #1
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	AND	R4, #255
+	JMP	cc_EQ, ?LBB0_3
+; %bb.2:                                ; %if.then
+	MOV	R6, #SOF (___c166_iob+12)
+	MOV	R7, #SEG (___c166_iob+12)
+	MOV	R14, R6
+	MOV	R15, R7
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, #SOF L_?str
+	MOV	R13, #SEG L_?str
+	MOV	R14, R6
+	MOV	R15, R7
+	CALLS	SEG _fputs, SOF _fputs
+?LBB0_3:
+	EXTS	#SEG _errno, #1
+	MOV	R12, SOF _errno
+	CALLS	SEG _strerror, SOF _strerror
+	MOV	R6, #SOF (___c166_iob+12)
+	MOV	R7, #SEG (___c166_iob+12)
+	MOV	R12, R4
+	MOV	R13, R5
+	MOV	R14, R6
+	MOV	R15, R7
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, #10
+	MOV	R13, R6
+	MOV	R14, R7
+	CALLS	SEG _fputc, SOF _fputc
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+_perror?F	ENDP
+PERROR_PR	ENDS
+PERROR_XC	SECTION	XCONST WORD PUBLIC 'CHUGEROM'
+L_?str:
+	DB	58
+	DB	32
+	DB	0
+	EXTRN	___c166_iob : WORD
+	EXTRN	_fputs : NEAR
+	EXTRN	_errno : WORD
+	EXTRN	_strerror : NEAR
+	EXTRN	_fputc : NEAR
+PERROR_XC	ENDS
+	END

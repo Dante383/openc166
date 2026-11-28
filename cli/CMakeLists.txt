@@ -11,7 +11,7 @@ else()
     # to bin/. Startup code and library modules per memory model, headers.
     install(FILES ${PROJECT_SOURCE_DIR}/runtime/cstart.a66
             DESTINATION share/openc166/runtime)
-    foreach(dir lib tiny medium large)
+    foreach(dir lib tiny medium large huge)
         install(DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/${dir}/
                 DESTINATION share/openc166/runtime/${dir}
                 FILES_MATCHING PATTERN "*.a66")

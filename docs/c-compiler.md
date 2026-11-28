@@ -7,7 +7,7 @@ assembles and links with the C runtime in [runtime/](../runtime/README.md).
 The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
-Status: TASKING's tiny, small, medium and large memory models, integers up
+Status: TASKING's tiny, small, medium, large and huge memory models, integers up
 to 64 bits, `float` and `double`, structs by value, TASKING keywords and
 intrinsics for payloads and drivers, and a C library (`stdio.h`,
 `string.h`, `stdlib.h`, `math.h`, ...). Checked by running compiled C in the
@@ -79,6 +79,7 @@ In short:
 | `tiny` | near: first 64 KB, `CALL`/`RET` | near, first 64 KB | 16 bits |
 | `medium` | near: one segment, `CALL`/`RET` | far: anywhere in 16 MB | 16 bits |
 | `large` | far, as in small | far, as in medium | 32 bits |
+| `huge` | far, as in small | far, objects over 64 KB | 32 bits |
 
 In the small model every function is far, as in TASKING, except:
 
@@ -117,7 +118,17 @@ In the medium and large models data is far:
 
 Medium's functions are near, all in one segment, and its function pointers
 are 16 bits (`CALLI`), so code that calls through them has no
-`__c166_icall`. The huge model is not done.
+`__c166_icall`.
+
+The huge model is the large one with objects of any size, as in TASKING:
+`size_t` is 32 bits, unqualified and `_huge` variables and constants go
+into `XDATA` and `XCONST` sections (still classes `CHUGE` and
+`CHUGEROM`), which may be over 64 KB and cross segment boundaries, and
+`__cstart` (`runtime/huge/cstart.a66`) fills and clears them with 32-bit
+lengths. The second word of a 32-bit access, and the second byte of an
+unaligned one, carries into the segment. In the other models `_huge` and
+unqualified far data share `HDATA` sections, at most 64 KB in all.
+`_shuge` is `_huge`.
 
 ## Memory map
 
@@ -221,7 +232,6 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 
 ## Not yet
 
-- The huge memory model.
 - `_near` function pointers (all function pointers are far in the small
   and large models, near in tiny and medium).
 - Structs returned by value work, but through a hidden pointer argument,

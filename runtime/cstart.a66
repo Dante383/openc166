@@ -1,6 +1,7 @@
 ; C startup code for openc166's C166 compiler, small and large memory models
 ; (TASKING's: far code, and near or far data). runtime/tiny/cstart.a66 is the
-; tiny model's, runtime/medium/cstart.a66 the medium model's.
+; tiny model's, runtime/medium/cstart.a66 the medium model's and
+; runtime/huge/cstart.a66 the huge model's.
 ;
 ; __cstart sets up the user stack, copies the initial values of initialised
 ; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the

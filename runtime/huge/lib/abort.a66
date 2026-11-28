@@ -1,0 +1,23 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+ABORT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_abort
+_abort:
+_abort?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R12, #1
+	CALLS	SEG __exit, SOF __exit
+_abort?F	ENDP
+	PUBLIC	__Exit
+__Exit:
+__Exit?F	PROC	FAR
+; %bb.0:                                ; %entry
+	CALLS	SEG __exit, SOF __exit
+__Exit?F	ENDP
+	EXTRN	__exit : NEAR
+ABORT_PR	ENDS
+	END

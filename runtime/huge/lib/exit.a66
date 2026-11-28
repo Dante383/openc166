@@ -1,0 +1,84 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+EXIT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_atexit
+_atexit:
+_atexit?F	PROC	FAR
+; %bb.0:                                ; %entry
+	EXTS	#SEG _count, #1
+	MOV	R5, SOF _count
+	MOV	R4, #65535
+	CMP	R5, #8
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.end
+	MOV	R4, R5
+	ADD	R4, #1
+	EXTS	#SEG _count, #1
+	MOV	SOF _count, R4
+	MOV	R4, R5
+	SHR	R4, #14
+	SHL	R5, #2
+	MOV	R1, #SEG _handlers
+	MOV	R2, #SOF _handlers
+	ADD	R5, R2
+	ADDC	R4, R1
+	EXTS	R4, #1
+	MOV	[R5], R12
+	ADD	R5, #2
+	ADDC	R4, #0
+	EXTS	R4, #1
+	MOV	[R5], R13
+	MOV	R4, #0
+?LBB0_2:
+	RETS
+_atexit?F	ENDP
+	PUBLIC	_exit
+_exit:
+_exit?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R6, R12
+?LBB1_1:
+	EXTS	#SEG _count, #1
+	MOV	R5, SOF _count
+	CMP	R5, #0
+	JMP	cc_EQ, ?LBB1_3
+; %bb.2:                                ; %while.body
+	SUB	R5, #1
+	EXTS	#SEG _count, #1
+	MOV	SOF _count, R5
+	MOV	R1, R5
+	SHR	R1, #14
+	SHL	R5, #2
+	MOV	R4, #SEG _handlers
+	MOV	R2, #SOF _handlers
+	ADD	R5, R2
+	ADDC	R1, R4
+	EXTS	R1, #1
+	MOV	R4, [R5]
+	ADD	R5, #2
+	ADDC	R1, #0
+	EXTS	R1, #1
+	MOV	R5, [R5]
+	CALLS	SEG ___c166_icall, SOF ___c166_icall
+	JMP	cc_UC, ?LBB1_1
+?LBB1_3:
+	MOV	R12, R6
+	CALLS	SEG __exit, SOF __exit
+_exit?F	ENDP
+EXIT_PR	ENDS
+C166_XBSS	SECTION	XDATA WORD PUBLIC 'CHUGE'
+	EVEN
+_count:
+	DSB	2
+	EVEN
+_handlers:
+	DSB	32
+	EXTRN	___c166_icall : NEAR
+	EXTRN	__exit : NEAR
+C166_XBSS	ENDS
+	END

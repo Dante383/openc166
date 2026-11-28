@@ -1,0 +1,55 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRCAT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strcat
+_strcat:
+_strcat?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R3, R4
+	MOV	R10, R5
+?LBB0_1:
+	MOV	R2, R10
+	MOV	R1, R3
+	EXTS	R2, #1
+	MOVB	RL6, [R1]
+	MOVBZ	R6, RL6
+	AND	R6, #255
+	ADD	R3, #1
+	ADDC	R10, #0
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB0_1
+; %bb.2:                                ; %while.cond1.preheader
+	MOV	R3, R14
+	MOV	R10, R15
+	MOV	R11, R1
+	MOV	R12, R2
+?LBB0_3:
+	ADD	R3, #1
+	ADDC	R10, #0
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	ADD	R11, #1
+	ADDC	R12, #0
+	EXTS	R2, #1
+	MOVB	[R1], RL6
+	AND	R6, #255
+	MOV	R14, R3
+	MOV	R15, R10
+	MOV	R1, R11
+	MOV	R2, R12
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB0_3
+; %bb.4:                                ; %while.end6
+	MOV	R6, [R0+]
+	RETS
+_strcat?F	ENDP
+STRCAT_PR	ENDS
+	END

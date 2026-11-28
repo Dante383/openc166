@@ -1,0 +1,677 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MALLOC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_malloc
+_malloc:
+_malloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	EXTS	#SEG _ready, #1
+	MOVBZ	R4, SOF _ready
+	JB	R4.0, ?LBB0_2
+; %bb.1:                                ; %if.then
+	MOV	R4, #SEG ___c166_heap
+	EXTS	#SEG (_free_list+2), #1
+	MOV	SOF (_free_list+2), R4
+	MOV	R4, #SOF ___c166_heap
+	EXTS	#SEG _free_list, #1
+	MOV	SOF _free_list, R4
+	EXTS	#SEG (___c166_heap_size+2), #1
+	MOV	R4, SOF (___c166_heap_size+2)
+	EXTS	#SEG ___c166_heap_size, #1
+	MOV	R5, SOF ___c166_heap_size
+	AND	R5, #65534
+	EXTS	#SEG (___c166_heap+2), #1
+	MOV	SOF (___c166_heap+2), R4
+	EXTS	#SEG ___c166_heap, #1
+	MOV	SOF ___c166_heap, R5
+	MOV	R4, #0
+	EXTS	#SEG (___c166_heap+6), #1
+	MOV	SOF (___c166_heap+6), R4
+	EXTS	#SEG (___c166_heap+4), #1
+	MOV	SOF (___c166_heap+4), R4
+	MOV	R4, #1
+	EXTS	#SEG _ready, #1
+	MOVB	SOF _ready, RL4
+?LBB0_2:
+	MOV	R4, #0
+	MOV	R1, #1
+	CMP	R12, #65530
+	JMP	cc_UGT, ?LBB0_4
+; %bb.3:                                ; %if.end
+	MOV	R1, R4
+?LBB0_4:
+	CMP	R13, #65535
+	JMP	cc_EQ, ?LBB0_6
+; %bb.5:                                ; %if.end
+	MOV	R1, R4
+?LBB0_6:
+	MOV	R5, R4
+	JNB	R1.0, ?LBB0_7
+	JMP	cc_UC, ?LBB0_42
+?LBB0_7:
+	MOV	R4, #0
+	MOV	R5, #1
+	CMP	R12, #3
+	JMP	cc_ULT, ?LBB0_9
+; %bb.8:                                ; %if.end2
+	MOV	R5, R4
+?LBB0_9:
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB0_11
+; %bb.10:                               ; %if.end2
+	MOV	R5, R4
+?LBB0_11:
+	ADD	R12, #5
+	ADDC	R13, #0
+	MOV	R1, R4
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_13
+; %bb.12:                               ; %if.end2
+	MOV	R1, R13
+?LBB0_13:
+	MOV	R2, #8
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_15
+; %bb.14:                               ; %if.end2
+	AND	R12, #65534
+	MOV	R2, R12
+?LBB0_15:
+	EXTS	#SEG (_free_list+2), #1
+	MOV	R5, SOF (_free_list+2)
+	EXTS	#SEG _free_list, #1
+	MOV	R13, SOF _free_list
+	MOV	R3, R13
+	OR	R3, R5
+	JMP	cc_EQ, ?LBB0_41
+; %bb.16:                               ; %for.body.preheader
+	MOV	R4, R13
+	MOV	R3, R5
+	ADD	R4, #2
+	ADDC	R3, #0
+	EXTS	R3, #1
+	MOV	R12, [R4]
+	EXTS	R5, #1
+	MOV	R11, [R13]
+	MOV	R10, #0
+	MOV	R3, #1
+	MOV	R4, R3
+	CMP	R11, R2
+	JMP	cc_ULT, ?LBB0_28
+; %bb.17:                               ; %for.body.preheader
+	CMP	R12, R1
+	JMP	cc_ULT, ?LBB0_29
+?LBB0_18:
+	CMP	R12, R1
+	JMP	cc_NE, ?LBB0_30
+?LBB0_19:
+	JB	R4.0, ?LBB0_31
+?LBB0_20:
+	MOV	R3, R13
+	MOV	R10, R5
+	ADD	R3, #4
+	ADDC	R10, #0
+	EXTS	R10, #1
+	MOV	R13, [R3]
+	MOV	R4, R3
+	MOV	R5, R10
+	ADD	R4, #2
+	ADDC	R5, #0
+	EXTS	R5, #1
+	MOV	R5, [R4]
+	MOV	R4, R13
+	OR	R4, R5
+	JMP	cc_EQ, ?LBB0_40
+; %bb.21:                               ; %for.body
+	EXTS	R5, #1
+	MOV	R11, [R13]
+	MOV	R15, #0
+	MOV	R14, #1
+	MOV	R4, R14
+	CMP	R11, R2
+	JMP	cc_ULT, ?LBB0_23
+; %bb.22:                               ; %for.body
+	MOV	R4, R15
+?LBB0_23:
+	MOV	R12, R13
+	MOV	R6, R5
+	ADD	R12, #2
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOV	R12, [R12]
+	CMP	R12, R1
+	JMP	cc_UGE, ?LBB0_26
+; %bb.24:                               ; %for.body
+	CMP	R12, R1
+	JMP	cc_NE, ?LBB0_27
+?LBB0_25:
+	JB	R4.0, ?LBB0_20
+	JMP	cc_UC, ?LBB0_32
+?LBB0_26:
+	MOV	R14, R15
+	CMP	R12, R1
+	JMP	cc_EQ, ?LBB0_25
+?LBB0_27:
+	MOV	R4, R14
+	JB	R4.0, ?LBB0_20
+	JMP	cc_UC, ?LBB0_32
+?LBB0_28:
+	MOV	R4, R10
+	CMP	R12, R1
+	JMP	cc_UGE, ?LBB0_18
+?LBB0_29:
+	MOV	R3, R10
+	CMP	R12, R1
+	JMP	cc_EQ, ?LBB0_19
+?LBB0_30:
+	MOV	R4, R3
+	JNB	R4.0, ?LBB0_20
+?LBB0_31:
+	MOV	R10, #SEG _free_list
+	MOV	R3, #SOF _free_list
+?LBB0_32:
+	MOV	R4, R13
+	SUB	R11, R2
+	SUBC	R12, R1
+	MOV	R13, #0
+	MOV	R14, #1
+	CMP	R11, #10
+	JMP	cc_UGE, ?LBB0_36
+; %bb.33:                               ; %if.end11
+	CMP	R12, #0
+	JMP	cc_NE, ?LBB0_37
+?LBB0_34:
+	JB	R14.0, ?LBB0_38
+?LBB0_35:
+	MOV	R13, R4
+	MOV	R14, R5
+	ADD	R13, R2
+	ADDC	R14, R1
+	EXTS	R14, #1
+	MOV	[R13], R11
+	MOV	R11, R13
+	MOV	R15, R14
+	ADD	R11, #2
+	ADDC	R15, #0
+	EXTS	R15, #1
+	MOV	[R11], R12
+	MOV	R11, R4
+	MOV	R12, R5
+	ADD	R11, #4
+	ADDC	R12, #0
+	EXTS	R12, #1
+	MOV	R15, [R11]
+	ADD	R11, #2
+	ADDC	R12, #0
+	EXTS	R12, #1
+	MOV	R11, [R11]
+	MOV	R12, R13
+	MOV	R6, R14
+	ADD	R12, #4
+	ADDC	R6, #0
+	MOV	R7, R12
+	MOV	R8, R6
+	ADD	R7, #2
+	ADDC	R8, #0
+	EXTS	R8, #1
+	MOV	[R7], R11
+	EXTS	R6, #1
+	MOV	[R12], R15
+	EXTS	R5, #1
+	MOV	[R4], R2
+	MOV	R2, R4
+	MOV	R11, R5
+	ADD	R2, #2
+	ADDC	R11, #0
+	EXTS	R11, #1
+	MOV	[R2], R1
+	JMP	cc_UC, ?LBB0_39
+?LBB0_36:
+	MOV	R14, R13
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB0_34
+?LBB0_37:
+	MOV	R14, R13
+	JNB	R14.0, ?LBB0_35
+?LBB0_38:
+	MOV	R1, R4
+	MOV	R2, R5
+	ADD	R1, #4
+	ADDC	R2, #0
+	EXTS	R2, #1
+	MOV	R13, [R1]
+	ADD	R1, #2
+	ADDC	R2, #0
+	EXTS	R2, #1
+	MOV	R14, [R1]
+?LBB0_39:
+	EXTS	R10, #1
+	MOV	[R3], R13
+	ADD	R3, #2
+	ADDC	R10, #0
+	EXTS	R10, #1
+	MOV	[R3], R14
+	ADD	R4, #4
+	ADDC	R5, #0
+	JMP	cc_UC, ?LBB0_42
+?LBB0_40:
+	MOV	R4, #0
+?LBB0_41:
+	MOV	R5, R4
+?LBB0_42:
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	RETS
+_malloc?F	ENDP
+	PUBLIC	_free
+_free:
+_free?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R4, R12
+	OR	R4, R13
+	JMP	cc_EQ, ?LBB1_20
+; %bb.1:                                ; %if.end
+	MOV	R3, R12
+	MOV	R4, R13
+	ADD	R3, #65532
+	ADDC	R4, #65535
+	MOV	R15, #SEG _free_list
+	MOV	R14, #SOF _free_list
+	MOV	R2, #0
+	MOV	R10, R2
+?LBB1_2:
+	MOV	R5, R10
+	MOV	R1, R2
+	EXTS	R15, #1
+	MOV	R2, [R14]
+	ADD	R14, #2
+	ADDC	R15, #0
+	EXTS	R15, #1
+	MOV	R10, [R14]
+	MOV	R11, R2
+	OR	R11, R10
+	JMP	cc_EQ, ?LBB1_10
+; %bb.3:                                ; %while.cond
+	MOV	R15, #0
+	MOV	R14, #1
+	MOV	R6, R14
+	CMP	R2, R3
+	JMP	cc_UGE, ?LBB1_8
+; %bb.4:                                ; %while.cond
+	CMP	R10, R4
+	JMP	cc_UGE, ?LBB1_9
+?LBB1_5:
+	CMP	R10, R4
+	JMP	cc_EQ, ?LBB1_7
+?LBB1_6:
+	MOV	R6, R14
+?LBB1_7:
+	MOV	R14, R2
+	MOV	R15, R10
+	ADD	R14, #4
+	ADDC	R15, #0
+	JB	R6.0, ?LBB1_2
+	JMP	cc_UC, ?LBB1_10
+?LBB1_8:
+	MOV	R6, R15
+	CMP	R10, R4
+	JMP	cc_ULT, ?LBB1_5
+?LBB1_9:
+	MOV	R14, R15
+	CMP	R10, R4
+	JMP	cc_NE, ?LBB1_6
+	JMP	cc_UC, ?LBB1_7
+?LBB1_10:
+	CMP	R11, #0
+	JMP	cc_EQ, ?LBB1_13
+; %bb.11:                               ; %land.lhs.true
+	EXTS	R4, #1
+	MOV	R14, [R3]
+	MOV	R11, R3
+	MOV	R15, R4
+	ADD	R11, #2
+	ADDC	R15, #0
+	EXTS	R15, #1
+	MOV	R6, [R11]
+	MOV	R7, R3
+	MOV	R8, R4
+	ADD	R7, R14
+	ADDC	R8, R6
+	XOR	R8, R10
+	XOR	R7, R2
+	OR	R7, R8
+	JMP	cc_EQ, ?LBB1_14
+; %bb.12:
+	MOV	R11, R10
+	JMP	cc_UC, ?LBB1_15
+?LBB1_13:
+	MOV	R2, #0
+	MOV	R11, R2
+	JMP	cc_UC, ?LBB1_15
+?LBB1_14:
+	EXTS	R10, #1
+	MOV	R7, [R2]
+	MOV	R8, R2
+	MOV	R9, R10
+	ADD	R8, #2
+	ADDC	R9, #0
+	EXTS	R9, #1
+	MOV	R8, [R8]
+	ADD	R7, R14
+	ADDC	R8, R6
+	EXTS	R4, #1
+	MOV	[R3], R7
+	EXTS	R15, #1
+	MOV	[R11], R8
+	ADD	R2, #4
+	ADDC	R10, #0
+	MOV	R11, R2
+	MOV	R14, R10
+	ADD	R11, #2
+	ADDC	R14, #0
+	EXTS	R14, #1
+	MOV	R11, [R11]
+	EXTS	R10, #1
+	MOV	R2, [R2]
+?LBB1_15:
+	EXTS	R13, #1
+	MOV	[R12], R2
+	ADD	R12, #2
+	ADDC	R13, #0
+	EXTS	R13, #1
+	MOV	[R12], R11
+	MOV	R10, R1
+	OR	R10, R5
+	JMP	cc_EQ, ?LBB1_18
+; %bb.16:                               ; %land.lhs.true13
+	EXTS	R5, #1
+	MOV	R12, [R1]
+	MOV	R10, R1
+	MOV	R13, R5
+	ADD	R10, #2
+	ADDC	R13, #0
+	EXTS	R13, #1
+	MOV	R14, [R10]
+	MOV	R15, R1
+	MOV	R6, R5
+	ADD	R15, R12
+	ADDC	R6, R14
+	XOR	R6, R4
+	XOR	R15, R3
+	OR	R15, R6
+	JMP	cc_EQ, ?LBB1_19
+; %bb.17:                               ; %if.then23
+	ADD	R1, #4
+	ADDC	R5, #0
+	EXTS	R5, #1
+	MOV	[R1], R3
+	ADD	R1, #2
+	ADDC	R5, #0
+	EXTS	R5, #1
+	MOV	[R1], R4
+	JMP	cc_UC, ?LBB1_20
+?LBB1_18:
+	EXTS	#SEG _free_list, #1
+	MOV	SOF _free_list, R3
+	EXTS	#SEG (_free_list+2), #1
+	MOV	SOF (_free_list+2), R4
+	JMP	cc_UC, ?LBB1_20
+?LBB1_19:
+	EXTS	R4, #1
+	MOV	R15, [R3]
+	ADD	R3, #2
+	ADDC	R4, #0
+	EXTS	R4, #1
+	MOV	R4, [R3]
+	ADD	R15, R12
+	ADDC	R4, R14
+	EXTS	R5, #1
+	MOV	[R1], R15
+	EXTS	R13, #1
+	MOV	[R10], R4
+	ADD	R1, #4
+	ADDC	R5, #0
+	MOV	R4, R5
+	MOV	R3, R1
+	ADD	R3, #2
+	ADDC	R4, #0
+	EXTS	R4, #1
+	MOV	[R3], R11
+	EXTS	R5, #1
+	MOV	[R1], R2
+?LBB1_20:
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_free?F	ENDP
+	PUBLIC	_calloc
+_calloc:
+_calloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #4
+	MOV	R4, R14
+	OR	R4, R15
+	JMP	cc_EQ, ?LBB2_12
+; %bb.1:                                ; %land.lhs.true
+	MOV	R6, #0
+	MOV	R4, #1
+	MOV	R1, R4
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB2_3
+; %bb.2:                                ; %land.lhs.true
+	MOV	R1, R6
+?LBB2_3:
+	MOV	R5, R4
+	CMP	R15, #0
+	JMP	cc_NE, ?LBB2_5
+; %bb.4:                                ; %land.lhs.true
+	MOV	R5, R6
+?LBB2_5:
+	AND	R5, R1
+	MULU	R15, R12
+	MOV	R2, MDH
+	MOV	R1, R4
+	CMP	R2, #0
+	JMP	cc_NE, ?LBB2_7
+; %bb.6:                                ; %land.lhs.true
+	MOV	R1, R6
+?LBB2_7:
+	OR	R5, R1
+	MULU	R13, R14
+	MOV	R2, MDH
+	MOV	R1, R4
+	CMP	R2, #0
+	JMP	cc_NE, ?LBB2_9
+; %bb.8:                                ; %land.lhs.true
+	MOV	R1, R6
+?LBB2_9:
+	OR	R5, R1
+	MUL	R13, R14
+	MOV	R1, MDL
+	MUL	R15, R12
+	MOV	R2, MDL
+	ADD	R2, R1
+	MULU	R14, R12
+	MOV	R1, MDH
+	ADD	R2, R1
+	CMP	R2, R1
+	JMP	cc_ULT, ?LBB2_11
+; %bb.10:                               ; %land.lhs.true
+	MOV	R4, R6
+?LBB2_11:
+	OR	R5, R4
+	MOV	R7, R6
+	JB	R5.0, ?LBB2_15
+?LBB2_12:
+	MULU	R14, R12
+	MOV	R4, MDH
+	MUL	R14, R13
+	MOV	R5, MDL
+	ADD	R5, R4
+	MUL	R15, R12
+	MOV	R8, MDL
+	ADD	R8, R5
+	MUL	R14, R12
+	MOV	R9, MDL
+	MOV	R12, R9
+	MOV	R13, R8
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R6, R4
+	MOV	R7, R5
+	OR	R4, R7
+	JMP	cc_EQ, ?LBB2_14
+; %bb.13:                               ; %if.then2
+	MOV	[R0+#2], R8
+	MOV	[R0], R9
+	MOV	R14, #0
+	MOV	R12, R6
+	MOV	R13, R7
+	CALLS	SEG _memset, SOF _memset
+	JMP	cc_UC, ?LBB2_15
+?LBB2_14:
+	MOV	R6, #0
+	MOV	R7, R6
+?LBB2_15:
+	MOV	R4, R6
+	MOV	R5, R7
+	ADD	R0, #4
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_calloc?F	ENDP
+	PUBLIC	_realloc
+_realloc:
+_realloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R7, R12
+	MOV	R12, R14
+	MOV	R4, R7
+	OR	R4, R13
+	JMP	cc_EQ, ?LBB3_8
+; %bb.1:                                ; %if.end
+	OR	R14, R15
+	JMP	cc_EQ, ?LBB3_9
+; %bb.2:                                ; %if.end3
+	MOV	R4, R7
+	MOV	R5, R13
+	ADD	R4, #65532
+	ADDC	R5, #65535
+	EXTS	R5, #1
+	MOV	R2, [R4]
+	ADD	R4, #2
+	ADDC	R5, #0
+	EXTS	R5, #1
+	MOV	R6, [R4]
+	ADD	R2, #65532
+	ADDC	R6, #65535
+	MOV	R1, #0
+	MOV	R4, #1
+	MOV	R5, R4
+	CMP	R15, R6
+	JMP	cc_UGT, ?LBB3_11
+; %bb.3:                                ; %if.end3
+	CMP	R12, R2
+	JMP	cc_UGT, ?LBB3_12
+?LBB3_4:
+	CMP	R15, R6
+	JMP	cc_NE, ?LBB3_13
+?LBB3_5:
+	JB	R4.0, ?LBB3_14
+?LBB3_6:
+	MOV	[R0+#4], R2
+	MOV	[R0+#6], R13
+	MOV	R13, R15
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R8, R4
+	MOV	R9, R5
+	OR	R4, R9
+	JMP	cc_EQ, ?LBB3_10
+; %bb.7:                                ; %if.then9
+	MOV	[R0+#2], R6
+	MOV	R4, [R0+#4]
+	MOV	[R0], R4
+	MOV	R12, R8
+	MOV	R13, R9
+	MOV	R14, R7
+	MOV	R6, [R0+#6]
+	MOV	R15, R6
+	CALLS	SEG _memcpy, SOF _memcpy
+	MOV	R12, R7
+	MOV	R13, R6
+	CALLS	SEG _free, SOF _free
+	JMP	cc_UC, ?LBB3_15
+?LBB3_8:
+	MOV	R13, R15
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R8, R4
+	MOV	R9, R5
+	JMP	cc_UC, ?LBB3_15
+?LBB3_9:
+	MOV	R12, R7
+	CALLS	SEG _free, SOF _free
+?LBB3_10:
+	MOV	R8, #0
+	MOV	R9, R8
+	JMP	cc_UC, ?LBB3_15
+?LBB3_11:
+	MOV	R5, R1
+	CMP	R12, R2
+	JMP	cc_ULE, ?LBB3_4
+?LBB3_12:
+	MOV	R4, R1
+	CMP	R15, R6
+	JMP	cc_EQ, ?LBB3_5
+?LBB3_13:
+	MOV	R4, R5
+	JNB	R4.0, ?LBB3_6
+?LBB3_14:
+	MOV	R8, R7
+	MOV	R9, R13
+?LBB3_15:
+	MOV	R4, R8
+	MOV	R5, R9
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_realloc?F	ENDP
+MALLOC_PR	ENDS
+C166_XBSS	SECTION	XDATA WORD PUBLIC 'CHUGE'
+	EVEN
+_ready:
+	DSB	1
+	EVEN
+_free_list:
+	DSB	4
+	EXTRN	___c166_heap : WORD
+	EXTRN	___c166_heap_size : WORD
+	EXTRN	_memset : NEAR
+	EXTRN	_memcpy : NEAR
+C166_XBSS	ENDS
+	END

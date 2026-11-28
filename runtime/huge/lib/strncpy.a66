@@ -1,0 +1,72 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRNCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strncpy
+_strncpy:
+_strncpy?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R1, [R0+#6]
+	MOV	R2, [R0+#4]
+	MOV	R3, R2
+	OR	R3, R1
+	JMP	cc_EQ, ?LBB0_6
+; %bb.1:                                ; %land.rhs.preheader
+	MOV	R3, R4
+	MOV	R10, R5
+?LBB0_2:
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	MOV	R7, R6
+	AND	R7, #255
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %for.body
+	ADD	R14, #1
+	ADDC	R15, #0
+	MOV	R11, R3
+	MOV	R12, R10
+	ADD	R11, #1
+	ADDC	R12, #0
+	EXTS	R10, #1
+	MOVB	[R3], RL6
+	ADD	R2, #65535
+	ADDC	R1, #65535
+	MOV	R13, R2
+	OR	R13, R1
+	MOV	R3, R11
+	MOV	R10, R12
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB0_2
+	JMP	cc_UC, ?LBB0_6
+?LBB0_4:
+	MOV	R11, R3
+	MOV	R12, R10
+?LBB0_5:
+	ADD	R11, #1
+	ADDC	R12, #0
+	MOV	R6, #0
+	EXTS	R10, #1
+	MOVB	[R3], RL6
+	ADD	R2, #65535
+	ADDC	R1, #65535
+	MOV	R13, R2
+	OR	R13, R1
+	MOV	R3, R11
+	MOV	R10, R12
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB0_5
+?LBB0_6:
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+_strncpy?F	ENDP
+STRNCPY_PR	ENDS
+	END

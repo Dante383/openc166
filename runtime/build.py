@@ -33,15 +33,17 @@ FLAGS = ["--target=c166", "-Os", "-ffreestanding", "-fno-builtin", "-S"]
 # One runtime per memory model: lib/ for small, <model>/lib/ for the
 # others. Calls and returns (CALLS/RETS against CALL/RET) and pointers (16
 # or 32 bits) differ, so they do not mix. lib/icall.a66, for calls through
-# far function pointers, is hand-written; the large model gets a copy.
+# far function pointers, is hand-written; the large and huge models get a
+# copy.
 MODELS = [
     ("small", "lib"),
     ("tiny", os.path.join("tiny", "lib")),
     ("medium", os.path.join("medium", "lib")),
     ("large", os.path.join("large", "lib")),
+    ("huge", os.path.join("huge", "lib")),
 ]
-FAR_CODE = {"small", "large"}
-FAR_DATA = {"medium", "large"}
+FAR_CODE = {"small", "large", "huge"}
+FAR_DATA = {"medium", "large", "huge"}
 
 # compiler-rt/lib/builtins: what LLVM calls for float and double.
 COMPILER_RT = [

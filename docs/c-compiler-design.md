@@ -529,6 +529,20 @@ modules (`--lib`) so only what a program uses is pulled in:
      soft float is ROM (`sin`: 30 KB with its helpers) and user stack (up to
      1.8 KB, so the stack size became settable: `_ustack(n)`).
 
+   - The huge model: large, and objects of any size. The data layout is
+     large's; the back end tells by the ABI name. `size_t` is 32 bits;
+     unqualified and `_huge` data go into `XDATA`/`XCONST` sections (A166's
+     sections without the 64 KB limit, classes `CHUGE`/`CHUGEROM` as
+     before); the second word or byte of an access through a pointer
+     carries into the segment (named accesses need not: the linker computes
+     `SEG (x+n)`); `runtime/huge/cstart.a66` copies and clears the X
+     sections up to `?SECTION_END?` with 32-bit pointers; `memcpy` and
+     friends take a 32-bit size. Checked with a 70000-byte constant across
+     segments 2 and 3 of the 5WY19's flash (indexing, a `long` across the
+     boundary, `memcpy` across it), and the C library tests in this model.
+     Left as it is in the other models: `_huge` and unqualified far data
+     share `HDATA` sections, at most 64 KB in all (OC37 beyond).
+
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.
 

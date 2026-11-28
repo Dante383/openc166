@@ -1,0 +1,268 @@
+; Compiled from LLVM libc, libc/shared/math/fmax.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FMAX_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fmax
+_fmax:
+_fmax?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #34
+	MOV	R6, [R0+#44]
+	MOV	R10, [R0+#42]
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R2, R5
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R2, R1
+?LBB0_2:
+	MOV	R4, R5
+	CMP	R10, #0
+	JMP	cc_NE, ?LBB0_4
+; %bb.3:                                ; %entry
+	MOV	R4, R1
+?LBB0_4:
+	MOV	R9, [R0+#48]
+	MOV	R8, [R0+#46]
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_6
+; %bb.5:                                ; %entry
+	MOV	R4, R2
+?LBB0_6:
+	MOV	R2, R9
+	AND	R2, #32767
+	MOV	R3, R5
+	CMP	R8, #0
+	JMP	cc_EQ, ?LBB0_14
+; %bb.7:                                ; %entry
+	CMP	R2, #32752
+	JMP	cc_ULE, ?LBB0_15
+?LBB0_8:
+	CMP	R2, #32752
+	JMP	cc_EQ, ?LBB0_10
+?LBB0_9:
+	MOV	R3, R5
+?LBB0_10:
+	MOV	R11, [R0+#56]
+	MOV	R13, [R0+#54]
+	XOR	R2, #32752
+	OR	R2, R8
+	JMP	cc_EQ, ?LBB0_12
+; %bb.11:                               ; %entry
+	MOV	R4, R3
+?LBB0_12:
+	MOV	R7, [R0+#52]
+	MOV	R14, [R0+#50]
+	JNB	R4.0, ?LBB0_16
+; %bb.13:
+	MOV	R10, R14
+	MOV	R6, R7
+	MOV	R8, R13
+	MOV	R9, R11
+	JMP	cc_UC, ?LBB0_52
+?LBB0_14:
+	MOV	R3, R1
+	CMP	R2, #32752
+	JMP	cc_UGT, ?LBB0_8
+?LBB0_15:
+	MOV	R5, R1
+	CMP	R2, #32752
+	JMP	cc_NE, ?LBB0_9
+	JMP	cc_UC, ?LBB0_10
+?LBB0_16:
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_18
+; %bb.17:                               ; %if.end.i.i
+	MOV	R4, R1
+?LBB0_18:
+	MOV	R2, R5
+	CMP	R7, #0
+	JMP	cc_NE, ?LBB0_20
+; %bb.19:                               ; %if.end.i.i
+	MOV	R2, R1
+?LBB0_20:
+	CMP	R7, #0
+	JMP	cc_EQ, ?LBB0_22
+; %bb.21:                               ; %if.end.i.i
+	MOV	R4, R2
+?LBB0_22:
+	MOV	R2, R11
+	AND	R2, #32767
+	MOV	R3, R5
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB0_53
+; %bb.23:                               ; %if.end.i.i
+	CMP	R2, #32752
+	JMP	cc_ULE, ?LBB0_54
+?LBB0_24:
+	CMP	R2, #32752
+	JMP	cc_EQ, ?LBB0_26
+?LBB0_25:
+	MOV	R3, R5
+?LBB0_26:
+	XOR	R2, #32752
+	MOV	R5, R13
+	OR	R5, R2
+	JMP	cc_EQ, ?LBB0_28
+; %bb.27:                               ; %if.end.i.i
+	MOV	R4, R3
+?LBB0_28:
+	JB	R4.0, ?LBB0_52
+; %bb.29:                               ; %if.end3.i.i
+	MOV	R4, R14
+	JB	R9.15, ?LBB0_31
+; %bb.30:                               ; %if.end3.i.i
+	MOV	R4, R10
+?LBB0_31:
+	MOV	R5, R7
+	JB	R9.15, ?LBB0_33
+; %bb.32:                               ; %if.end3.i.i
+	MOV	R5, R6
+?LBB0_33:
+	MOV	[R0+#22], R13
+	JB	R9.15, ?LBB0_35
+; %bb.34:                               ; %if.end3.i.i
+	MOV	[R0+#22], R8
+?LBB0_35:
+	MOV	[R0+#18], R5
+	MOV	[R0+#20], R4
+	MOV	[R0+#32], R12
+	MOV	R4, R11
+	JB	R9.15, ?LBB0_37
+; %bb.36:                               ; %if.end3.i.i
+	MOV	R4, R9
+?LBB0_37:
+	MOV	[R0+#16], R4
+	MOV	[R0+#10], R7
+	MOV	[R0+#24], R14
+	MOV	[R0+#8], R14
+	MOV	[R0+#2], R6
+	MOV	[R0+#30], R10
+	MOV	[R0], R10
+	MOV	[R0+#26], R13
+	MOV	[R0+#12], R13
+	MOV	[R0+#4], R8
+	MOV	[R0+#28], R11
+	MOV	[R0+#14], R11
+	MOV	[R0+#6], R9
+	CALLS	SEG ___gtdf2, SOF ___gtdf2
+	MOV	R3, #0
+	MOV	R1, #1
+	MOV	R2, R1
+	CMP	R5, #0
+	JMP	cc_SGT, ?LBB0_39
+; %bb.38:                               ; %if.end3.i.i
+	MOV	R2, R3
+?LBB0_39:
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_41
+; %bb.40:                               ; %if.end3.i.i
+	MOV	R1, R3
+?LBB0_41:
+	MOV	R12, [R0+#32]
+	MOV	R10, [R0+#30]
+	MOV	R3, [R0+#28]
+	MOV	R4, [R0+#26]
+	MOV	R11, [R0+#24]
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_55
+; %bb.42:                               ; %if.end3.i.i
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_56
+?LBB0_43:
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_57
+?LBB0_44:
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_46
+?LBB0_45:
+	MOV	R8, R4
+?LBB0_46:
+	MOV	R4, R9
+	SHR	R4, #15
+	MOV	R5, R3
+	SHR	R5, #15
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_58
+; %bb.47:                               ; %if.end3.i.i
+	CMP	R4, R5
+	JMP	cc_NE, ?LBB0_59
+?LBB0_48:
+	CMP	R4, R5
+	JMP	cc_NE, ?LBB0_60
+?LBB0_49:
+	CMP	R4, R5
+	JMP	cc_NE, ?LBB0_61
+?LBB0_50:
+	CMP	R4, R5
+	JMP	cc_EQ, ?LBB0_52
+?LBB0_51:
+	MOV	R10, [R0+#20]
+?LBB0_52:
+	MOV	[R12], R10
+	MOV	[R12+#2], R6
+	MOV	[R12+#4], R8
+	MOV	[R12+#6], R9
+	ADD	R0, #34
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+?LBB0_53:
+	MOV	R3, R1
+	CMP	R2, #32752
+	JMP	cc_UGT, ?LBB0_24
+?LBB0_54:
+	MOV	R5, R1
+	CMP	R2, #32752
+	JMP	cc_NE, ?LBB0_25
+	JMP	cc_UC, ?LBB0_26
+?LBB0_55:
+	MOV	R1, R2
+	JMP	cc_NE, ?LBB0_43
+?LBB0_56:
+	MOV	R10, R11
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_44
+?LBB0_57:
+	MOV	R6, R7
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_45
+	JMP	cc_UC, ?LBB0_46
+?LBB0_58:
+	MOV	R9, R3
+	CMP	R4, R5
+	JMP	cc_EQ, ?LBB0_48
+?LBB0_59:
+	MOV	R9, [R0+#16]
+	CMP	R4, R5
+	JMP	cc_EQ, ?LBB0_49
+?LBB0_60:
+	MOV	R8, [R0+#22]
+	CMP	R4, R5
+	JMP	cc_EQ, ?LBB0_50
+?LBB0_61:
+	MOV	R6, [R0+#18]
+	CMP	R4, R5
+	JMP	cc_NE, ?LBB0_51
+	JMP	cc_UC, ?LBB0_52
+_fmax?F	ENDP
+	EXTRN	___gtdf2 : NEAR
+FMAX_PR	ENDS
+	END

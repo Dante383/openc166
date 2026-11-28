@@ -90,7 +90,7 @@ class Program:
             with open(start) as f:
                 modules.append(("cstart.a66", f.read()))
         self.tiny = model == "tiny"
-        self.far_code = model in ("small", "large")
+        self.far_code = model in ("small", "large", "huge")
         if model != "small":
             opt += " -mabi=" + model
         for i, src in enumerate(sources):
@@ -977,7 +977,7 @@ def run_cstart(p, instructions=3000000):
     return s
 
 
-MODELS = ("tiny", "small", "medium", "large")
+MODELS = ("tiny", "small", "medium", "large", "huge")
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
@@ -1297,6 +1297,76 @@ int main(void) {
         (r,) = struct.unpack("<f", s.read(p.address("_r"), 4))
         self.assertTrue(math.isclose(r, math.sin(0.5) + math.sqrt(0.5), rel_tol=1e-6))
         self.assertIn("_sinf", p.asm[-1][1])
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class HugeModelTest(unittest.TestCase):
+    """The huge memory model: as large, and objects may be over 64 KB.
+    A 70000-byte constant in flash at 20000H and up crosses into segment 3:
+    indexing, a long across the segment boundary, memcpy across it, and
+    size_t of 32 bits. Variables (XDATA) are filled and cleared by
+    __cstart."""
+
+    SOURCE = r"""
+#include <stdio.h>
+#include <string.h>
+const unsigned char big[70000] = {
+    [0] = 1, [65534] = 0x34, [65535] = 0x12, [65536] = 0x78, [65537] = 0x56,
+    [69999] = 4};
+int data[3] = {7, 8, 9};
+long zero[40];
+char out[32];
+int outn;
+size_t _write(int fd, char *b, size_t n) {
+  for (size_t i = 0; i < n; i++)
+    if (outn < (int)sizeof out)
+      out[outn++] = b[i];
+  return n;
+}
+volatile long at = 65534;
+int main(void) {
+  int fail = 0;
+  const unsigned char *p = big + at;
+  if (big[0] != 1 || p[1] != 0x12 || p[2] != 0x78 || big[at + 4465] != 4)
+    fail |= 1;
+  if (*(const long *)p != 0x56781234L)
+    fail |= 2;
+  unsigned char copy[8];
+  memcpy(copy, p - 2, sizeof copy);
+  if (copy[2] != 0x34 || copy[5] != 0x56)
+    fail |= 4;
+  if (sizeof big != 70000UL || sizeof(size_t) != 4)
+    fail |= 8;
+  if (data[2] != 9 || zero[39] != 0)
+    fail |= 16;
+  printf("%zu", sizeof big);
+  if (outn != 5 || memcmp(out, "70000", 5))
+    fail |= 32;
+  return fail;
+}
+"""
+
+    def test_object_over_64k(self):
+        p = Program(
+            [self.SOURCE],
+            "-Os",
+            startup=True,
+            image=bytes(0x80000 * [0xFF]),
+            board="5wy19",
+            model="huge",
+            classes={
+                "CPROGRAM": [(0x40000, 0x4FFFF)],
+                "CNEARROM": [(0x8000, 0xBFFF)],
+                "CNEAR": [(0xF200, 0xF9FF)],
+                "CHUGE": [(0x90000, 0x93FFF)],
+                "CHUGEROM": [(0x20000, 0x3FFFF)],
+            },
+        )
+        big = p.address("_big")
+        self.assertTrue(big < 0x30000 < big + 70000)  # across segments 2 and 3
+        s = run_cstart(p)
+        self.assertEqual(s.r[4], 0)  # a bit per failed check
+        self.assertIn("XCONST", p.asm[-1][1])
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

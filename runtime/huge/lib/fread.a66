@@ -1,0 +1,114 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FREAD_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fread
+_fread:
+_fread?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #14
+	MOV	[R0+#12], R13
+	MOV	[R0+#10], R12
+	MOV	R4, [R0+#24]
+	MOV	R5, [R0+#22]
+	MOV	[R0+#4], R15
+	MUL	R5, R15
+	MOV	R1, MDL
+	MULU	R5, R14
+	MOV	R2, MDH
+	ADD	R2, R1
+	MUL	R4, R14
+	MOV	R9, MDL
+	ADD	R9, R2
+	MOV	[R0+#2], R14
+	MUL	R5, R14
+	MOV	R6, MDL
+	MOV	R4, R6
+	OR	R4, R9
+	MOV	R8, #0
+	MOV	[R0], R8
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_10
+; %bb.1:                                ; %for.body.preheader
+	MOV	R4, [R0+#28]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#26]
+	MOV	[R0+#6], R4
+	MOV	R7, #0
+	MOV	R8, R7
+?LBB0_2:
+	MOV	R12, [R0+#6]
+	MOV	R13, [R0+#8]
+	CALLS	SEG _fgetc, SOF _fgetc
+	CMP	R4, #65535
+	JMP	cc_EQ, ?LBB0_11
+; %bb.3:                                ; %for.inc
+	MOV	R5, [R0+#10]
+	MOV	R1, [R0+#12]
+	ADD	R5, R7
+	ADDC	R1, R8
+	EXTS	R1, #1
+	MOVB	[R5], RL4
+	ADD	R7, #1
+	ADDC	R8, #0
+	MOV	R1, #0
+	MOV	R4, #1
+	MOV	R5, R4
+	CMP	R8, R9
+	JMP	cc_UGE, ?LBB0_7
+; %bb.4:                                ; %for.inc
+	CMP	R7, R6
+	JMP	cc_UGE, ?LBB0_8
+?LBB0_5:
+	CMP	R8, R9
+	JMP	cc_NE, ?LBB0_9
+?LBB0_6:
+	JB	R4.0, ?LBB0_2
+	JMP	cc_UC, ?LBB0_11
+?LBB0_7:
+	MOV	R5, R1
+	CMP	R7, R6
+	JMP	cc_ULT, ?LBB0_5
+?LBB0_8:
+	MOV	R4, R1
+	CMP	R8, R9
+	JMP	cc_EQ, ?LBB0_6
+?LBB0_9:
+	MOV	R4, R5
+	JB	R4.0, ?LBB0_2
+	JMP	cc_UC, ?LBB0_11
+?LBB0_10:
+	MOV	R7, R8
+?LBB0_11:
+	MOV	R14, [R0+#2]
+	MOV	R4, R14
+	MOV	R15, [R0+#4]
+	OR	R4, R15
+	JMP	cc_EQ, ?LBB0_13
+; %bb.12:                               ; %cond.true
+	MOV	R12, R7
+	MOV	R13, R8
+	CALLS	SEG ___udivsi3, SOF ___udivsi3
+	JMP	cc_UC, ?LBB0_14
+?LBB0_13:
+	MOV	R4, [R0]
+	MOV	R5, R4
+?LBB0_14:
+	ADD	R0, #14
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_fread?F	ENDP
+	EXTRN	_fgetc : NEAR
+	EXTRN	___udivsi3 : NEAR
+FREAD_PR	ENDS
+	END
