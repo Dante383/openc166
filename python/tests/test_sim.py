@@ -4,6 +4,7 @@
 import glob
 import os
 import tempfile
+import time
 import unittest
 
 import openc166
@@ -272,6 +273,29 @@ class SimulatorTest(unittest.TestCase):
         self.assertEqual(s.read16(0xFC60), 0x3412)
         self.assertEqual(s.describe(0xFC60), "IRAM")
         self.assertEqual(s.sfr["CP"], 0xFC00)
+
+    def test_block_writes(self):
+        s = self.s
+        s.cont(10)
+        snap = s.save()
+        rom = s.read(0x0000, 0x40)
+        # blocks into the ROM image and RAM are fast: the decode cache is
+        # cleared once per block, the image copied once per snapshot
+        t = time.perf_counter()
+        for _ in range(64):
+            s.write(0x0000, bytes(range(0x40)))
+        s.write(0xF600, bytes(0x800))
+        self.assertLess(time.perf_counter() - t, 0.5)
+        self.assertEqual(s.read(0x0010, 4), b"\x10\x11\x12\x13")
+        s.load(snap)
+        self.assertEqual(s.read(0x0000, 0x40), rom)
+        # code written in a block runs as written, not from the decode cache
+        s.pc = 0
+        s.step()
+        s.pc = 0
+        s.write(0x0000, bytes.fromhex("e6f43412"))  # MOV R4, #1234H
+        s.step()
+        self.assertEqual(s.r[4], 0x1234)
 
     def test_python_device(self):
         s = self.s

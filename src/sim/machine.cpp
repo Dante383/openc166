@@ -57,9 +57,9 @@ void Rom::write8(Addr a, std::uint8_t v) {
 void Rom::poke8(Addr a, std::uint8_t v) {
     const std::size_t i = a & mask_;
     if (i >= image_->size()) return;
-    auto copy = std::make_shared<std::vector<std::uint8_t>>(*image_);
-    (*copy)[i] = v;
-    image_ = std::move(copy);
+    // Snapshots share the image: copy it before the first change only.
+    if (image_.use_count() > 1) image_ = std::make_shared<std::vector<std::uint8_t>>(*image_);
+    const_cast<std::vector<std::uint8_t>&>(*image_)[i] = v;
 }
 
 // ---- Boards ----------------------------------------------------------------
@@ -437,7 +437,10 @@ void Machine::bus_write16(Addr a, std::uint16_t v) {
     bus_write8(a + 1, static_cast<std::uint8_t>(v >> 8));
 }
 
-void Machine::invalidate_code() { std::fill(decode_cache_.begin(), decode_cache_.end(), CachedInsn{}); }
+void Machine::invalidate_code() {
+    if (poking_) return;
+    std::fill(decode_cache_.begin(), decode_cache_.end(), CachedInsn{});
+}
 
 std::uint8_t Machine::read8(Addr a) {
     const std::uint8_t v = bus_read8(a);
@@ -500,6 +503,18 @@ std::uint8_t Machine::peek8(Addr a) {
 }
 
 void Machine::poke8(Addr a, std::uint8_t v) {
+    poke8_raw(a, v);
+    invalidate_code();
+}
+
+void Machine::poke(Addr a, const std::uint8_t* data, std::size_t size) {
+    poking_ = true;
+    for (std::size_t i = 0; i < size; ++i) poke8_raw(a + static_cast<Addr>(i), data[i]);
+    poking_ = false;
+    invalidate_code();
+}
+
+void Machine::poke8_raw(Addr a, std::uint8_t v) {
     a &= 0xFFFFFF;
     if (a >= 0xF000 && a <= 0xFFFF) {
         if (a >= 0xFE00 || a < 0xF200) {
@@ -516,7 +531,6 @@ void Machine::poke8(Addr a, std::uint8_t v) {
         else if (Device* d = external_device(a, &cs))
             d->poke8(a, v);
     }
-    std::fill(decode_cache_.begin(), decode_cache_.end(), CachedInsn{});
 }
 
 std::string Machine::describe(Addr a) {

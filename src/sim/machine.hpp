@@ -345,6 +345,8 @@ public:
     std::uint8_t peek8(Addr a);
     std::uint16_t peek16(Addr a) { return static_cast<std::uint16_t>(peek8(a) | (peek8(a + 1) << 8)); }
     void poke8(Addr a, std::uint8_t v);
+    // Writes a block without side effects; the decode cache is cleared once.
+    void poke(Addr a, const std::uint8_t* data, std::size_t size);
     // Name of what answers at 'a': "IRAM", "SFR", "CS0:flash", ...
     std::string describe(Addr a);
     // The 16-bit data address 'a' as the CPU would map it now (DPPs, or the
@@ -491,6 +493,8 @@ private:
         bool valid = false;
     };
     std::vector<CachedInsn> decode_cache_;
+    bool poking_ = false;         // inside poke(): invalidate_code() once at the end
+    void poke8_raw(Addr a, std::uint8_t v);
 
     std::vector<UnmodelledAccess> unmodelled_;
     std::unordered_set<std::uint32_t> unmodelled_seen_;

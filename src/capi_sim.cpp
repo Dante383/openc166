@@ -279,7 +279,7 @@ void oc166_sim_read(oc166_sim* s, uint32_t address, uint8_t* out, size_t size) {
 void oc166_sim_write(oc166_sim* s, uint32_t address, const uint8_t* data, size_t size) {
     if (!s || !data) return;
     guarded([&] {
-        for (size_t i = 0; i < size; ++i) s->machine->poke8(address + static_cast<uint32_t>(i), data[i]);
+        s->machine->poke(address, data, size);
         return 0;
     });
 }
