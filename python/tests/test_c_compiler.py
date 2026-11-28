@@ -605,6 +605,44 @@ int test(int v) {
         self.assertTrue(0xFD00 <= p.address("_flags") < 0xFE00)
         self.assertEqual(s.read16(p.address("_flags")), 0)
 
+    def test_bits_of_fixed_addresses(self):
+        # Bytes and words of the bit-addressable RAM, tested and changed in
+        # place (JB/JNB, BSET/BCLR/BMOVN on the word's bits).
+        p = Program(
+            [
+                r"""
+#include <c166.h>
+#define B7A (*(volatile unsigned char *)0xFD7AU)
+#define B7B (*(volatile unsigned char *)0xFD7BU)
+#define W7A (*(volatile unsigned int *)0xFD7AU)
+int test(int v) {
+  int r = 0;
+  W7A = v;
+  if (B7A & 0x04) r |= 1;
+  if (B7A & 0x02) r |= 2;
+  if (B7B & 0x04) r |= 4;
+  if (!(B7B & 0x01)) r |= 8;
+  B7A &= ~0x01;
+  B7A |= 0x80;
+  B7B &= ~0x04;
+  B7B |= 0x40;
+  B7B ^= 0x01;
+  if (_getbit(W7A, 14)) r |= 16;
+  if (_getbit(W7A, 13)) r |= 32;
+  _putbit(1, W7A, 3);
+  return r;
+}
+"""
+            ]
+        )
+        lo, _, s = p.call("test", 0x0405)
+        self.assertEqual(lo, 1 + 4 + 8 + 16)
+        self.assertEqual(s.read16(0xFD7A), 0x418C)
+        asm = p.asm[-1][1]
+        for text in ("JB\t0FD7AH.8", "BCLR\t0FD7AH.0", "BSET\t0FD7AH.14",
+                     "BMOVN\t0FD7AH.8", "BSET 0FD7AH.3"):
+            self.assertIn(text, asm)
+
     def test_interrupt_function(self):
         p = Program(
             [
