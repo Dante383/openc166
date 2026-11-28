@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 COMPAREDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___ledf2                        ; -- Begin function __ledf2
-___ledf2:                               ; @__ledf2
+	PUBLIC	___ledf2
+___ledf2:
 ___ledf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
@@ -27,20 +27,20 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R5
-?LBB0_2:                                ; %entry
+?LBB0_2:
 	MOV	R11, R4
 	CMP	R3, #0
 	JMP	cc_NE, ?LBB0_4
 ; %bb.3:                                ; %entry
 	MOV	R11, R5
-?LBB0_4:                                ; %entry
+?LBB0_4:
 	MOV	R1, [R0+#14]
 	MOV	R2, [R0+#16]
 	CMP	R10, #0
 	JMP	cc_EQ, ?LBB0_6
 ; %bb.5:                                ; %entry
 	MOV	R11, R12
-?LBB0_6:                                ; %entry
+?LBB0_6:
 	MOV	R15, R2
 	AND	R15, #32767
 	MOV	R12, R4
@@ -48,29 +48,29 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_8
 ; %bb.7:                                ; %entry
 	MOV	R12, R5
-?LBB0_8:                                ; %entry
+?LBB0_8:
 	MOV	R13, R4
 	CMP	R15, #32752
 	JMP	cc_UGT, ?LBB0_10
 ; %bb.9:                                ; %entry
 	MOV	R13, R5
-?LBB0_10:                               ; %entry
+?LBB0_10:
 	CMP	R15, #32752
 	JMP	cc_EQ, ?LBB0_12
 ; %bb.11:                               ; %entry
 	MOV	R12, R13
-?LBB0_12:                               ; %entry
+?LBB0_12:
 	MOV	R13, R15
 	XOR	R13, #32752
 	OR	R13, R1
 	JMP	cc_EQ, ?LBB0_14
 ; %bb.13:                               ; %entry
 	MOV	R11, R12
-?LBB0_14:                               ; %entry
+?LBB0_14:
 	JNB	R11.0, ?LBB0_15
 	JMP	cc_UC, ?LBB0_50
-?LBB0_15:                               ; %entry
-	MOV	[R0], R1                        ; 2-byte Folded Spill
+?LBB0_15:
+	MOV	[R0], R1
 	MOV	R1, R2
 	MOV	R9, [R0+#20]
 	MOV	R13, [R0+#18]
@@ -82,13 +82,13 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_17
 ; %bb.16:                               ; %entry
 	MOV	R12, R7
-?LBB0_17:                               ; %entry
+?LBB0_17:
 	MOV	R6, R8
 	CMP	R9, #0
 	JMP	cc_NE, ?LBB0_19
 ; %bb.18:                               ; %entry
 	MOV	R6, R7
-?LBB0_19:                               ; %entry
+?LBB0_19:
 	MOV	R14, [R0+#22]
 	MOV	R13, [R0+#24]
 	MOV	R11, R9
@@ -96,7 +96,7 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_21
 ; %bb.20:                               ; %entry
 	MOV	R12, R6
-?LBB0_21:                               ; %entry
+?LBB0_21:
 	MOV	R6, R13
 	AND	R6, #32767
 	MOV	R9, R8
@@ -105,24 +105,24 @@ ___ledf2?F	PROC	FAR
 ; %bb.22:                               ; %entry
 	CMP	R6, #32752
 	JMP	cc_ULE, ?LBB0_48
-?LBB0_23:                               ; %entry
+?LBB0_23:
 	CMP	R6, #32752
 	JMP	cc_EQ, ?LBB0_25
-?LBB0_24:                               ; %entry
+?LBB0_24:
 	MOV	R9, R8
-?LBB0_25:                               ; %entry
+?LBB0_25:
 	MOV	R7, R6
 	XOR	R7, #32752
 	OR	R7, R14
 	JMP	cc_EQ, ?LBB0_27
 ; %bb.26:                               ; %entry
 	MOV	R12, R9
-?LBB0_27:                               ; %entry
+?LBB0_27:
 	MOV	R7, R2
 	MOV	R2, R3
 	MOV	R3, R1
 	MOV	R1, R10
-	MOV	R10, [R0]                       ; 2-byte Folded Reload
+	MOV	R10, [R0]
 	JB	R12.0, ?LBB0_50
 ; %bb.28:                               ; %if.end.i
 	MOV	R4, R11
@@ -148,34 +148,34 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_32
 ; %bb.31:                               ; %if.then9.i
 	MOV	R15, R5
-?LBB0_32:                               ; %if.then9.i
+?LBB0_32:
 	MOV	R12, R4
 	CMP	R1, R11
 	JMP	cc_ULT, ?LBB0_34
 ; %bb.33:                               ; %if.then9.i
 	MOV	R12, R5
-?LBB0_34:                               ; %if.then9.i
+?LBB0_34:
 	CMP	R1, R11
 	JMP	cc_EQ, ?LBB0_36
 ; %bb.35:                               ; %if.then9.i
 	MOV	R15, R12
-?LBB0_36:                               ; %if.then9.i
+?LBB0_36:
 	MOV	R6, R4
 	CMP	R10, R14
 	JMP	cc_ULT, ?LBB0_38
 ; %bb.37:                               ; %if.then9.i
 	MOV	R6, R5
-?LBB0_38:                               ; %if.then9.i
+?LBB0_38:
 	CMP	R3, R13
 	JMP	cc_SLT, ?LBB0_40
-?LBB0_39:                               ; %if.then9.i
+?LBB0_39:
 	MOV	R4, R5
-?LBB0_40:                               ; %if.then9.i
+?LBB0_40:
 	CMP	R3, R13
 	JMP	cc_EQ, ?LBB0_42
 ; %bb.41:                               ; %if.else15.i
 	MOV	R6, R4
-?LBB0_42:                               ; %if.else15.i
+?LBB0_42:
 	XOR	R10, R14
 	XOR	R3, R13
 	MOV	R4, R10
@@ -183,7 +183,7 @@ ___ledf2?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_44
 ; %bb.43:                               ; %if.else15.i
 	MOV	R15, R6
-?LBB0_44:                               ; %if.else15.i
+?LBB0_44:
 	MOV	R4, #65535
 	MOV	R5, R4
 	JB	R15.0, ?LBB0_50
@@ -200,11 +200,11 @@ ___ledf2?F	PROC	FAR
 ; %bb.46:                               ; %if.else18.i
 	MOV	R4, R5
 	JMP	cc_UC, ?LBB0_50
-?LBB0_47:                               ; %entry
+?LBB0_47:
 	MOV	R9, R7
 	CMP	R6, #32752
 	JMP	cc_UGT, ?LBB0_23
-?LBB0_48:                               ; %entry
+?LBB0_48:
 	MOV	R8, R7
 	CMP	R6, #32752
 	JMP	cc_NE, ?LBB0_24
@@ -212,45 +212,44 @@ ___ledf2?F	PROC	FAR
 ?LBB0_49:
 	MOV	R4, #0
 	MOV	R5, R4
-?LBB0_50:                               ; %__leXf2__.exit
+?LBB0_50:
 	ADD	R0, #2
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RETS
-?LBB0_51:                               ; %if.else15.i
+?LBB0_51:
 	MOV	R4, #1
 	MOV	R15, R4
 	CMP	R2, R7
 	JMP	cc_UGT, ?LBB0_53
 ; %bb.52:                               ; %if.else15.i
 	MOV	R15, R5
-?LBB0_53:                               ; %if.else15.i
+?LBB0_53:
 	MOV	R12, R4
 	CMP	R1, R11
 	JMP	cc_UGT, ?LBB0_55
 ; %bb.54:                               ; %if.else15.i
 	MOV	R12, R5
-?LBB0_55:                               ; %if.else15.i
+?LBB0_55:
 	CMP	R1, R11
 	JMP	cc_EQ, ?LBB0_57
 ; %bb.56:                               ; %if.else15.i
 	MOV	R15, R12
-?LBB0_57:                               ; %if.else15.i
+?LBB0_57:
 	MOV	R6, R4
 	CMP	R10, R14
 	JMP	cc_UGT, ?LBB0_59
 ; %bb.58:                               ; %if.else15.i
 	MOV	R6, R5
-?LBB0_59:                               ; %if.else15.i
+?LBB0_59:
 	CMP	R3, R13
 	JMP	cc_SLE, ?LBB0_39
 	JMP	cc_UC, ?LBB0_40
 ___ledf2?F	ENDP
-                                        ; -- End function
-	PUBLIC	___gedf2                        ; -- Begin function __gedf2
-___gedf2:                               ; @__gedf2
+	PUBLIC	___gedf2
+___gedf2:
 ___gedf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
@@ -266,20 +265,20 @@ ___gedf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB1_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R11
-?LBB1_2:                                ; %entry
+?LBB1_2:
 	MOV	R5, R4
 	CMP	R2, #0
 	JMP	cc_NE, ?LBB1_4
 ; %bb.3:                                ; %entry
 	MOV	R5, R11
-?LBB1_4:                                ; %entry
+?LBB1_4:
 	MOV	R10, [R0+#12]
 	MOV	R3, [R0+#14]
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB1_6
 ; %bb.5:                                ; %entry
 	MOV	R5, R12
-?LBB1_6:                                ; %entry
+?LBB1_6:
 	MOV	R15, R3
 	AND	R15, #32767
 	MOV	R12, R4
@@ -288,23 +287,23 @@ ___gedf2?F	PROC	FAR
 ; %bb.7:                                ; %entry
 	CMP	R15, #32752
 	JMP	cc_ULE, ?LBB1_46
-?LBB1_8:                                ; %entry
+?LBB1_8:
 	CMP	R15, #32752
 	JMP	cc_EQ, ?LBB1_10
-?LBB1_9:                                ; %entry
+?LBB1_9:
 	MOV	R12, R4
-?LBB1_10:                               ; %entry
+?LBB1_10:
 	MOV	R4, R15
 	XOR	R4, #32752
 	OR	R4, R10
 	JMP	cc_EQ, ?LBB1_12
 ; %bb.11:                               ; %entry
 	MOV	R5, R12
-?LBB1_12:                               ; %entry
+?LBB1_12:
 	MOV	R4, #65535
 	JNB	R5.0, ?LBB1_13
 	JMP	cc_UC, ?LBB1_50
-?LBB1_13:                               ; %entry
+?LBB1_13:
 	MOV	R11, [R0+#18]
 	MOV	R12, [R0+#16]
 	MOV	R8, #0
@@ -314,20 +313,20 @@ ___gedf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB1_15
 ; %bb.14:                               ; %entry
 	MOV	R7, R8
-?LBB1_15:                               ; %entry
+?LBB1_15:
 	MOV	R6, R5
 	CMP	R11, #0
 	JMP	cc_NE, ?LBB1_17
 ; %bb.16:                               ; %entry
 	MOV	R6, R8
-?LBB1_17:                               ; %entry
+?LBB1_17:
 	MOV	R14, [R0+#20]
 	MOV	R13, [R0+#22]
 	CMP	R11, #0
 	JMP	cc_EQ, ?LBB1_19
 ; %bb.18:                               ; %entry
 	MOV	R7, R6
-?LBB1_19:                               ; %entry
+?LBB1_19:
 	MOV	R6, R13
 	AND	R6, #32767
 	MOV	R9, R5
@@ -336,19 +335,19 @@ ___gedf2?F	PROC	FAR
 ; %bb.20:                               ; %entry
 	CMP	R6, #32752
 	JMP	cc_ULE, ?LBB1_48
-?LBB1_21:                               ; %entry
+?LBB1_21:
 	CMP	R6, #32752
 	JMP	cc_EQ, ?LBB1_23
-?LBB1_22:                               ; %entry
+?LBB1_22:
 	MOV	R9, R5
-?LBB1_23:                               ; %entry
+?LBB1_23:
 	MOV	R5, R6
 	XOR	R5, #32752
 	OR	R5, R14
 	JMP	cc_EQ, ?LBB1_25
 ; %bb.24:                               ; %entry
 	MOV	R7, R9
-?LBB1_25:                               ; %entry
+?LBB1_25:
 	MOV	R5, R4
 	JB	R7.0, ?LBB1_51
 ; %bb.26:                               ; %if.end.i
@@ -375,34 +374,34 @@ ___gedf2?F	PROC	FAR
 	JMP	cc_ULT, ?LBB1_30
 ; %bb.29:                               ; %if.then9.i
 	MOV	R15, R5
-?LBB1_30:                               ; %if.then9.i
+?LBB1_30:
 	MOV	R6, R4
 	CMP	R1, R11
 	JMP	cc_ULT, ?LBB1_32
 ; %bb.31:                               ; %if.then9.i
 	MOV	R6, R5
-?LBB1_32:                               ; %if.then9.i
+?LBB1_32:
 	CMP	R1, R11
 	JMP	cc_EQ, ?LBB1_34
 ; %bb.33:                               ; %if.then9.i
 	MOV	R15, R6
-?LBB1_34:                               ; %if.then9.i
+?LBB1_34:
 	MOV	R6, R4
 	CMP	R10, R14
 	JMP	cc_ULT, ?LBB1_36
 ; %bb.35:                               ; %if.then9.i
 	MOV	R6, R5
-?LBB1_36:                               ; %if.then9.i
+?LBB1_36:
 	CMP	R3, R13
 	JMP	cc_SLT, ?LBB1_38
-?LBB1_37:                               ; %if.then9.i
+?LBB1_37:
 	MOV	R4, R5
-?LBB1_38:                               ; %if.then9.i
+?LBB1_38:
 	CMP	R3, R13
 	JMP	cc_EQ, ?LBB1_40
 ; %bb.39:                               ; %if.else15.i
 	MOV	R6, R4
-?LBB1_40:                               ; %if.else15.i
+?LBB1_40:
 	XOR	R10, R14
 	XOR	R3, R13
 	MOV	R4, R10
@@ -410,7 +409,7 @@ ___gedf2?F	PROC	FAR
 	JMP	cc_EQ, ?LBB1_42
 ; %bb.41:                               ; %if.else15.i
 	MOV	R15, R6
-?LBB1_42:                               ; %if.else15.i
+?LBB1_42:
 	MOV	R4, #65535
 	MOV	R5, R4
 	JB	R15.0, ?LBB1_51
@@ -427,20 +426,20 @@ ___gedf2?F	PROC	FAR
 ; %bb.44:                               ; %if.else18.i
 	MOV	R4, R5
 	JMP	cc_UC, ?LBB1_51
-?LBB1_45:                               ; %entry
+?LBB1_45:
 	MOV	R12, R11
 	CMP	R15, #32752
 	JMP	cc_UGT, ?LBB1_8
-?LBB1_46:                               ; %entry
+?LBB1_46:
 	MOV	R4, R11
 	CMP	R15, #32752
 	JMP	cc_NE, ?LBB1_9
 	JMP	cc_UC, ?LBB1_10
-?LBB1_47:                               ; %entry
+?LBB1_47:
 	MOV	R9, R8
 	CMP	R6, #32752
 	JMP	cc_UGT, ?LBB1_21
-?LBB1_48:                               ; %entry
+?LBB1_48:
 	MOV	R5, R8
 	CMP	R6, #32752
 	JMP	cc_NE, ?LBB1_22
@@ -449,44 +448,43 @@ ___gedf2?F	PROC	FAR
 	MOV	R4, #0
 ?LBB1_50:
 	MOV	R5, R4
-?LBB1_51:                               ; %__geXf2__.exit
+?LBB1_51:
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RETS
-?LBB1_52:                               ; %if.else15.i
+?LBB1_52:
 	MOV	R4, #1
 	MOV	R15, R4
 	CMP	R2, R12
 	JMP	cc_UGT, ?LBB1_54
 ; %bb.53:                               ; %if.else15.i
 	MOV	R15, R5
-?LBB1_54:                               ; %if.else15.i
+?LBB1_54:
 	MOV	R6, R4
 	CMP	R1, R11
 	JMP	cc_UGT, ?LBB1_56
 ; %bb.55:                               ; %if.else15.i
 	MOV	R6, R5
-?LBB1_56:                               ; %if.else15.i
+?LBB1_56:
 	CMP	R1, R11
 	JMP	cc_EQ, ?LBB1_58
 ; %bb.57:                               ; %if.else15.i
 	MOV	R15, R6
-?LBB1_58:                               ; %if.else15.i
+?LBB1_58:
 	MOV	R6, R4
 	CMP	R10, R14
 	JMP	cc_UGT, ?LBB1_60
 ; %bb.59:                               ; %if.else15.i
 	MOV	R6, R5
-?LBB1_60:                               ; %if.else15.i
+?LBB1_60:
 	CMP	R3, R13
 	JMP	cc_SLE, ?LBB1_37
 	JMP	cc_UC, ?LBB1_38
 ___gedf2?F	ENDP
-                                        ; -- End function
-	PUBLIC	___unorddf2                     ; -- Begin function __unorddf2
-___unorddf2:                            ; @__unorddf2
+	PUBLIC	___unorddf2
+___unorddf2:
 ___unorddf2?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R2, [R0]
@@ -498,65 +496,65 @@ ___unorddf2?F	PROC	FAR
 	JMP	cc_NE, ?LBB2_2
 ; %bb.1:                                ; %entry
 	MOV	R11, R5
-?LBB2_2:                                ; %entry
+?LBB2_2:
 	MOV	R4, R1
 	CMP	R2, #0
 	JMP	cc_NE, ?LBB2_4
 ; %bb.3:                                ; %entry
 	MOV	R4, R5
-?LBB2_4:                                ; %entry
+?LBB2_4:
 	MOV	R3, [R0+#6]
 	MOV	R2, [R0+#4]
 	CMP	R10, #0
 	JMP	cc_EQ, ?LBB2_6
 ; %bb.5:                                ; %entry
 	MOV	R4, R11
-?LBB2_6:                                ; %entry
+?LBB2_6:
 	AND	R3, #32767
 	MOV	R10, R1
 	CMP	R2, #0
 	JMP	cc_NE, ?LBB2_8
 ; %bb.7:                                ; %entry
 	MOV	R10, R5
-?LBB2_8:                                ; %entry
+?LBB2_8:
 	MOV	R11, R1
 	CMP	R3, #32752
 	JMP	cc_UGT, ?LBB2_10
 ; %bb.9:                                ; %entry
 	MOV	R11, R5
-?LBB2_10:                               ; %entry
+?LBB2_10:
 	CMP	R3, #32752
 	JMP	cc_EQ, ?LBB2_12
 ; %bb.11:                               ; %entry
 	MOV	R10, R11
-?LBB2_12:                               ; %entry
+?LBB2_12:
 	MOV	R11, [R0+#10]
 	XOR	R3, #32752
 	OR	R2, R3
 	JMP	cc_EQ, ?LBB2_14
 ; %bb.13:                               ; %entry
 	MOV	R4, R10
-?LBB2_14:                               ; %entry
+?LBB2_14:
 	MOV	R10, [R0+#8]
 	MOV	R12, R1
 	CMP	R11, #0
 	JMP	cc_NE, ?LBB2_16
 ; %bb.15:                               ; %entry
 	MOV	R12, R5
-?LBB2_16:                               ; %entry
+?LBB2_16:
 	MOV	R3, [R0+#12]
 	MOV	R2, R1
 	CMP	R10, #0
 	JMP	cc_NE, ?LBB2_18
 ; %bb.17:                               ; %entry
 	MOV	R2, R5
-?LBB2_18:                               ; %entry
+?LBB2_18:
 	MOV	R10, [R0+#14]
 	CMP	R11, #0
 	JMP	cc_EQ, ?LBB2_20
 ; %bb.19:                               ; %entry
 	MOV	R2, R12
-?LBB2_20:                               ; %entry
+?LBB2_20:
 	AND	R10, #32767
 	MOV	R11, R1
 	CMP	R3, #0
@@ -564,31 +562,30 @@ ___unorddf2?F	PROC	FAR
 ; %bb.21:                               ; %entry
 	CMP	R10, #32752
 	JMP	cc_ULE, ?LBB2_28
-?LBB2_22:                               ; %entry
+?LBB2_22:
 	CMP	R10, #32752
 	JMP	cc_EQ, ?LBB2_24
-?LBB2_23:                               ; %entry
+?LBB2_23:
 	MOV	R11, R1
-?LBB2_24:                               ; %entry
+?LBB2_24:
 	XOR	R10, #32752
 	OR	R3, R10
 	JMP	cc_EQ, ?LBB2_26
 ; %bb.25:                               ; %entry
 	MOV	R2, R11
-?LBB2_26:                               ; %entry
+?LBB2_26:
 	OR	R4, R2
 	RETS
-?LBB2_27:                               ; %entry
+?LBB2_27:
 	MOV	R11, R5
 	CMP	R10, #32752
 	JMP	cc_UGT, ?LBB2_22
-?LBB2_28:                               ; %entry
+?LBB2_28:
 	MOV	R1, R5
 	CMP	R10, #32752
 	JMP	cc_NE, ?LBB2_23
 	JMP	cc_UC, ?LBB2_24
 ___unorddf2?F	ENDP
-                                        ; -- End function
 	PUBLIC	___cmpdf2
 ___cmpdf2	EQU	___ledf2
 	PUBLIC	___eqdf2

@@ -1,0 +1,55 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+RAND_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_rand
+_rand:
+; %bb.0:                                ; %entry
+	EXTS	#SEG (_next+2), #1
+	MOV	R4, SOF (_next+2)
+	EXTS	#SEG _next, #1
+	MOV	R5, SOF _next
+	MOV	R1, #16838
+	MUL	R5, R1
+	MOV	R1, MDL
+	MOV	R2, #20077
+	MULU	R5, R2
+	MOV	R3, MDH
+	ADD	R3, R1
+	MUL	R4, R2
+	MOV	R4, MDL
+	ADD	R4, R3
+	MUL	R5, R2
+	MOV	R5, MDL
+	ADD	R5, #12345
+	ADDC	R4, #0
+	EXTS	#SEG (_next+2), #1
+	MOV	SOF (_next+2), R4
+	EXTS	#SEG _next, #1
+	MOV	SOF _next, R5
+	AND	R4, #32767
+	RET
+	PUBLIC	_srand
+_srand:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	EXTS	#SEG (_next+2), #1
+	MOV	SOF (_next+2), R4
+	EXTS	#SEG _next, #1
+	MOV	SOF _next, R12
+	RET
+RAND_PR	ENDS
+C166_HDATA	SECTION	HDATA WORD PUBLIC 'CHUGE'
+	EVEN
+_next:
+	DSB	4
+C166_HDATA	ENDS
+C166_HDATA_INIT	SECTION	HCONST WORD PUBLIC 'CHUGEROM'
+	EVEN
+	DW	1
+	DW	0
+C166_HDATA_INIT	ENDS
+	END

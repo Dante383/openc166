@@ -1,0 +1,105 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+QSORT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_qsort
+_qsort:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #10
+	MOV	[R0+#8], R15
+	MOV	[R0+#6], R12
+	MOV	R4, #1
+	MOV	[R0], R13
+	CMP	R13, #6
+	JMP	cc_ULT, ?LBB0_3
+; %bb.1:                                ; %while.body.preheader
+	MOV	R4, #43691
+	MOV	R5, [R0]
+	MULU	R5, R4
+	MOV	R5, MDH
+	SHR	R5, #1
+	MOV	R4, #1
+	MOV	R1, #3
+?LBB0_2:
+	MUL	R4, R1
+	MOV	R4, MDL
+	ADD	R4, #1
+	CMP	R4, R5
+	JMP	cc_ULT, ?LBB0_2
+?LBB0_3:
+	MOV	[R0+#4], R14
+?LBB0_4:
+	MOV	R7, R4
+	MOV	R4, [R0]
+	CMP	R7, R4
+	JMP	cc_UGE, ?LBB0_13
+; %bb.5:                                ; %for.cond5.preheader.preheader
+	MOV	R5, R7
+?LBB0_6:
+	MOV	R9, R5
+	MOV	[R0+#2], R5
+	CMP	R5, R7
+	JMP	cc_ULT, ?LBB0_12
+?LBB0_7:
+	MUL	R9, R14
+	MOV	R8, MDL
+	SUB	R9, R7
+	MUL	R9, R14
+	MOV	R6, MDL
+	MOV	R4, [R0+#6]
+	ADD	R6, R4
+	ADD	R8, R4
+	MOV	R12, R6
+	MOV	R13, R8
+	MOV	R4, [R0+#8]
+	CALLI	cc_UC, [R4]
+	MOV	R14, [R0+#4]
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_12
+; %bb.8:                                ; %for.body12
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_11
+; %bb.9:                                ; %while.body.i.preheader
+	MOV	R4, R14
+	MOV	R5, R6
+	MOV	R1, R8
+?LBB0_10:
+	SUB	R4, #1
+	MOVB	RL2, [R5+]
+	MOVB	RL3, [R1+]
+	MOVB	[R6], RL3
+	MOVB	[R8], RL2
+	MOV	R6, R5
+	MOV	R8, R1
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_10
+?LBB0_11:
+	CMP	R9, R7
+	JMP	cc_UGE, ?LBB0_7
+?LBB0_12:
+	MOV	R5, [R0+#2]
+	ADD	R5, #1
+	MOV	R4, [R0]
+	CMP	R5, R4
+	JMP	cc_NE, ?LBB0_6
+?LBB0_13:
+	MOV	R4, #43691
+	MULU	R7, R4
+	MOV	R4, MDH
+	SHR	R4, #1
+	CMP	R7, #3
+	JMP	cc_UGE, ?LBB0_4
+; %bb.14:                               ; %for.end23
+	ADD	R0, #10
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+QSORT_PR	ENDS
+	END

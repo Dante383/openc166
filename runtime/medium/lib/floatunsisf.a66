@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FLOATUNSISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___floatunsisf                  ; -- Begin function __floatunsisf
-___floatunsisf:                         ; @__floatunsisf
+	PUBLIC	___floatunsisf
+___floatunsisf:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -93,7 +93,7 @@ ___floatunsisf:                         ; @__floatunsisf
 	SHR	R8, #8
 	ADD	R8, R4
 	AND	R8, #31
-?LBB0_5:                                ; %if.end
+?LBB0_5:
 	MOV	R4, R8
 	XOR	R4, #31
 	CMP	R4, #23
@@ -106,13 +106,13 @@ ___floatunsisf:                         ; @__floatunsisf
 	CALL	___ashlsi3
 	XOR	R5, #128
 	JMP	cc_UC, ?LBB0_16
-?LBB0_7:                                ; %if.else
+?LBB0_7:
 	MOV	R14, #8
 	SUB	R14, R8
 	MOV	R12, R7
 	MOV	R13, R6
 	CALL	___lshrsi3
-	MOV	[R0], R4                        ; 2-byte Folded Spill
+	MOV	[R0], R4
 	MOV	R9, R5
 	MOV	R14, R8
 	ADD	R14, #24
@@ -128,20 +128,20 @@ ___floatunsisf:                         ; @__floatunsisf
 	JMP	cc_UGT, ?LBB0_9
 ; %bb.8:                                ; %if.else
 	MOV	R3, R5
-?LBB0_9:                                ; %if.else
+?LBB0_9:
 	MOV	R10, R4
 	CMP	R1, #0
 	JMP	cc_NE, ?LBB0_11
 ; %bb.10:                               ; %if.else
 	MOV	R10, R5
-?LBB0_11:                               ; %if.else
+?LBB0_11:
 	XOR	R9, #128
 	CMP	R2, #32768
 	JMP	cc_EQ, ?LBB0_13
 ; %bb.12:                               ; %if.else
 	MOV	R10, R3
-?LBB0_13:                               ; %if.else
-	MOV	R3, [R0]                        ; 2-byte Folded Reload
+?LBB0_13:
+	MOV	R3, [R0]
 	ADD	R3, R10
 	ADDC	R9, R5
 	XOR	R2, #32768
@@ -149,25 +149,24 @@ ___floatunsisf:                         ; @__floatunsisf
 	JMP	cc_EQ, ?LBB0_15
 ; %bb.14:                               ; %if.else
 	MOV	R4, R5
-?LBB0_15:                               ; %if.else
+?LBB0_15:
 	AND	R4, R3
 	ADD	R4, R3
 	ADDC	R5, R9
-?LBB0_16:                               ; %if.end17
+?LBB0_16:
 	MOV	R1, #158
 	SUB	R1, R8
 	SHL	R1, #7
 	MOV	R2, #0
 	ADD	R4, R2
 	ADDC	R5, R1
-?LBB0_17:                               ; %cleanup
+?LBB0_17:
 	ADD	R0, #2
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
 	EXTRN	___ashlsi3 : NEAR
 	EXTRN	___lshrsi3 : NEAR
 FLOATUNSISF_PR	ENDS

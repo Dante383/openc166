@@ -7,10 +7,16 @@ if(SKBUILD)
     install(TARGETS openc166_cli RUNTIME DESTINATION ${SKBUILD_SCRIPTS_DIR})
 else()
     install(TARGETS openc166_cli RUNTIME DESTINATION bin)
-    # The C runtime, where the C166 clang looks for it: next to bin/.
+    # The C runtime and library, where the C166 clang looks for them: next
+    # to bin/. Startup code and library modules per memory model, headers.
     install(FILES ${PROJECT_SOURCE_DIR}/runtime/cstart.a66
             DESTINATION share/openc166/runtime)
-    install(DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/lib/
-            DESTINATION share/openc166/runtime/lib
-            FILES_MATCHING PATTERN "*.a66")
+    foreach(dir lib tiny medium large)
+        install(DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/${dir}/
+                DESTINATION share/openc166/runtime/${dir}
+                FILES_MATCHING PATTERN "*.a66")
+    endforeach()
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/runtime/include/
+            DESTINATION share/openc166/runtime/include
+            FILES_MATCHING PATTERN "*.h")
 endif()

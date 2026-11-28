@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FLOATDISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___floatdisf                    ; -- Begin function __floatdisf
-___floatdisf:                           ; @__floatdisf
+	PUBLIC	___floatdisf
+___floatdisf:
 ___floatdisf?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
@@ -34,12 +34,12 @@ ___floatdisf?F	PROC	FAR
 	MOV	R1, R5
 	CMP	R13, #0
 	JMP	cc_EQ, ?LBB0_15
-?LBB0_3:                                ; %if.end.i
+?LBB0_3:
 	CMP	R13, #0
 	JMP	cc_EQ, ?LBB0_5
-?LBB0_4:                                ; %if.end.i
+?LBB0_4:
 	MOV	R1, R4
-?LBB0_5:                                ; %if.end.i
+?LBB0_5:
 	MOV	R2, R5
 	MOV	R4, R5
 	SUB	R2, R14
@@ -49,11 +49,11 @@ ___floatdisf?F	PROC	FAR
 	JB	R15.15, ?LBB0_7
 ; %bb.6:                                ; %if.end.i
 	MOV	R2, R14
-?LBB0_7:                                ; %if.end.i
+?LBB0_7:
 	JB	R15.15, ?LBB0_9
 ; %bb.8:                                ; %if.end.i
 	MOV	R4, R15
-?LBB0_9:                                ; %if.end.i
+?LBB0_9:
 	MOV	R10, R5
 	MOV	R3, R5
 	SUB	R10, R12
@@ -62,10 +62,10 @@ ___floatdisf?F	PROC	FAR
 ; %bb.10:                               ; %if.end.i
 	MOV	R10, R12
 	JNB	R15.15, ?LBB0_17
-?LBB0_11:                               ; %if.end.i
+?LBB0_11:
 	CMP	R4, #0
 	JMP	cc_NE, ?LBB0_18
-?LBB0_12:                               ; %if.end.i
+?LBB0_12:
 	MOV	R1, R2
 	SHR	R1, #1
 	OR	R1, R2
@@ -131,17 +131,17 @@ ___floatdisf?F	PROC	FAR
 	ADD	R11, R13
 	AND	R11, #31
 	JMP	cc_UC, ?LBB0_20
-?LBB0_14:                               ; %if.end.i
+?LBB0_14:
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_3
-?LBB0_15:                               ; %if.end.i
+?LBB0_15:
 	MOV	R4, R5
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_4
 	JMP	cc_UC, ?LBB0_5
-?LBB0_16:                               ; %if.end.i
+?LBB0_16:
 	JB	R15.15, ?LBB0_11
-?LBB0_17:                               ; %if.end.i
+?LBB0_17:
 	MOV	R3, R13
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_12
@@ -178,7 +178,7 @@ ___floatdisf?F	PROC	FAR
 	AND	R1, #31
 	CMP	R3, #0
 	JMP	cc_NE, ?LBB0_13
-?LBB0_19:                               ; %if.end.i
+?LBB0_19:
 	MOV	R11, R10
 	SHR	R11, #1
 	OR	R11, R10
@@ -210,7 +210,7 @@ ___floatdisf?F	PROC	FAR
 	ADD	R11, R13
 	AND	R11, #31
 	ADD	R11, #16
-?LBB0_20:                               ; %if.end.i
+?LBB0_20:
 	MOV	R12, R2
 	OR	R12, R4
 	JMP	cc_NE, ?LBB0_22
@@ -218,7 +218,7 @@ ___floatdisf?F	PROC	FAR
 	ADD	R11, #32
 	ADDC	R5, #0
 	MOV	R1, R11
-?LBB0_22:                               ; %if.end.i
+?LBB0_22:
 	ASHR	R15, #15
 	CMP	R1, #39
 	JMP	cc_UGT, ?LBB0_27
@@ -248,7 +248,7 @@ ___floatdisf?F	PROC	FAR
 	MOV	R4, #0
 	MOV	R5, R4
 	JMP	cc_UC, ?LBB0_40
-?LBB0_27:                               ; %if.else30.i
+?LBB0_27:
 	MOV	R2, R1
 	SUB	R2, #40
 	MOV	[R0+#42], R10
@@ -280,10 +280,10 @@ ___floatdisf?F	PROC	FAR
 	MOV	R13, R10
 	MOV	R11, R3
 	MOV	R5, R2
-?LBB0_29:                               ; %if.end18.i
+?LBB0_29:
 	MOV	R12, R4
 	JMP	cc_UC, ?LBB0_33
-?LBB0_30:                               ; %if.else9.i
+?LBB0_30:
 	MOV	R5, #38
 	SUB	R5, R1
 	MOV	R14, #0
@@ -311,7 +311,7 @@ ___floatdisf?F	PROC	FAR
 	MOV	R11, R12
 	SHL	R11, #1
 	SHL	R11, R6
-	MOV	[R0], R11                       ; 2-byte Folded Spill
+	MOV	[R0], R11
 	MOV	R13, [R9+#2]
 	MOV	R11, R13
 	SHR	R11, R8
@@ -359,13 +359,13 @@ ___floatdisf?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_32
 ; %bb.31:                               ; %if.else9.i
 	MOV	R4, R14
-?LBB0_32:                               ; %if.else9.i
-	MOV	R2, [R0]                        ; 2-byte Folded Reload
+?LBB0_32:
+	MOV	R2, [R0]
 	OR	R5, R2
 	OR	R11, R7
 	SHR	R12, R8
 	OR	R13, R4
-?LBB0_33:                               ; %if.end18.i
+?LBB0_33:
 	MOV	R4, R13
 	SHR	R4, #2
 	AND	R4, #1
@@ -380,7 +380,7 @@ ___floatdisf?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_35
 ; %bb.34:                               ; %if.end18.i
 	MOV	R3, R2
-?LBB0_35:                               ; %if.end18.i
+?LBB0_35:
 	ADD	R5, R3
 	ADDC	R12, R2
 	JB	R11.10, ?LBB0_38
@@ -392,10 +392,10 @@ ___floatdisf?F	PROC	FAR
 	SHR	R11, #2
 	SHL	R5, #14
 	OR	R5, R11
-?LBB0_37:                               ; %if.end34.i
+?LBB0_37:
 	MOV	R2, #63
 	JMP	cc_UC, ?LBB0_39
-?LBB0_38:                               ; %if.then26.i
+?LBB0_38:
 	MOV	R2, R4
 	SHR	R2, #3
 	MOV	R4, R11
@@ -405,7 +405,7 @@ ___floatdisf?F	PROC	FAR
 	SHL	R5, #13
 	OR	R5, R11
 	MOV	R2, #64
-?LBB0_39:                               ; %if.end34.i
+?LBB0_39:
 	AND	R15, #32768
 	XOR	R1, #127
 	ADD	R1, R2
@@ -413,7 +413,7 @@ ___floatdisf?F	PROC	FAR
 	OR	R1, R15
 	AND	R5, #127
 	OR	R5, R1
-?LBB0_40:                               ; %__floatXiYf__.exit
+?LBB0_40:
 	ADD	R0, #50
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
@@ -421,6 +421,5 @@ ___floatdisf?F	PROC	FAR
 	MOV	R9, [R0+]
 	RETS
 ___floatdisf?F	ENDP
-                                        ; -- End function
 FLOATDISF_PR	ENDS
 	END

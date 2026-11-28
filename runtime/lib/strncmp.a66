@@ -1,0 +1,43 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRNCMP_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strncmp
+_strncmp:
+_strncmp?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, #0
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %for.body.preheader
+	SUB	R14, #1
+?LBB0_2:
+	MOV	R1, R14
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	MOVB	RL2, [R13]
+	MOVBZ	R2, RL2
+	CMP	R4, R2
+	JMP	cc_NE, ?LBB0_6
+; %bb.3:                                ; %if.end
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.4:                                ; %if.end
+	ADD	R12, #1
+	ADD	R13, #1
+	MOV	R14, R1
+	SUB	R14, #1
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_5:
+	MOV	R4, R5
+	RETS
+?LBB0_6:
+	SUB	R4, R2
+	RETS
+_strncmp?F	ENDP
+STRNCMP_PR	ENDS
+	END

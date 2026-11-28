@@ -1,0 +1,84 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FPUTS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fputs
+_fputs:
+_fputs?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R7, R15
+	MOV	R6, R14
+	MOV	R8, R13
+	MOV	R9, R12
+	CALLS	SEG _strlen, SOF _strlen
+	MOV	[R0], R7
+	EXTS	R7, #1
+	MOV	R12, [R6]
+	MOV	R13, R9
+	MOV	R14, R8
+	MOV	R15, R4
+	MOV	R7, R4
+	CALLS	SEG __write, SOF __write
+	MOV	R5, R4
+	MOV	R4, #0
+	CMP	R5, R7
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.then
+	MOV	R5, [R0]
+	ADD	R6, #4
+	ADDC	R5, #0
+	EXTS	R5, #1
+	MOVB	RL4, [R6]
+	MOVBZ	R4, RL4
+	OR	R4, #2
+	EXTS	R5, #1
+	MOVB	[R6], RL4
+	MOV	R4, #65535
+?LBB0_2:
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_fputs?F	ENDP
+	PUBLIC	_puts
+_puts:
+_puts?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R14, #SOF (___c166_iob+6)
+	MOV	R15, #SEG (___c166_iob+6)
+	CALLS	SEG _fputs, SOF _fputs
+	CMP	R4, #65535
+	JMP	cc_EQ, ?LBB1_4
+; %bb.1:                                ; %if.end
+	MOV	R12, #10
+	MOV	R13, #SOF (___c166_iob+6)
+	MOV	R14, #SEG (___c166_iob+6)
+	CALLS	SEG _fputc, SOF _fputc
+	MOV	R5, R4
+	MOV	R4, #65535
+	CMP	R5, #65535
+	JMP	cc_EQ, ?LBB1_3
+; %bb.2:                                ; %if.end
+	MOV	R4, #0
+?LBB1_3:
+	RETS
+?LBB1_4:
+	MOV	R4, #65535
+	RETS
+_puts?F	ENDP
+	EXTRN	_strlen : NEAR
+	EXTRN	__write : NEAR
+	EXTRN	___c166_iob : WORD
+	EXTRN	_fputc : NEAR
+FPUTS_PR	ENDS
+	END

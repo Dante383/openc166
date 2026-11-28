@@ -9,17 +9,15 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FP_MODE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fe_getround                  ; -- Begin function __fe_getround
-___fe_getround:                         ; @__fe_getround
+	PUBLIC	___fe_getround
+___fe_getround:
 ; %bb.0:                                ; %entry
 	MOV	R4, #0
 	RET
-                                        ; -- End function
-	PUBLIC	___fe_raise_inexact             ; -- Begin function __fe_raise_inexact
-___fe_raise_inexact:                    ; @__fe_raise_inexact
+	PUBLIC	___fe_raise_inexact
+___fe_raise_inexact:
 ; %bb.0:                                ; %entry
 	MOV	R4, #0
 	RET
-                                        ; -- End function
 FP_MODE_PR	ENDS
 	END

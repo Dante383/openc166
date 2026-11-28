@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FIXUNSDFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixunsdfsi                   ; -- Begin function __fixunsdfsi
-___fixunsdfsi:                          ; @__fixunsdfsi
+	PUBLIC	___fixunsdfsi
+___fixunsdfsi:
 ___fixunsdfsi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	SUB	R0, #16
@@ -68,10 +68,9 @@ ___fixunsdfsi?F	PROC	FAR
 	SHL	R4, #1
 	SHL	R4, R10
 	OR	R4, R2
-?LBB0_4:                                ; %__fixuint.exit
+?LBB0_4:
 	ADD	R0, #16
 	RETS
 ___fixunsdfsi?F	ENDP
-                                        ; -- End function
 FIXUNSDFSI_PR	ENDS
 	END

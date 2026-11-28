@@ -1,0 +1,24 @@
+; Compiled from LLVM libc, libc/shared/math/fabs.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FABS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fabs
+_fabs:
+; %bb.0:                                ; %entry
+	MOV	R4, [R0+#6]
+	AND	R4, #32767
+	MOV	R5, [R0]
+	MOV	R1, [R0+#2]
+	MOV	R2, [R0+#4]
+	MOV	[R12+#6], R4
+	MOV	[R12+#4], R2
+	MOV	[R12+#2], R1
+	MOV	[R12], R5
+	RET
+FABS_PR	ENDS
+	END

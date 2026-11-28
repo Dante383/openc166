@@ -1,0 +1,35 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+READ_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	__read
+__read:
+__read?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, R15
+	JMP	cc_EQ, ?LBB0_4
+; %bb.1:                                ; %while.cond.preheader.preheader
+	MOV	R5, #0
+?LBB0_2:
+	JNB	S0RIR, ?LBB0_2
+; %bb.3:                                ; %while.end
+	BCLR	S0RIR
+	MOV	R1, S0RBUF
+	MOV	R2, #0
+	MOV	R3, R14
+	MOV	R10, R13
+	ADD	R10, R5
+	ADDC	R3, R2
+	EXTS	R3, #1
+	MOVB	[R10], RL1
+	ADD	R5, #1
+	CMP	R5, R4
+	JMP	cc_NE, ?LBB0_2
+?LBB0_4:
+	RETS
+__read?F	ENDP
+READ_PR	ENDS
+	END

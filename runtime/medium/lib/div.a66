@@ -1,0 +1,160 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+DIV_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_div
+_div:
+; %bb.0:                                ; %entry
+	MOV	MDL, R13
+	DIV	R14
+	MOV	R4, MDL
+	MOV	[R12], R4
+	MUL	R4, R14
+	MOV	R4, MDL
+	SUB	R13, R4
+	MOV	[R12+#2], R13
+	RET
+	PUBLIC	_ldiv
+_ldiv:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R6, R14
+	MOV	R7, R13
+	MOV	R8, R12
+	MOV	R9, [R0+#10]
+	MOV	R15, [R0+#12]
+	MOV	[R0], R15
+	MOV	R12, R7
+	MOV	R13, R6
+	MOV	R14, R9
+	CALL	___divsi3
+	MOV	[R8+#2], R5
+	MOV	[R8], R4
+	MOV	R1, [R0]
+	MUL	R4, R1
+	MOV	R1, MDL
+	MULU	R4, R9
+	MOV	R2, MDH
+	ADD	R2, R1
+	MUL	R5, R9
+	MOV	R5, MDL
+	ADD	R5, R2
+	MUL	R4, R9
+	MOV	R4, MDL
+	SUB	R7, R4
+	SUBC	R6, R5
+	MOV	[R8+#6], R6
+	MOV	[R8+#4], R7
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	PUBLIC	_lldiv
+_lldiv:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #42
+	MOV	R6, R12
+	MOV	R4, [R0+#50]
+	MOV	R8, [R0+#52]
+	MOV	R7, [R0+#54]
+	MOV	R9, [R0+#56]
+	MOV	R5, [R0+#58]
+	MOV	[R0+#22], R5
+	MOV	R1, [R0+#60]
+	MOV	[R0+#20], R1
+	MOV	R2, [R0+#62]
+	MOV	[R0+#18], R2
+	MOV	R3, [R0+#64]
+	MOV	[R0+#16], R3
+	MOV	[R0+#14], R3
+	MOV	[R0+#12], R2
+	MOV	[R0+#10], R1
+	MOV	[R0+#8], R5
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R7
+	MOV	[R0+#2], R8
+	MOV	[R0+#24], R4
+	MOV	[R0], R4
+	MOV	R12, R0
+	ADD	R12, #34
+	CALL	___divdi3
+	MOV	R4, [R0+#34]
+	MOV	R5, [R0+#36]
+	MOV	R1, [R0+#38]
+	MOV	R2, [R0+#40]
+	MOV	[R6+#6], R2
+	MOV	[R6+#4], R1
+	MOV	[R6+#2], R5
+	MOV	[R6], R4
+	MOV	R3, [R0+#16]
+	MOV	[R0+#14], R3
+	MOV	R3, [R0+#18]
+	MOV	[R0+#12], R3
+	MOV	R3, [R0+#20]
+	MOV	[R0+#10], R3
+	MOV	R3, [R0+#22]
+	MOV	[R0+#8], R3
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	MOV	R12, R0
+	ADD	R12, #26
+	CALL	___muldi3
+	MOV	R4, [R0+#26]
+	MOV	R5, [R0+#28]
+	MOV	R1, #0
+	MOV	R2, #1
+	MOV	R3, R2
+	CMP	R8, R5
+	JMP	cc_ULT, ?LBB2_2
+; %bb.1:                                ; %entry
+	MOV	R3, R1
+?LBB2_2:
+	MOV	R12, [R0+#24]
+	CMP	R12, R4
+	JMP	cc_ULT, ?LBB2_4
+; %bb.3:                                ; %entry
+	MOV	R2, R1
+?LBB2_4:
+	MOV	R10, [R0+#32]
+	MOV	R11, [R0+#30]
+	CMP	R8, R5
+	JMP	cc_EQ, ?LBB2_6
+; %bb.5:                                ; %entry
+	MOV	R2, R3
+?LBB2_6:
+	SUB	R7, R11
+	SUBC	R9, R10
+	SUB	R7, R2
+	SUBC	R9, R1
+	SUB	R12, R4
+	SUBC	R8, R5
+	MOV	[R6+#10], R8
+	MOV	[R6+#8], R12
+	MOV	[R6+#14], R9
+	MOV	[R6+#12], R7
+	ADD	R0, #42
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	___divsi3 : NEAR
+	EXTRN	___divdi3 : NEAR
+	EXTRN	___muldi3 : NEAR
+DIV_PR	ENDS
+	END

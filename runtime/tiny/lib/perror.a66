@@ -1,0 +1,48 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+PERROR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_perror
+_perror:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %land.lhs.true
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	JMP	cc_EQ, ?LBB0_3
+; %bb.2:                                ; %if.then
+	MOV	R6, #___c166_iob+12
+	MOV	R13, R6
+	CALL	_fputs
+	MOV	R12, #L_?str
+	MOV	R13, R6
+	CALL	_fputs
+?LBB0_3:
+	MOV	R12, _errno
+	CALL	_strerror
+	MOV	R6, #___c166_iob+12
+	MOV	R12, R4
+	MOV	R13, R6
+	CALL	_fputs
+	MOV	R12, #10
+	MOV	R13, R6
+	CALL	_fputc
+	MOV	R6, [R0+]
+	RET
+PERROR_PR	ENDS
+PERROR_NC	SECTION	DATA WORD PUBLIC 'CNEARROM'
+L_?str:
+	DB	58
+	DB	32
+	DB	0
+
+	EXTRN	___c166_iob : WORD
+	EXTRN	_fputs : NEAR
+	EXTRN	_errno : WORD
+	EXTRN	_strerror : NEAR
+	EXTRN	_fputc : NEAR
+PERROR_NC	ENDS
+	END

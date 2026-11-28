@@ -3,8 +3,8 @@ $CASE
 $MOD167
 $INCLUDE(REG167.INC)
 UDIVSI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___udivsi3                      ; -- Begin function __udivsi3
-___udivsi3:                             ; @__udivsi3
+	PUBLIC	___udivsi3
+___udivsi3:
 ; %bb.0:                                ; %entry
 	SUB	R0, #6
 	MOV	R4, R0
@@ -13,9 +13,7 @@ ___udivsi3:                             ; @__udivsi3
 	CALL	_divmod
 	ADD	R0, #6
 	RET
-                                        ; -- End function
-_divmod:                                ; -- Begin function divmod
-                                        ; @divmod
+_divmod:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -28,8 +26,7 @@ _divmod:                                ; -- Begin function divmod
 	MOV	R10, R1
 	MOV	R4, R1
 	MOV	R5, R1
-?LBB1_1:                                ; %for.body
-                                        ; =>This Inner Loop Header: Depth=1
+?LBB1_1:
 	MOV	R11, R7
 	SHR	R11, #15
 	SHL	R10, #1
@@ -39,10 +36,8 @@ _divmod:                                ; -- Begin function divmod
 	CMP	R10, R15
 	JMP	cc_UGE, ?LBB1_3
 ; %bb.2:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
 	MOV	R8, R1
-?LBB1_3:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
+?LBB1_3:
 	SHL	R7, #1
 	MOV	R11, R13
 	SHR	R11, #15
@@ -50,33 +45,25 @@ _divmod:                                ; -- Begin function divmod
 	CMP	R11, R14
 	JMP	cc_UGE, ?LBB1_5
 ; %bb.4:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
 	MOV	R6, R1
-?LBB1_5:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
+?LBB1_5:
 	CMP	R10, R15
 	JMP	cc_EQ, ?LBB1_7
 ; %bb.6:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
 	MOV	R6, R8
-?LBB1_7:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
+?LBB1_7:
 	MOV	R7, R15
 	CMP	R6, #0
 	JMP	cc_NE, ?LBB1_9
 ; %bb.8:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
 	MOV	R7, R1
-?LBB1_9:                                ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
+?LBB1_9:
 	MOV	R8, R14
 	CMP	R6, #0
 	JMP	cc_NE, ?LBB1_11
 ; %bb.10:                               ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
 	MOV	R8, R1
-?LBB1_11:                               ; %for.body
-                                        ;   in Loop: Header=BB1_1 Depth=1
+?LBB1_11:
 	MOV	R9, R12
 	SHR	R9, #15
 	SHL	R13, #1
@@ -102,9 +89,8 @@ _divmod:                                ; -- Begin function divmod
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
-	PUBLIC	___umodsi3                      ; -- Begin function __umodsi3
-___umodsi3:                             ; @__umodsi3
+	PUBLIC	___umodsi3
+___umodsi3:
 ; %bb.0:                                ; %entry
 	SUB	R0, #6
 	MOV	R4, R0
@@ -115,9 +101,8 @@ ___umodsi3:                             ; @__umodsi3
 	MOV	R4, [R0+#2]
 	ADD	R0, #6
 	RET
-                                        ; -- End function
-	PUBLIC	___divsi3                       ; -- Begin function __divsi3
-___divsi3:                              ; @__divsi3
+	PUBLIC	___divsi3
+___divsi3:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -132,11 +117,11 @@ ___divsi3:                              ; @__divsi3
 	JB	R7.15, ?LBB3_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R4
-?LBB3_2:                                ; %entry
+?LBB3_2:
 	JB	R7.15, ?LBB3_4
 ; %bb.3:                                ; %entry
 	MOV	R13, R7
-?LBB3_4:                                ; %entry
+?LBB3_4:
 	MOV	R4, R6
 	MOV	R5, R6
 	SUB	R4, R14
@@ -144,12 +129,12 @@ ___divsi3:                              ; @__divsi3
 	JB	R15.15, ?LBB3_6
 ; %bb.5:                                ; %entry
 	MOV	R4, R14
-?LBB3_6:                                ; %entry
+?LBB3_6:
 	XOR	R7, R15
 	JB	R15.15, ?LBB3_8
 ; %bb.7:                                ; %entry
 	MOV	R5, R15
-?LBB3_8:                                ; %entry
+?LBB3_8:
 	MOV	R1, R0
 	ADD	R1, #2
 	MOV	[R0], R1
@@ -163,19 +148,18 @@ ___divsi3:                              ; @__divsi3
 	JB	R7.15, ?LBB3_10
 ; %bb.9:                                ; %entry
 	MOV	R6, R4
-?LBB3_10:                               ; %entry
+?LBB3_10:
 	JB	R7.15, ?LBB3_12
 ; %bb.11:                               ; %entry
 	MOV	R5, R1
-?LBB3_12:                               ; %entry
+?LBB3_12:
 	MOV	R4, R6
 	ADD	R0, #6
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	RET
-                                        ; -- End function
-	PUBLIC	___modsi3                       ; -- Begin function __modsi3
-___modsi3:                              ; @__modsi3
+	PUBLIC	___modsi3
+___modsi3:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -190,11 +174,11 @@ ___modsi3:                              ; @__modsi3
 	JB	R7.15, ?LBB4_2
 ; %bb.1:                                ; %entry
 	MOV	R12, R4
-?LBB4_2:                                ; %entry
+?LBB4_2:
 	JB	R7.15, ?LBB4_4
 ; %bb.3:                                ; %entry
 	MOV	R13, R7
-?LBB4_4:                                ; %entry
+?LBB4_4:
 	MOV	R4, R6
 	MOV	R5, R6
 	SUB	R4, R14
@@ -202,11 +186,11 @@ ___modsi3:                              ; @__modsi3
 	JB	R15.15, ?LBB4_6
 ; %bb.5:                                ; %entry
 	MOV	R4, R14
-?LBB4_6:                                ; %entry
+?LBB4_6:
 	JB	R15.15, ?LBB4_8
 ; %bb.7:                                ; %entry
 	MOV	R5, R15
-?LBB4_8:                                ; %entry
+?LBB4_8:
 	MOV	R1, R0
 	ADD	R1, #2
 	MOV	[R0], R1
@@ -221,16 +205,15 @@ ___modsi3:                              ; @__modsi3
 	JB	R7.15, ?LBB4_10
 ; %bb.9:                                ; %entry
 	MOV	R6, R1
-?LBB4_10:                               ; %entry
+?LBB4_10:
 	JB	R7.15, ?LBB4_12
 ; %bb.11:                               ; %entry
 	MOV	R5, R4
-?LBB4_12:                               ; %entry
+?LBB4_12:
 	MOV	R4, R6
 	ADD	R0, #6
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	RET
-                                        ; -- End function
 UDIVSI3_PR	ENDS
 	END

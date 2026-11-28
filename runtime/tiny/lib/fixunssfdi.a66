@@ -7,8 +7,8 @@ $CASE
 $MOD167
 $INCLUDE(REG167.INC)
 FIXUNSSFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixunssfdi                   ; -- Begin function __fixunssfdi
-___fixunssfdi:                          ; @__fixunssfdi
+	PUBLIC	___fixunssfdi
+___fixunssfdi:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -31,26 +31,26 @@ ___fixunssfdi:                          ; @__fixunssfdi
 ; %bb.1:                                ; %entry
 	CMP	R4, #0
 	JMP	cc_NE, ?LBB0_6
-?LBB0_2:                                ; %entry
+?LBB0_2:
 	CMP	R5, #0
 	JMP	cc_NE, ?LBB0_7
-?LBB0_3:                                ; %entry
+?LBB0_3:
 	JNB	R1.0, ?LBB0_4
 	JMP	cc_UC, ?LBB0_8
-?LBB0_4:                                ; %if.end
+?LBB0_4:
 	MOV	[R0+#2], R8
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #56
 	CALL	___extendsfdf2
 	MOV	R5, [R0+#56]
-	MOV	[R0+#22], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#22], R5
 	MOV	R1, [R0+#58]
-	MOV	[R0+#20], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#20], R1
 	MOV	R2, [R0+#60]
-	MOV	[R0+#18], R2                    ; 2-byte Folded Spill
+	MOV	[R0+#18], R2
 	MOV	R3, [R0+#62]
-	MOV	[R0+#16], R3                    ; 2-byte Folded Spill
+	MOV	[R0+#16], R3
 	MOV	R4, #15856
 	MOV	[R0+#14], R4
 	MOV	R9, #0
@@ -96,13 +96,13 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	R12, R0
 	ADD	R12, #32
 	CALL	___muldf3
-	MOV	R4, [R0+#16]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#16]
 	MOV	[R0+#6], R4
-	MOV	R4, [R0+#18]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#18]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#20]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#20]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#22]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#22]
 	MOV	[R0], R4
 	MOV	R4, [R0+#38]
 	MOV	[R0+#14], R4
@@ -126,15 +126,15 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	CALL	___fixunsdfsi
 	MOV	R9, R4
 	JMP	cc_UC, ?LBB0_9
-?LBB0_5:                                ; %entry
+?LBB0_5:
 	MOV	R2, R9
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_2
-?LBB0_6:                                ; %entry
+?LBB0_6:
 	MOV	R1, R9
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB0_3
-?LBB0_7:                                ; %entry
+?LBB0_7:
 	MOV	R1, R2
 	JB	R1.0, ?LBB0_8
 	JMP	cc_UC, ?LBB0_4
@@ -142,7 +142,7 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	R5, R9
 	MOV	R7, R9
 	MOV	R8, R9
-?LBB0_9:                                ; %return
+?LBB0_9:
 	MOV	[R6], R9
 	MOV	[R6+#2], R5
 	MOV	[R6+#4], R7
@@ -153,7 +153,6 @@ ___fixunssfdi:                          ; @__fixunssfdi
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
 	EXTRN	___lesf2 : NEAR
 	EXTRN	___extendsfdf2 : NEAR
 	EXTRN	___muldf3 : NEAR

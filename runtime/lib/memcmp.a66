@@ -1,0 +1,36 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMCMP_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memcmp
+_memcmp:
+_memcmp?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, #0
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_3
+?LBB0_1:
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	MOVB	RL1, [R13]
+	MOVBZ	R1, RL1
+	CMP	R4, R1
+	JMP	cc_NE, ?LBB0_4
+; %bb.2:                                ; %for.inc
+	SUB	R14, #1
+	ADD	R12, #1
+	ADD	R13, #1
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_1
+?LBB0_3:
+	MOV	R4, R5
+	RETS
+?LBB0_4:
+	SUB	R4, R1
+	RETS
+_memcmp?F	ENDP
+MEMCMP_PR	ENDS
+	END

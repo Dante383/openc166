@@ -5,8 +5,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 SHIFTS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___ashlsi3                      ; -- Begin function __ashlsi3
-___ashlsi3:                             ; @__ashlsi3
+	PUBLIC	___ashlsi3
+___ashlsi3:
 ___ashlsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R5, R12
@@ -19,7 +19,7 @@ ___ashlsi3?F	PROC	FAR
 	SHL	R5, R4
 	MOV	R4, #0
 	RETS
-?LBB0_2:                                ; %if.else
+?LBB0_2:
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_4
 ; %bb.3:                                ; %if.then3
@@ -41,9 +41,8 @@ ___ashlsi3?F	PROC	FAR
 	MOV	R5, R13
 	RETS
 ___ashlsi3?F	ENDP
-                                        ; -- End function
-	PUBLIC	___lshrsi3                      ; -- Begin function __lshrsi3
-___lshrsi3:                             ; @__lshrsi3
+	PUBLIC	___lshrsi3
+___lshrsi3:
 ___lshrsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R4, R13
@@ -56,7 +55,7 @@ ___lshrsi3?F	PROC	FAR
 	SHR	R4, R1
 	MOV	R5, #0
 	RETS
-?LBB1_2:                                ; %if.else
+?LBB1_2:
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB1_4
 ; %bb.3:                                ; %if.then4
@@ -78,9 +77,8 @@ ___lshrsi3?F	PROC	FAR
 	MOV	R4, R12
 	RETS
 ___lshrsi3?F	ENDP
-                                        ; -- End function
-	PUBLIC	___ashrsi3                      ; -- Begin function __ashrsi3
-___ashrsi3:                             ; @__ashrsi3
+	PUBLIC	___ashrsi3
+___ashrsi3:
 ___ashrsi3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R5, R13
@@ -95,7 +93,7 @@ ___ashrsi3?F	PROC	FAR
 	ASHR	R4, R1
 	ASHR	R5, #15
 	RETS
-?LBB2_2:                                ; %if.else
+?LBB2_2:
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB2_4
 ; %bb.3:                                ; %if.then6
@@ -110,9 +108,8 @@ ___ashrsi3?F	PROC	FAR
 	SHL	R4, R14
 	OR	R4, R3
 	ASHR	R5, R1
-?LBB2_4:                                ; %if.end10
+?LBB2_4:
 	RETS
 ___ashrsi3?F	ENDP
-                                        ; -- End function
 SHIFTS_PR	ENDS
 	END

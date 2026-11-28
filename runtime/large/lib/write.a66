@@ -1,0 +1,37 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+WRITE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	__write
+__write:
+__write?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, R15
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %for.body.preheader
+	MOV	R5, #0
+	MOV	R1, R5
+?LBB0_2:
+	BCLR	S0TIR
+	MOV	R2, R14
+	MOV	R3, R13
+	ADD	R3, R1
+	ADDC	R2, R5
+	EXTS	R2, #1
+	MOVB	RL2, [R3]
+	MOVBZ	R2, RL2
+	MOV	S0TBUF, R2
+?LBB0_3:
+	JNB	S0TIR, ?LBB0_3
+; %bb.4:                                ; %for.inc
+	ADD	R1, #1
+	CMP	R1, R4
+	JMP	cc_NE, ?LBB0_2
+?LBB0_5:
+	RETS
+__write?F	ENDP
+WRITE_PR	ENDS
+	END

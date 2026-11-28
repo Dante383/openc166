@@ -1,0 +1,103 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$SET (FARCODE)
+$RESET (FARDATA)
+$INCLUDE(REG167.INC)
+; setjmp and longjmp for openc166's C library. Hand-written; part of
+; openc166 (MIT). runtime/build.py puts it into each model's library with
+; the controls for that model in front: $SEGMENTED but in tiny, FARCODE
+; (CALLS/RETS: small, large) and FARDATA (the jmp_buf is behind a far
+; pointer in R12:R13: medium, large).
+;
+; jmp_buf, words: R0, SP after the return, R6, R7, R8, R9, IP, CSP.
+
+SETJMP_PR       SECTION CODE WORD PUBLIC 'CPROGRAM'
+        PUBLIC  _setjmp, _longjmp
+
+; int setjmp(jmp_buf env): env in R12 (R12:R13 with far data).
+$IF (FARCODE)
+_setjmp PROC    FAR
+$ELSE
+_setjmp PROC    NEAR
+$ENDIF
+        MOV     R2, SP
+        MOV     R3, [R2]                ; the return IP
+$IF (FARCODE)
+        MOV     R1, [R2+#2]             ; and CSP
+        ADD     R2, #4
+$ELSE
+        ADD     R2, #2
+$ENDIF
+$IF (FARDATA)
+        EXTS    R13, #4
+$ENDIF
+        MOV     [R12], R0
+        MOV     [R12+#2], R2
+        MOV     [R12+#4], R6
+        MOV     [R12+#6], R7
+$IF (FARDATA)
+        EXTS    R13, #4
+$ENDIF
+        MOV     [R12+#8], R8
+        MOV     [R12+#10], R9
+        MOV     [R12+#12], R3
+$IF (FARCODE)
+        MOV     [R12+#14], R1
+$ELSE
+        NOP
+$ENDIF
+        MOV     R4, #0
+$IF (FARCODE)
+        RETS
+$ELSE
+        RET
+$ENDIF
+_setjmp ENDP
+
+; void longjmp(jmp_buf env, int val): back from setjmp with val (1 for 0).
+; val is in R13 (R14 with far data).
+$IF (FARCODE)
+_longjmp PROC   FAR
+$ELSE
+_longjmp PROC   NEAR
+$ENDIF
+$IF (FARDATA)
+        MOV     R4, R14
+        EXTS    R13, #4
+$ELSE
+        MOV     R4, R13
+$ENDIF
+        MOV     R0, [R12]
+        MOV     R2, [R12+#2]
+        MOV     R6, [R12+#4]
+        MOV     R7, [R12+#6]
+$IF (FARDATA)
+        EXTS    R13, #4
+$ENDIF
+        MOV     R8, [R12+#8]
+        MOV     R9, [R12+#10]
+        MOV     R3, [R12+#12]
+$IF (FARCODE)
+        MOV     R1, [R12+#14]
+$ELSE
+        NOP
+$ENDIF
+        CMP     R4, #0
+        JMP     cc_NE, ?LJ_VAL
+        MOV     R4, #1
+?LJ_VAL:
+        MOV     SP, R2
+        NOP                             ; SP written: no implicit use next
+$IF (FARCODE)
+        PUSH    R1
+        PUSH    R3
+        RETS
+$ELSE
+        PUSH    R3
+        RET
+$ENDIF
+_longjmp ENDP
+SETJMP_PR       ENDS
+        END

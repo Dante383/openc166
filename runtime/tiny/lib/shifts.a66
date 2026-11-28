@@ -3,8 +3,8 @@ $CASE
 $MOD167
 $INCLUDE(REG167.INC)
 SHIFTS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___ashlsi3                      ; -- Begin function __ashlsi3
-___ashlsi3:                             ; @__ashlsi3
+	PUBLIC	___ashlsi3
+___ashlsi3:
 ; %bb.0:                                ; %entry
 	MOV	R5, R12
 	MOV	R4, R14
@@ -16,7 +16,7 @@ ___ashlsi3:                             ; @__ashlsi3
 	SHL	R5, R4
 	MOV	R4, #0
 	RET
-?LBB0_2:                                ; %if.else
+?LBB0_2:
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_4
 ; %bb.3:                                ; %if.then3
@@ -37,9 +37,8 @@ ___ashlsi3:                             ; @__ashlsi3
 	MOV	R4, R5
 	MOV	R5, R13
 	RET
-                                        ; -- End function
-	PUBLIC	___lshrsi3                      ; -- Begin function __lshrsi3
-___lshrsi3:                             ; @__lshrsi3
+	PUBLIC	___lshrsi3
+___lshrsi3:
 ; %bb.0:                                ; %entry
 	MOV	R4, R13
 	MOV	R1, R14
@@ -51,7 +50,7 @@ ___lshrsi3:                             ; @__lshrsi3
 	SHR	R4, R1
 	MOV	R5, #0
 	RET
-?LBB1_2:                                ; %if.else
+?LBB1_2:
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB1_4
 ; %bb.3:                                ; %if.then4
@@ -72,9 +71,8 @@ ___lshrsi3:                             ; @__lshrsi3
 	MOV	R5, R4
 	MOV	R4, R12
 	RET
-                                        ; -- End function
-	PUBLIC	___ashrsi3                      ; -- Begin function __ashrsi3
-___ashrsi3:                             ; @__ashrsi3
+	PUBLIC	___ashrsi3
+___ashrsi3:
 ; %bb.0:                                ; %entry
 	MOV	R5, R13
 	MOV	R4, R12
@@ -88,7 +86,7 @@ ___ashrsi3:                             ; @__ashrsi3
 	ASHR	R4, R1
 	ASHR	R5, #15
 	RET
-?LBB2_2:                                ; %if.else
+?LBB2_2:
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB2_4
 ; %bb.3:                                ; %if.then6
@@ -103,8 +101,7 @@ ___ashrsi3:                             ; @__ashrsi3
 	SHL	R4, R14
 	OR	R4, R3
 	ASHR	R5, R1
-?LBB2_4:                                ; %if.end10
+?LBB2_4:
 	RET
-                                        ; -- End function
 SHIFTS_PR	ENDS
 	END

@@ -1,0 +1,56 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FWRITE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fwrite
+_fwrite:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R6, R14
+	MOV	R14, R13
+	MOV	R13, R12
+	MOV	R4, #0
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %entry
+	CMP	R15, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.2:                                ; %if.end
+	MOV	R8, [R0+#10]
+	MOV	R9, [R0+#8]
+	EXTS	R8, #1
+	MOV	R12, [R9]
+	MUL	R15, R6
+	MOV	R7, MDL
+	MOV	R15, R7
+	CALL	__write
+	CMP	R4, R7
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %if.then3
+	ADD	R9, #4
+	ADDC	R8, #0
+	EXTS	R8, #1
+	MOVB	RL5, [R9]
+	MOVBZ	R5, RL5
+	OR	R5, #2
+	EXTS	R8, #1
+	MOVB	[R9], RL5
+?LBB0_4:
+	MOV	MDL, R4
+	DIVU	R6
+	MOV	R4, MDL
+?LBB0_5:
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	__write : NEAR
+FWRITE_PR	ENDS
+	END

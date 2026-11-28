@@ -1,0 +1,108 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRTOK_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strtok
+_strtok:
+_strtok?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R8, R15
+	MOV	R9, R14
+	MOV	R7, R13
+	MOV	R6, R12
+	MOV	R4, R6
+	OR	R4, R7
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:
+	EXTS	#SEG (_strtok?next+2), #1
+	MOV	R7, SOF (_strtok?next+2)
+?LBB0_2:
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_4
+; %bb.3:
+	EXTS	#SEG _strtok?next, #1
+	MOV	R6, SOF _strtok?next
+?LBB0_4:
+	MOV	R4, R6
+	OR	R4, R7
+	JMP	cc_EQ, ?LBB0_8
+; %bb.5:                                ; %if.end3
+	MOV	R12, R6
+	MOV	R13, R7
+	MOV	R14, R9
+	MOV	R15, R8
+	CALLS	SEG _strspn, SOF _strspn
+	MOV	R5, #0
+	ADD	R6, R4
+	ADDC	R7, R5
+	EXTS	R7, #1
+	MOVB	RL4, [R6]
+	MOVBZ	R4, RL4
+	AND	R4, #255
+	JMP	cc_EQ, ?LBB0_9
+; %bb.6:                                ; %if.end6
+	MOV	R12, R6
+	MOV	R13, R7
+	MOV	R14, R9
+	MOV	R15, R8
+	CALLS	SEG _strcspn, SOF _strcspn
+	MOV	R5, #0
+	MOV	R1, R6
+	MOV	R2, R7
+	ADD	R1, R4
+	ADDC	R2, R5
+	EXTS	R2, #1
+	MOVB	RL4, [R1]
+	MOVBZ	R4, RL4
+	AND	R4, #255
+	JMP	cc_EQ, ?LBB0_10
+; %bb.7:                                ; %if.then11
+	MOV	R5, R1
+	MOV	R4, R2
+	ADD	R5, #1
+	ADDC	R4, #0
+	MOV	R3, #0
+	EXTS	R2, #1
+	MOVB	[R1], RL3
+	JMP	cc_UC, ?LBB0_11
+?LBB0_8:
+	MOV	R6, #0
+	MOV	R7, R6
+	JMP	cc_UC, ?LBB0_12
+?LBB0_9:
+	MOV	R4, R5
+	MOV	R6, R5
+	MOV	R7, R5
+	JMP	cc_UC, ?LBB0_11
+?LBB0_10:
+	MOV	R4, R5
+?LBB0_11:
+	EXTS	#SEG _strtok?next, #1
+	MOV	SOF _strtok?next, R5
+	EXTS	#SEG (_strtok?next+2), #1
+	MOV	SOF (_strtok?next+2), R4
+?LBB0_12:
+	MOV	R4, R6
+	MOV	R5, R7
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_strtok?F	ENDP
+STRTOK_PR	ENDS
+C166_HBSS	SECTION	HDATA WORD PUBLIC 'CHUGE'
+	EVEN
+_strtok?next:
+	DSB	4
+	EXTRN	_strspn : NEAR
+	EXTRN	_strcspn : NEAR
+C166_HBSS	ENDS
+	END

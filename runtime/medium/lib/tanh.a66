@@ -1,0 +1,173 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+TANH_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_tanh
+_tanh:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #68
+	MOV	[R0+#26], R12
+	MOV	R4, [R0+#82]
+	MOV	R5, [R0+#80]
+	MOV	R2, [R0+#78]
+	MOV	R1, [R0+#76]
+	MOV	[R0+#24], R4
+	MOV	[R0+#6], R4
+	MOV	[R0+#22], R5
+	MOV	[R0+#4], R5
+	MOV	[R0+#18], R2
+	MOV	[R0+#2], R2
+	MOV	[R0+#20], R1
+	MOV	[R0], R1
+	MOV	R12, R0
+	ADD	R12, #60
+	CALL	_fabs
+	MOV	R5, [R0+#66]
+	MOV	R9, [R0+#64]
+	MOV	R7, [R0+#62]
+	MOV	R6, [R0+#60]
+	MOV	R4, #16438
+	MOV	[R0+#14], R4
+	MOV	R8, #0
+	MOV	[R0+#12], R8
+	MOV	[R0+#10], R8
+	MOV	[R0+#8], R8
+	MOV	[R0+#16], R5
+	MOV	[R0+#6], R5
+	MOV	[R0+#4], R9
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	CALL	___gtdf2
+	MOV	R1, #1
+	MOV	R2, R1
+	CMP	R5, #0
+	JMP	cc_SLE, ?LBB0_5
+; %bb.1:                                ; %entry
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_6
+?LBB0_2:
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_7
+?LBB0_3:
+	JNB	R1.0, ?LBB0_8
+?LBB0_4:
+	MOV	R7, #16368
+	MOV	R9, R8
+	MOV	R6, R8
+	JMP	cc_UC, ?LBB0_9
+?LBB0_5:
+	MOV	R2, R8
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_6:
+	MOV	R1, R8
+	CMP	R5, #0
+	JMP	cc_EQ, ?LBB0_3
+?LBB0_7:
+	MOV	R1, R2
+	JB	R1.0, ?LBB0_4
+?LBB0_8:
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R6
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	[R0+#12], R9
+	MOV	[R0+#4], R9
+	MOV	R4, [R0+#16]
+	MOV	[R0+#14], R4
+	MOV	[R0+#6], R4
+	MOV	R12, R0
+	ADD	R12, #44
+	CALL	___adddf3
+	MOV	R4, [R0+#44]
+	MOV	R5, [R0+#46]
+	MOV	R1, [R0+#48]
+	MOV	R2, [R0+#50]
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	MOV	R12, R0
+	ADD	R12, #52
+	CALL	_expm1
+	MOV	R6, [R0+#52]
+	MOV	R7, [R0+#54]
+	MOV	R8, [R0+#56]
+	MOV	R9, [R0+#58]
+	MOV	R4, #16384
+	MOV	[R0+#14], R4
+	MOV	R4, #0
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	R12, R0
+	ADD	R12, #36
+	CALL	___adddf3
+	MOV	R4, [R0+#36]
+	MOV	R5, [R0+#38]
+	MOV	R1, [R0+#40]
+	MOV	R2, [R0+#42]
+	MOV	[R0+#6], R9
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R7
+	MOV	[R0], R6
+	MOV	[R0+#14], R2
+	MOV	[R0+#12], R1
+	MOV	[R0+#10], R5
+	MOV	[R0+#8], R4
+	MOV	R12, R0
+	ADD	R12, #28
+	CALL	___divdf3
+	MOV	R7, [R0+#34]
+	MOV	R6, [R0+#32]
+	MOV	R9, [R0+#30]
+	MOV	R8, [R0+#28]
+?LBB0_9:
+	MOV	R4, #0
+	MOV	[R0+#14], R4
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#24]
+	MOV	[R0+#6], R4
+	CALL	___ltdf2
+	JNB	R5.15, ?LBB0_11
+; %bb.10:
+	XOR	R7, #32768
+?LBB0_11:
+	MOV	R4, [R0+#26]
+	MOV	[R4], R8
+	MOV	[R4+#2], R9
+	MOV	[R4+#4], R6
+	MOV	[R4+#6], R7
+	ADD	R0, #68
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	_fabs : NEAR
+	EXTRN	___gtdf2 : NEAR
+	EXTRN	___adddf3 : NEAR
+	EXTRN	_expm1 : NEAR
+	EXTRN	___divdf3 : NEAR
+	EXTRN	___ltdf2 : NEAR
+TANH_PR	ENDS
+	END

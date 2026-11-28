@@ -1,0 +1,77 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+BSEARCH_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_bsearch
+_bsearch:
+_bsearch?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #10
+	MOV	[R0+#8], R15
+	MOV	R7, R14
+	MOV	R9, R13
+	MOV	[R0+#6], R12
+	MOV	R4, #0
+	CMP	R7, #0
+	JMP	cc_EQ, ?LBB0_10
+; %bb.1:                                ; %while.body.preheader
+	MOV	[R0], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+?LBB0_2:
+	MOV	R8, R7
+	SHR	R8, #1
+	MOV	R4, [R0+#8]
+	MUL	R8, R4
+	MOV	R6, MDL
+	ADD	R6, R9
+	MOV	R12, [R0+#6]
+	MOV	R13, R6
+	MOV	R4, [R0+#2]
+	MOV	R5, [R0+#4]
+	CALLS	SEG ___c166_icall, SOF ___c166_icall
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_9
+; %bb.3:                                ; %cleanup
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_5
+; %bb.4:                                ;   in Loop: Header=BB0_2 Depth=1
+	MOV	R5, [R0+#8]
+	ADD	R6, R5
+	MOV	R9, R6
+?LBB0_5:
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_7
+; %bb.6:                                ; %cleanup
+	MOV	R7, R8
+	JMP	cc_NE, ?LBB0_2
+	JMP	cc_UC, ?LBB0_8
+?LBB0_7:
+	CPL	R8
+	ADD	R7, R8
+	JMP	cc_NE, ?LBB0_2
+?LBB0_8:
+	MOV	R4, [R0]
+	JMP	cc_UC, ?LBB0_10
+?LBB0_9:
+	MOV	R4, R6
+?LBB0_10:
+	ADD	R0, #10
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_bsearch?F	ENDP
+	EXTRN	___c166_icall : NEAR
+BSEARCH_PR	ENDS
+	END

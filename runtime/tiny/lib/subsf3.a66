@@ -7,8 +7,8 @@ $CASE
 $MOD167
 $INCLUDE(REG167.INC)
 SUBSF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___subsf3                       ; -- Begin function __subsf3
-___subsf3:                              ; @__subsf3
+	PUBLIC	___subsf3
+___subsf3:
 ; %bb.0:                                ; %entry
 	SUB	R0, #8
 	MOV	R4, [R0+#8]
@@ -23,7 +23,6 @@ ___subsf3:                              ; @__subsf3
 	CALL	___addsf3
 	ADD	R0, #8
 	RET
-                                        ; -- End function
 	EXTRN	___addsf3 : NEAR
 SUBSF3_PR	ENDS
 	END

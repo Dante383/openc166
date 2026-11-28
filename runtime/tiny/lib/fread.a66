@@ -1,0 +1,59 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FREAD_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fread
+_fread:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #4
+	MOV	R8, R15
+	MOV	R9, R12
+	MUL	R14, R13
+	MOV	R6, MDL
+	MOV	R4, #0
+	MOV	R7, R4
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_6
+; %bb.1:                                ; %for.body.preheader
+	MOV	[R0], R4
+	MOV	[R0+#2], R13
+	MOV	R7, #0
+?LBB0_2:
+	MOV	R12, R8
+	CALL	_fgetc
+	CMP	R4, #65535
+	JMP	cc_EQ, ?LBB0_5
+; %bb.3:                                ; %for.inc
+	MOV	R5, R9
+	ADD	R5, R7
+	MOVB	[R5], RL4
+	ADD	R7, #1
+	CMP	R6, R7
+	JMP	cc_NE, ?LBB0_2
+; %bb.4:
+	MOV	R7, R6
+?LBB0_5:
+	MOV	R13, [R0+#2]
+	MOV	R4, [R0]
+?LBB0_6:
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB0_8
+; %bb.7:                                ; %cond.true
+	MOV	MDL, R7
+	DIVU	R13
+	MOV	R4, MDL
+?LBB0_8:
+	ADD	R0, #4
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	_fgetc : NEAR
+FREAD_PR	ENDS
+	END

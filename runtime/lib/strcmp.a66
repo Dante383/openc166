@@ -1,0 +1,79 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRCMP_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strcmp
+_strcmp:
+_strcmp?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	JMP	cc_EQ, ?LBB0_6
+; %bb.1:                                ; %land.rhs.preheader
+	ADD	R12, #1
+?LBB0_2:
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	MOV	R1, R4
+	AND	R1, #255
+	CMP	R1, R5
+	JMP	cc_NE, ?LBB0_5
+; %bb.3:                                ; %while.body
+	ADD	R13, #1
+	MOVB	RL4, [R12+]
+	MOVBZ	R4, RL4
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_2
+; %bb.4:
+	MOV	R4, #0
+?LBB0_5:
+	AND	R4, #255
+	JMP	cc_UC, ?LBB0_7
+?LBB0_6:
+	MOV	R4, #0
+?LBB0_7:
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	SUB	R4, R5
+	RETS
+_strcmp?F	ENDP
+	PUBLIC	_strcoll
+_strcoll:
+_strcoll?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	JMP	cc_EQ, ?LBB1_6
+; %bb.1:                                ; %land.rhs.i.preheader
+	ADD	R12, #1
+?LBB1_2:
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	MOV	R1, R4
+	AND	R1, #255
+	CMP	R1, R5
+	JMP	cc_NE, ?LBB1_5
+; %bb.3:                                ; %while.body.i
+	ADD	R13, #1
+	MOVB	RL4, [R12+]
+	MOVBZ	R4, RL4
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB1_2
+; %bb.4:
+	MOV	R4, #0
+?LBB1_5:
+	AND	R4, #255
+	JMP	cc_UC, ?LBB1_7
+?LBB1_6:
+	MOV	R4, #0
+?LBB1_7:
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	SUB	R4, R5
+	RETS
+_strcoll?F	ENDP
+STRCMP_PR	ENDS
+	END

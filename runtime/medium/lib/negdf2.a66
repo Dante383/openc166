@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 NEGDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___negdf2                       ; -- Begin function __negdf2
-___negdf2:                              ; @__negdf2
+	PUBLIC	___negdf2
+___negdf2:
 ; %bb.0:                                ; %entry
 	MOV	R4, [R0+#6]
 	XOR	R4, #32768
@@ -22,6 +22,5 @@ ___negdf2:                              ; @__negdf2
 	MOV	[R12+#2], R1
 	MOV	[R12], R5
 	RET
-                                        ; -- End function
 NEGDF2_PR	ENDS
 	END

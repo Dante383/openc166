@@ -1,0 +1,51 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FSTATUS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fflush
+_fflush:
+_fflush?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	RETS
+_fflush?F	ENDP
+	PUBLIC	_feof
+_feof:
+_feof?F	PROC	FAR
+; %bb.0:                                ; %entry
+	ADD	R12, #4
+	ADDC	R13, #0
+	EXTS	R13, #1
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	AND	R4, #1
+	RETS
+_feof?F	ENDP
+	PUBLIC	_ferror
+_ferror:
+_ferror?F	PROC	FAR
+; %bb.0:                                ; %entry
+	ADD	R12, #4
+	ADDC	R13, #0
+	EXTS	R13, #1
+	MOVB	RL4, [R12]
+	MOVBZ	R4, RL4
+	AND	R4, #2
+	RETS
+_ferror?F	ENDP
+	PUBLIC	_clearerr
+_clearerr:
+_clearerr?F	PROC	FAR
+; %bb.0:                                ; %entry
+	ADD	R12, #4
+	ADDC	R13, #0
+	MOV	R4, #0
+	EXTS	R13, #1
+	MOVB	[R12], RL4
+	RETS
+_clearerr?F	ENDP
+FSTATUS_PR	ENDS
+	END

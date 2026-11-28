@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 SUBDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___subdf3                       ; -- Begin function __subdf3
-___subdf3:                              ; @__subdf3
+	PUBLIC	___subdf3
+___subdf3:
 ___subdf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
@@ -48,7 +48,6 @@ ___subdf3?F	PROC	FAR
 	MOV	R6, [R0+]
 	RETS
 ___subdf3?F	ENDP
-                                        ; -- End function
 	EXTRN	___adddf3 : NEAR
 SUBDF3_PR	ENDS
 	END

@@ -7,8 +7,8 @@ $CASE
 $MOD167
 $INCLUDE(REG167.INC)
 FIXUNSDFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixunsdfdi                   ; -- Begin function __fixunsdfdi
-___fixunsdfdi:                          ; @__fixunsdfdi
+	PUBLIC	___fixunsdfdi
+___fixunsdfdi:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -26,11 +26,11 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#10], R9
 	MOV	[R0+#8], R9
 	MOV	[R0+#6], R8
-	MOV	[R0+#24], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#24], R4
 	MOV	[R0+#4], R4
 	MOV	R7, R5
 	MOV	[R0+#2], R5
-	MOV	[R0+#22], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#22], R1
 	MOV	[R0], R1
 	CALL	___ledf2
 	MOV	R1, #1
@@ -40,24 +40,24 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 ; %bb.1:                                ; %entry
 	CMP	R4, #0
 	JMP	cc_NE, ?LBB0_6
-?LBB0_2:                                ; %entry
+?LBB0_2:
 	CMP	R5, #0
 	JMP	cc_NE, ?LBB0_7
-?LBB0_3:                                ; %entry
+?LBB0_3:
 	JNB	R1.0, ?LBB0_4
 	JMP	cc_UC, ?LBB0_8
-?LBB0_4:                                ; %if.end
+?LBB0_4:
 	MOV	R4, #15856
 	MOV	[R0+#14], R4
 	MOV	R9, #0
 	MOV	[R0+#12], R9
 	MOV	[R0+#10], R9
 	MOV	[R0+#8], R9
-	MOV	[R0+#18], R7                    ; 2-byte Folded Spill
+	MOV	[R0+#18], R7
 	MOV	[R0+#2], R7
-	MOV	R7, [R0+#22]                    ; 2-byte Folded Reload
+	MOV	R7, [R0+#22]
 	MOV	[R0], R7
-	MOV	R4, [R0+#24]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#24]
 	MOV	[R0+#4], R4
 	MOV	[R0+#6], R8
 	MOV	R12, R0
@@ -72,8 +72,8 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0+#2], R5
 	MOV	[R0], R4
 	CALL	___fixunsdfsi
-	MOV	[R0+#20], R4                    ; 2-byte Folded Spill
-	MOV	[R0+#16], R8                    ; 2-byte Folded Spill
+	MOV	[R0+#20], R4
+	MOV	[R0+#16], R8
 	MOV	R8, R5
 	MOV	R12, R0
 	ADD	R12, #42
@@ -96,12 +96,12 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	R12, R0
 	ADD	R12, #34
 	CALL	___muldf3
-	MOV	R4, [R0+#18]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#18]
 	MOV	[R0+#2], R4
 	MOV	[R0], R7
-	MOV	R4, [R0+#24]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#24]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#16]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#16]
 	MOV	[R0+#6], R4
 	MOV	R4, [R0+#40]
 	MOV	[R0+#14], R4
@@ -124,17 +124,17 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	[R0], R4
 	CALL	___fixunsdfsi
 	MOV	R9, R4
-	MOV	R4, [R0+#20]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#20]
 	JMP	cc_UC, ?LBB0_9
-?LBB0_5:                                ; %entry
+?LBB0_5:
 	MOV	R2, R9
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_2
-?LBB0_6:                                ; %entry
+?LBB0_6:
 	MOV	R1, R9
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB0_3
-?LBB0_7:                                ; %entry
+?LBB0_7:
 	MOV	R1, R2
 	JB	R1.0, ?LBB0_8
 	JMP	cc_UC, ?LBB0_4
@@ -142,7 +142,7 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	R5, R9
 	MOV	R4, R9
 	MOV	R8, R9
-?LBB0_9:                                ; %return
+?LBB0_9:
 	MOV	[R6], R9
 	MOV	[R6+#2], R5
 	MOV	[R6+#4], R4
@@ -153,7 +153,6 @@ ___fixunsdfdi:                          ; @__fixunsdfdi
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
 	EXTRN	___ledf2 : NEAR
 	EXTRN	___muldf3 : NEAR
 	EXTRN	___fixunsdfsi : NEAR

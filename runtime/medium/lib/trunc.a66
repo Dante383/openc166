@@ -1,0 +1,98 @@
+; Compiled from LLVM libc, libc/shared/math/trunc.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+TRUNC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_trunc
+_trunc:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	R4, [R0+#24]
+	MOV	R3, R4
+	CPL	R3
+	MOV	R5, [R0+#22]
+	MOV	R2, [R0+#20]
+	MOV	R1, [R0+#18]
+	AND	R3, #32752
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %if.end.i.i
+	MOV	R3, R4
+	SHR	R3, #4
+	AND	R3, #2047
+	CMP	R3, #1074
+	JMP	cc_UGT, ?LBB0_5
+; %bb.2:                                ; %if.end3.i.i
+	CMP	R3, #1022
+	JMP	cc_UGT, ?LBB0_4
+; %bb.3:                                ; %if.then5.i.i
+	AND	R4, #32768
+	MOV	R1, #0
+	MOV	R2, R1
+	MOV	R5, R1
+	JMP	cc_UC, ?LBB0_5
+?LBB0_4:
+	MOV	R10, #1075
+	SUB	R10, R3
+	MOV	R3, #65535
+	MOV	[R0+#14], R3
+	MOV	[R0+#12], R3
+	MOV	[R0+#10], R3
+	MOV	[R0+#8], R3
+	MOV	R3, #0
+	MOV	[R0+#6], R3
+	MOV	[R0+#4], R3
+	MOV	[R0+#2], R3
+	MOV	[R0], R3
+	MOV	R3, R10
+	AND	R3, #15
+	SHR	R10, #3
+	AND	R10, #6
+	MOV	R11, R0
+	ADD	R11, #8
+	SUB	R11, R10
+	MOV	R10, [R11+#4]
+	MOV	R13, R10
+	SHL	R13, R3
+	MOV	R14, R3
+	XOR	R14, #15
+	MOV	R15, [R11+#2]
+	MOV	R6, R15
+	SHR	R6, #1
+	SHR	R6, R14
+	OR	R6, R13
+	AND	R5, R6
+	SHL	R15, R3
+	MOV	R13, [R11]
+	MOV	R6, R13
+	SHR	R6, #1
+	SHR	R6, R14
+	OR	R6, R15
+	AND	R2, R6
+	MOV	R11, [R11+#6]
+	SHL	R11, R3
+	SHR	R10, #1
+	SHR	R10, R14
+	OR	R10, R11
+	AND	R10, R4
+	SHL	R13, R3
+	AND	R1, R13
+	AND	R10, #15
+	AND	R4, #65520
+	OR	R4, R10
+?LBB0_5:
+	MOV	[R12], R1
+	MOV	[R12+#2], R2
+	MOV	[R12+#4], R5
+	MOV	[R12+#6], R4
+	ADD	R0, #16
+	MOV	R6, [R0+]
+	RET
+TRUNC_PR	ENDS
+	END

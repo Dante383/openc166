@@ -1,0 +1,50 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+EXIT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_atexit
+_atexit:
+; %bb.0:                                ; %entry
+	MOV	R5, _count
+	MOV	R4, #65535
+	CMP	R5, #8
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.end
+	MOV	R4, R5
+	ADD	R4, #1
+	MOV	_count, R4
+	SHL	R5, #1
+	MOV	[R5+#_handlers], R12
+	MOV	R4, #0
+?LBB0_2:
+	RET
+	PUBLIC	_exit
+_exit:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R6, R12
+?LBB1_1:
+	MOV	R4, _count
+	JMP	cc_EQ, ?LBB1_3
+; %bb.2:                                ; %while.body
+	SUB	R4, #1
+	MOV	_count, R4
+	SHL	R4, #1
+	MOV	R4, [R4+#_handlers]
+	CALLI	cc_UC, [R4]
+	JMP	cc_UC, ?LBB1_1
+?LBB1_3:
+	MOV	R12, R6
+	CALL	__exit
+EXIT_PR	ENDS
+C166_BSS	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_count:
+	DSB	2
+	EVEN
+_handlers:
+	DSB	16
+	EXTRN	__exit : NEAR
+C166_BSS	ENDS
+	END

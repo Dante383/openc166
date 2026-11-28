@@ -1,0 +1,95 @@
+; Compiled from LLVM libc, libc/shared/math/ceilf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+CEILF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_ceilf
+_ceilf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R6, [R0+#18]
+	MOV	R8, R6
+	MOV	R7, [R0+#16]
+	MOV	R9, R7
+	MOV	R4, #0
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R6
+	MOV	[R0], R7
+	CALL	___eqsf2
+	OR	R5, R4
+	JMP	cc_EQ, ?LBB0_12
+; %bb.1:                                ; %entry
+	MOV	R4, R6
+	AND	R4, #32640
+	CMP	R4, #32640
+	JMP	cc_EQ, ?LBB0_12
+; %bb.2:                                ; %if.end.i.i
+	MOV	R4, R6
+	SHR	R4, #7
+	AND	R4, #255
+	CMP	R4, #149
+	JMP	cc_UGT, ?LBB0_12
+; %bb.3:                                ; %if.end5.i.i
+	CMP	R4, #126
+	JMP	cc_UGT, ?LBB0_7
+; %bb.4:                                ; %if.then7.i.i
+	MOV	R8, #32768
+	JB	R6.15, ?LBB0_6
+; %bb.5:                                ; %if.then7.i.i
+	MOV	R8, #16256
+?LBB0_6:
+	MOV	R9, #0
+	JMP	cc_UC, ?LBB0_12
+?LBB0_7:
+	MOV	R14, #150
+	SUB	R14, R4
+	MOV	R12, #65535
+	MOV	R13, R12
+	CALL	___ashlsi3
+	AND	R4, R7
+	AND	R5, R6
+	MOV	R1, R5
+	XOR	R1, R6
+	XOR	R7, R4
+	OR	R7, R1
+	JMP	cc_EQ, ?LBB0_12
+; %bb.8:                                ; %if.end13.i.i
+	MOV	R1, #16256
+	MOV	[R0+#6], R1
+	MOV	R1, #0
+	MOV	[R0+#4], R1
+	MOV	R8, R5
+	MOV	[R0+#2], R5
+	MOV	R9, R4
+	MOV	[R0], R4
+	CALL	___addsf3
+	JB	R6.15, ?LBB0_10
+; %bb.9:                                ; %if.end13.i.i
+	MOV	R8, R5
+?LBB0_10:
+	JB	R6.15, ?LBB0_12
+; %bb.11:                               ; %if.end13.i.i
+	MOV	R9, R4
+?LBB0_12:
+	MOV	R4, R9
+	MOV	R5, R8
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	___eqsf2 : NEAR
+	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___addsf3 : NEAR
+CEILF_PR	ENDS
+	END

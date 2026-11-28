@@ -8,9 +8,9 @@ The design and the reasons behind it are in
 [c-compiler-design.md](c-compiler-design.md).
 
 Status: TASKING's tiny, small, medium and large memory models, integers up
-to 64 bits,
-`float` and `double`, TASKING keywords and
-intrinsics for payloads and drivers. Checked by running compiled C in the
+to 64 bits, `float` and `double`, structs by value, TASKING keywords and
+intrinsics for payloads and drivers, and a C library (`stdio.h`,
+`string.h`, `stdlib.h`, `math.h`, ...). Checked by running compiled C in the
 simulator (`python/tests/test_c_compiler.py`), including a MiniMon-style
 payload on the simulated 5WY19.
 
@@ -28,11 +28,12 @@ clang --target=c166 -Os main.c util.c -o prog.hex \
   for speed (it turns a bitwise CRC into a 512-byte table, and unrolls).
 - `clang -c` writes an A166 module (`main.o` is assembly text); linking runs
   openc166 on the modules, which must be on `PATH` or next to `clang`.
-- The startup code (`runtime/cstart.a66`) is linked first and the runtime
-  helpers as library modules. `-nostartfiles`, `-nodefaultlibs` and
-  `-nostdlib` leave them out. Clang finds the runtime in openc166's source
-  tree, in `share/openc166/runtime` next to an installed `openc166`, or
-  where `OPENC166_RUNTIME` points.
+- The startup code (`runtime/cstart.a66`) is linked first, and the runtime
+  helpers and the C library as library modules. `-nostartfiles`,
+  `-nodefaultlibs` and `-nostdlib` leave them out, `-nostdlibinc` the C
+  library's headers. Clang finds the runtime in openc166's source tree, in
+  `share/openc166/runtime` next to an installed `openc166`, or where
+  `OPENC166_RUNTIME` points.
 - `-Wl,` passes options to openc166: `--class` for the memory map,
   `--section`, `-l` for a listing, `-g` for debug information.
 - `double` is 64 bits; `-mdouble=32` (TASKING's `-F`) makes it the same
@@ -42,11 +43,31 @@ clang --target=c166 -Os main.c util.c -o prog.hex \
   information and ELF output, and so the debugger and Ghidra, show C lines.
 
 The entry point is `__cstart`. It sets up the user stack, initialises the
-variables, calls `main` and returns `main`'s result in R4, keeping the
-caller's R0 and R6-R9: a loader or existing firmware can call a C program
-and get control back (with `CALLS` in the small and large models, `CALLA`
-in the tiny and medium ones). A program that starts from reset must first set up
-SYSCON, BUSCON, the system stack and the watchdog itself.
+variables, calls `main` and returns `main`'s result in R4 (or the status
+given to `exit`), keeping the caller's R0 and R6-R9: a loader or existing
+firmware can call a C program and get control back (with `CALLS` in the
+small and large models, `CALLA` in the tiny and medium ones). A program
+that starts from reset must first set up SYSCON, BUSCON, the system stack
+and the watchdog itself.
+
+## C library
+
+openc166's own (MIT) in `runtime/libc` with its headers in
+`runtime/include`, and LLVM libc's math functions; one build per memory
+model. [runtime/README.md](../runtime/README.md) lists what is there.
+In short:
+
+- `printf` and the other output go through `_write(fd, buffer, count)`,
+  input through `_read`, as in TASKING. The library's own use ASC0
+  (polled; set up the baud rate first); define `_write` to send output
+  elsewhere. `printf` has no floating-point conversions yet, and there is
+  no `scanf`.
+- The user stack is 512 bytes; `_ustack(n);` from `<c166.h>` adds n bytes.
+  The math functions need up to about 1.8 KB.
+- `malloc` uses a 1024-byte heap unless the program defines
+  `__c166_heap` and `__c166_heap_size` itself.
+- The math functions are large in soft float (`sin` with what it needs:
+  about 30 KB of code). With `-mdouble=32`, `sin` is `sinf`.
 
 ## Memory models
 
@@ -118,9 +139,9 @@ TASKING Classic's, so C can call and be called by TASKING-built code,
 including the stock 5WY19 firmware:
 
 - arguments in R12, R13, R14, R15, a 32-bit one in two registers (low word
-  first); one that no longer fits, a float, a struct by value and every
-  argument after them go on the user stack, and so do the `...` of a
-  variadic function;
+  first); one that no longer fits, a float, a struct by value (a copy, in
+  words) and every argument after them go on the user stack, and so do the
+  `...` of a variadic function;
 - results in R4 (`char` in RL4), 32 bits in R4:R5;
 - R6-R9 saved by the called function; R0 is the user stack pointer; the
   system stack holds only return addresses;
@@ -203,12 +224,13 @@ register, `"i"(&var)` the A166 name of a variable or SFR.
 - The huge memory model.
 - `_near` function pointers (all function pointers are far in the small
   and large models, near in tiny and medium).
-- Structs passed by value (an error). Structs returned by value work, but
-  through a hidden pointer argument, not TASKING's block on the user stack,
-  so such functions cannot be called from TASKING-built code.
+- Structs returned by value work, but through a hidden pointer argument,
+  not TASKING's block on the user stack, so such functions cannot be
+  called from TASKING-built code.
 - Register bank switching for interrupts (`_using(name)` falls back to
   pushing registers), `#pragma` (`noframe`, `regdef`, ...), `_packed`,
   `_noalign`, `_stackparm`.
 - `_bit` variables as bits in the bit-addressable RAM.
 - Alignment above 2 bytes (`_Alignas(4)`): A166 has only `EVEN`.
-- A C library beyond `memcpy`, `memmove` and `memset`.
+- In the C library: floating-point `printf` conversions, `scanf`, files,
+  `time.h`, `signal.h`, `locale.h`.

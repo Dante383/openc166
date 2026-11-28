@@ -1,0 +1,25 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+STRCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strcpy
+_strcpy:
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	MOV	R5, #0
+?LBB0_1:
+	MOV	R1, R13
+	ADD	R1, R5
+	MOV	R2, R4
+	ADD	R2, R5
+	MOVB	RL1, [R1]
+	MOVBZ	R1, RL1
+	MOVB	[R2], RL1
+	ADD	R5, #1
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_1
+; %bb.2:                                ; %while.end
+	RET
+STRCPY_PR	ENDS
+	END

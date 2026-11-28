@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 DIVDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___divdf3                       ; -- Begin function __divdf3
-___divdf3:                              ; @__divdf3
+	PUBLIC	___divdf3
+___divdf3:
 ___divdf3?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
@@ -22,7 +22,7 @@ ___divdf3?F	PROC	FAR
 	MOV	R15, [R0+#296]
 	MOV	R6, [R0+#294]
 	MOV	R4, [R0+#292]
-	MOV	[R0+#74], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#74], R4
 	MOV	R9, [R0+#290]
 	MOV	R10, [R0+#288]
 	MOV	R13, [R0+#286]
@@ -41,9 +41,9 @@ ___divdf3?F	PROC	FAR
 	AND	R7, #15
 	MOV	R8, R5
 	AND	R8, #15
-	MOV	[R0+#60], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#60], R4
 	SUB	R4, #2047
-	MOV	[R0+#58], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#58], R1
 	CMP	R4, #63490
 	JMP	cc_ULT, ?LBB0_77
 ; %bb.1:                                ; %entry
@@ -52,39 +52,39 @@ ___divdf3?F	PROC	FAR
 	CMP	R4, #63489
 	JMP	cc_ULE, ?LBB0_77
 ; %bb.2:
-	MOV	[R0+#42], R2                    ; 2-byte Folded Spill
-	MOV	[R0+#72], R7                    ; 2-byte Folded Spill
-	MOV	[R0+#48], R13                   ; 2-byte Folded Spill
-	MOV	[R0+#68], R11                   ; 2-byte Folded Spill
-	MOV	[R0+#56], R14                   ; 2-byte Folded Spill
-	MOV	[R0+#44], R12                   ; 2-byte Folded Spill
-	MOV	[R0+#46], R10                   ; 2-byte Folded Spill
-?LBB0_3:                                ; %if.end71.i
+	MOV	[R0+#42], R2
+	MOV	[R0+#72], R7
+	MOV	[R0+#48], R13
+	MOV	[R0+#68], R11
+	MOV	[R0+#56], R14
+	MOV	[R0+#44], R12
+	MOV	[R0+#46], R10
+?LBB0_3:
 	OR	R8, #16
-	MOV	R5, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R5, [R0+#74]
 	MOV	R4, R5
 	SHR	R4, #5
 	MOV	R1, R6
 	SHL	R1, #11
 	OR	R1, R4
-	MOV	[R0+#64], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#64], R1
 	SHL	R5, #11
-	MOV	[R0+#40], R5                    ; 2-byte Folded Spill
-	MOV	[R0+#52], R6                    ; 2-byte Folded Spill
+	MOV	[R0+#40], R5
+	MOV	[R0+#52], R6
 	MOV	R4, R6
 	SHR	R4, #5
 	MOV	R5, R15
 	SHL	R5, #11
 	OR	R5, R4
-	MOV	[R0+#54], R15                   ; 2-byte Folded Spill
+	MOV	[R0+#54], R15
 	MOV	R4, R15
 	SHR	R4, #5
-	MOV	[R0+#50], R8                    ; 2-byte Folded Spill
+	MOV	[R0+#50], R8
 	SHL	R8, #11
 	OR	R8, R4
 	MOV	R9, #29956
 	MOV	R6, #62259
-	MOV	[R0+#70], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#70], R5
 	SUB	R6, R5
 	SUBC	R9, R8
 	MOV	R4, R8
@@ -132,10 +132,10 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#70]
 	MOV	[R0+#8], R4
 	MOV	[R0+#10], R7
-	MOV	[R0+#38], R7                    ; 2-byte Folded Spill
+	MOV	[R0+#38], R7
 	MOV	[R0+#2], R6
 	MOV	[R0], R9
 	MOV	R12, R0
@@ -172,7 +172,7 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#70]
 	MOV	[R0+#8], R4
 	MOV	[R0+#10], R7
 	MOV	[R0+#2], R9
@@ -213,9 +213,9 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#70]
 	MOV	[R0], R4
-	MOV	R4, [R0+#38]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#38]
 	MOV	[R0+#2], R4
 	MOV	[R0+#10], R6
 	MOV	[R0+#8], R7
@@ -223,28 +223,28 @@ ___divdf3?F	PROC	FAR
 	ADD	R12, #188
 	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#194]
-	MOV	[R0+#70], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#70], R4
 	MOV	R4, [R0+#192]
-	MOV	[R0+#38], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#38], R4
 	MOV	R9, [R0+#190]
 	MOV	R4, [R0+#188]
-	MOV	[R0+#36], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#36], R4
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#40]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#40]
 	MOV	[R0], R4
-	MOV	R4, [R0+#64]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#64]
 	MOV	[R0+#2], R4
-	MOV	[R0+#62], R6                    ; 2-byte Folded Spill
+	MOV	[R0+#62], R6
 	MOV	[R0+#10], R6
-	MOV	[R0+#66], R7                    ; 2-byte Folded Spill
+	MOV	[R0+#66], R7
 	MOV	[R0+#8], R7
 	MOV	R12, R0
 	ADD	R12, #180
 	CALLS	SEG ___muldi3, SOF ___muldi3
-	MOV	R3, [R0+#36]                    ; 2-byte Folded Reload
+	MOV	R3, [R0+#36]
 	MOV	R1, [R0+#186]
 	MOV	R2, [R0+#184]
 	MOV	R4, R9
@@ -257,39 +257,39 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_5
 ; %bb.4:                                ; %if.end71.i
 	MOV	R2, R8
-?LBB0_5:                                ; %if.end71.i
+?LBB0_5:
 	MOV	R1, R10
 	CMP	R5, R3
 	JMP	cc_ULT, ?LBB0_7
 ; %bb.6:                                ; %if.end71.i
 	MOV	R1, R8
-?LBB0_7:                                ; %if.end71.i
-	MOV	R11, [R0+#70]                   ; 2-byte Folded Reload
-	MOV	R12, [R0+#38]                   ; 2-byte Folded Reload
+?LBB0_7:
+	MOV	R11, [R0+#70]
+	MOV	R12, [R0+#38]
 	CMP	R4, R9
 	JMP	cc_EQ, ?LBB0_9
 ; %bb.8:                                ; %if.end71.i
 	MOV	R1, R2
-?LBB0_9:                                ; %if.end71.i
+?LBB0_9:
 	MOV	R3, R10
 	CMP	R4, #0
 	JMP	cc_NE, ?LBB0_11
 ; %bb.10:                               ; %if.end71.i
 	MOV	R3, R8
-?LBB0_11:                               ; %if.end71.i
+?LBB0_11:
 	MOV	R2, R10
 	CMP	R5, #1
 	JMP	cc_UGT, ?LBB0_13
 ; %bb.12:                               ; %if.end71.i
 	MOV	R2, R8
-?LBB0_13:                               ; %if.end71.i
+?LBB0_13:
 	ADD	R12, R1
 	ADDC	R11, R8
 	CMP	R4, #0
 	JMP	cc_EQ, ?LBB0_15
 ; %bb.14:                               ; %if.end71.i
 	MOV	R2, R3
-?LBB0_15:                               ; %if.end71.i
+?LBB0_15:
 	MOV	R1, R8
 	MOV	R3, R8
 	SUB	R1, R12
@@ -300,30 +300,30 @@ ___divdf3?F	PROC	FAR
 	MOV	R2, R10
 	SUB	R2, R5
 	SUBC	R11, R4
-	MOV	[R0+#36], R11                   ; 2-byte Folded Spill
-	MOV	[R0+#38], R2                    ; 2-byte Folded Spill
+	MOV	[R0+#36], R11
+	MOV	[R0+#38], R2
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#62]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#62]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#66]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#66]
 	MOV	[R0], R4
 	MOV	[R0+#10], R3
 	MOV	[R0+#8], R1
 	MOV	R12, R0
 	ADD	R12, #164
-	MOV	[R0+#64], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#64], R10
 	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R6, [R0+#168]
 	MOV	R4, [R0+#170]
-	MOV	[R0+#70], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#70], R4
 	MOV	R9, [R0+#166]
 	MOV	R7, [R0+#164]
 	MOV	R4, R7
 	SHR	R4, #15
-	MOV	[R0+#40], R9                    ; 2-byte Folded Spill
+	MOV	[R0+#40], R9
 	SHL	R9, #1
 	OR	R9, R4
 	SHL	R7, #1
@@ -331,18 +331,18 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	R4, [R0+#62]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#62]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#66]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#66]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#36]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#36]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#38]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#38]
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #172
 	CALLS	SEG ___muldi3, SOF ___muldi3
-	MOV	R13, [R0+#64]                   ; 2-byte Folded Reload
+	MOV	R13, [R0+#64]
 	MOV	R2, [R0+#174]
 	MOV	R4, [R0+#178]
 	MOV	R5, [R0+#176]
@@ -363,27 +363,27 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_17
 ; %bb.16:                               ; %if.end71.i
 	MOV	R3, R8
-?LBB0_17:                               ; %if.end71.i
+?LBB0_17:
 	MOV	R2, R13
-	MOV	R11, [R0+#68]                   ; 2-byte Folded Reload
-	MOV	R12, [R0+#48]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#68]
+	MOV	R12, [R0+#48]
 	CMP	R1, R7
 	JMP	cc_ULT, ?LBB0_19
 ; %bb.18:                               ; %if.end71.i
 	MOV	R2, R8
-?LBB0_19:                               ; %if.end71.i
+?LBB0_19:
 	MOV	R10, R6
 	SHR	R10, #15
-	MOV	R14, [R0+#70]                   ; 2-byte Folded Reload
+	MOV	R14, [R0+#70]
 	SHL	R14, #1
-	MOV	R15, [R0+#40]                   ; 2-byte Folded Reload
+	MOV	R15, [R0+#40]
 	SHR	R15, #15
 	SHL	R6, #1
 	CMP	R5, R9
 	JMP	cc_EQ, ?LBB0_21
 ; %bb.20:                               ; %if.end71.i
 	MOV	R2, R3
-?LBB0_21:                               ; %if.end71.i
+?LBB0_21:
 	OR	R14, R10
 	OR	R6, R15
 	SHR	R4, #15
@@ -392,12 +392,12 @@ ___divdf3?F	PROC	FAR
 	ADD	R15, #65311
 	ADDC	R7, #65535
 	MOV	R3, R13
-	MOV	R10, [R0+#72]                   ; 2-byte Folded Reload
+	MOV	R10, [R0+#72]
 	CMP	R7, R5
 	JMP	cc_ULT, ?LBB0_23
 ; %bb.22:                               ; %if.end71.i
 	MOV	R3, R8
-?LBB0_23:                               ; %if.end71.i
+?LBB0_23:
 	ADD	R6, R4
 	ADDC	R14, R8
 	MOV	R4, R13
@@ -405,7 +405,7 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_25
 ; %bb.24:                               ; %if.end71.i
 	MOV	R4, R8
-?LBB0_25:                               ; %if.end71.i
+?LBB0_25:
 	OR	R10, #16
 	ADD	R6, R2
 	ADDC	R14, R8
@@ -414,20 +414,20 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_27
 ; %bb.26:                               ; %if.end71.i
 	MOV	R4, R3
-?LBB0_27:                               ; %if.end71.i
+?LBB0_27:
 	ADD	R6, #65535
 	ADDC	R14, #65535
 	ADD	R6, R4
 	ADDC	R14, R8
-	MOV	[R0+#70], R14                   ; 2-byte Folded Spill
-	MOV	[R0+#32], R6                    ; 2-byte Folded Spill
-	MOV	R9, [R0+#46]                    ; 2-byte Folded Reload
+	MOV	[R0+#70], R14
+	MOV	[R0+#32], R6
+	MOV	R9, [R0+#46]
 	MOV	R4, R9
 	SHR	R4, #15
-	MOV	[R0+#72], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#72], R10
 	SHL	R10, #1
 	OR	R10, R4
-	MOV	[R0+#66], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#66], R10
 	MOV	R4, R12
 	SHR	R4, #15
 	SHL	R9, #1
@@ -445,107 +445,107 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
 	MOV	[R0+#10], R6
-	MOV	[R0+#62], R1                    ; 2-byte Folded Spill
+	MOV	[R0+#62], R1
 	MOV	[R0+#2], R1
 	MOV	[R0], R15
 	MOV	R12, R0
 	ADD	R12, #140
-	MOV	[R0+#40], R15                   ; 2-byte Folded Spill
+	MOV	[R0+#40], R15
 	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#146]
-	MOV	[R0+#36], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#36], R4
 	MOV	R4, [R0+#144]
-	MOV	[R0+#34], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#34], R4
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
 	MOV	[R0+#8], R9
-	MOV	R4, [R0+#66]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#66]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#62]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#62]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#40]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#40]
 	MOV	[R0], R4
 	MOV	R12, R0
 	ADD	R12, #132
 	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#138]
-	MOV	[R0+#62], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#62], R4
 	MOV	R4, [R0+#136]
-	MOV	[R0+#40], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#40], R4
 	MOV	R4, [R0+#134]
-	MOV	[R0+#24], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#24], R4
 	MOV	R4, [R0+#132]
-	MOV	[R0+#22], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#22], R4
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R8
-	MOV	[R0+#20], R7                    ; 2-byte Folded Spill
+	MOV	[R0+#20], R7
 	MOV	[R0+#8], R7
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	[R0+#16], R6                    ; 2-byte Folded Spill
+	MOV	[R0+#16], R6
 	MOV	[R0+#10], R6
-	MOV	R6, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R6, [R0+#70]
 	MOV	[R0+#2], R6
-	MOV	R7, [R0+#32]                    ; 2-byte Folded Reload
+	MOV	R7, [R0+#32]
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #156
 	CALLS	SEG ___muldi3, SOF ___muldi3
 	MOV	R4, [R0+#162]
-	MOV	[R0+#30], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#30], R4
 	MOV	R4, [R0+#160]
-	MOV	[R0+#38], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#38], R4
 	MOV	R4, [R0+#158]
-	MOV	[R0+#28], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#28], R4
 	MOV	R4, [R0+#156]
-	MOV	[R0+#26], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#26], R4
 	MOV	[R0+#14], R8
 	MOV	[R0+#12], R8
 	MOV	[R0+#6], R8
 	MOV	[R0+#4], R8
-	MOV	[R0+#18], R9                    ; 2-byte Folded Spill
+	MOV	[R0+#18], R9
 	MOV	[R0+#8], R9
-	MOV	R4, [R0+#66]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#66]
 	MOV	[R0+#10], R4
 	MOV	[R0+#2], R6
 	MOV	[R0], R7
 	MOV	R12, R0
 	ADD	R12, #148
 	CALLS	SEG ___muldi3, SOF ___muldi3
-	MOV	R10, [R0+#34]                   ; 2-byte Folded Reload
-	MOV	R3, [R0+#36]                    ; 2-byte Folded Reload
+	MOV	R10, [R0+#34]
+	MOV	R3, [R0+#36]
 	MOV	R1, R3
 	MOV	R2, R10
-	MOV	R4, [R0+#24]                    ; 2-byte Folded Reload
-	MOV	R5, [R0+#22]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#24]
+	MOV	R5, [R0+#22]
 	ADD	R2, R5
 	ADDC	R1, R4
-	MOV	R15, [R0+#64]                   ; 2-byte Folded Reload
+	MOV	R15, [R0+#64]
 	MOV	R4, R15
 	CMP	R1, R3
 	JMP	cc_ULT, ?LBB0_29
 ; %bb.28:                               ; %if.end71.i
 	MOV	R4, R8
-?LBB0_29:                               ; %if.end71.i
+?LBB0_29:
 	MOV	R5, R15
 	CMP	R2, R10
 	JMP	cc_ULT, ?LBB0_31
 ; %bb.30:                               ; %if.end71.i
 	MOV	R5, R8
-?LBB0_31:                               ; %if.end71.i
-	MOV	R13, [R0+#30]                   ; 2-byte Folded Reload
+?LBB0_31:
+	MOV	R13, [R0+#30]
 	CMP	R1, R3
 	JMP	cc_EQ, ?LBB0_33
 ; %bb.32:                               ; %if.end71.i
 	MOV	R5, R4
-?LBB0_33:                               ; %if.end71.i
-	MOV	R10, [R0+#26]                   ; 2-byte Folded Reload
+?LBB0_33:
+	MOV	R10, [R0+#26]
 	AND	R10, #65534
 	MOV	R11, R2
 	MOV	R3, R1
-	MOV	R4, [R0+#28]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#28]
 	ADD	R11, R10
 	ADDC	R3, R4
 	MOV	R10, R15
@@ -553,22 +553,22 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_35
 ; %bb.34:                               ; %if.end71.i
 	MOV	R10, R8
-?LBB0_35:                               ; %if.end71.i
+?LBB0_35:
 	MOV	R4, R15
 	CMP	R11, R2
 	JMP	cc_ULT, ?LBB0_37
 ; %bb.36:                               ; %if.end71.i
 	MOV	R4, R8
-?LBB0_37:                               ; %if.end71.i
+?LBB0_37:
 	MOV	R2, [R0+#150]
 	MOV	R11, [R0+#148]
 	CMP	R3, R1
 	JMP	cc_EQ, ?LBB0_39
 ; %bb.38:                               ; %if.end71.i
 	MOV	R4, R10
-?LBB0_39:                               ; %if.end71.i
+?LBB0_39:
 	MOV	R3, R13
-	MOV	R10, [R0+#38]                   ; 2-byte Folded Reload
+	MOV	R10, [R0+#38]
 	MOV	R12, R10
 	ADD	R12, R11
 	ADDC	R3, R2
@@ -577,22 +577,22 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_41
 ; %bb.40:                               ; %if.end71.i
 	MOV	R1, R8
-?LBB0_41:                               ; %if.end71.i
+?LBB0_41:
 	MOV	R2, R15
 	CMP	R12, R10
 	JMP	cc_ULT, ?LBB0_43
 ; %bb.42:                               ; %if.end71.i
 	MOV	R2, R8
-?LBB0_43:                               ; %if.end71.i
+?LBB0_43:
 	CMP	R3, R13
 	JMP	cc_EQ, ?LBB0_45
 ; %bb.44:                               ; %if.end71.i
 	MOV	R2, R1
-?LBB0_45:                               ; %if.end71.i
+?LBB0_45:
 	MOV	R1, R3
 	MOV	R10, R12
-	MOV	R11, [R0+#62]                   ; 2-byte Folded Reload
-	MOV	R13, [R0+#40]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#62]
+	MOV	R13, [R0+#40]
 	ADD	R10, R13
 	ADDC	R1, R11
 	MOV	R13, R15
@@ -600,14 +600,14 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_47
 ; %bb.46:                               ; %if.end71.i
 	MOV	R13, R8
-?LBB0_47:                               ; %if.end71.i
+?LBB0_47:
 	MOV	R11, R15
-	MOV	R14, [R0+#60]                   ; 2-byte Folded Reload
+	MOV	R14, [R0+#60]
 	CMP	R10, R12
 	JMP	cc_ULT, ?LBB0_49
 ; %bb.48:                               ; %if.end71.i
 	MOV	R11, R8
-?LBB0_49:                               ; %if.end71.i
+?LBB0_49:
 	MOV	R12, R8
 	ADD	R5, R4
 	ADDC	R12, R12
@@ -615,7 +615,7 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_51
 ; %bb.50:                               ; %if.end71.i
 	MOV	R11, R13
-?LBB0_51:                               ; %if.end71.i
+?LBB0_51:
 	MOV	R6, [R0+#154]
 	MOV	R7, [R0+#152]
 	MOV	R13, R10
@@ -627,7 +627,7 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_53
 ; %bb.52:                               ; %if.end71.i
 	MOV	R5, R8
-?LBB0_53:                               ; %if.end71.i
+?LBB0_53:
 	ADD	R7, R2
 	ADDC	R6, R8
 	MOV	R2, R15
@@ -635,15 +635,15 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_55
 ; %bb.54:                               ; %if.end71.i
 	MOV	R2, R8
-?LBB0_55:                               ; %if.end71.i
+?LBB0_55:
 	ADD	R7, R11
 	ADDC	R6, R8
 	CMP	R4, R1
 	JMP	cc_EQ, ?LBB0_57
 ; %bb.56:                               ; %if.end71.i
 	MOV	R2, R5
-?LBB0_57:                               ; %if.end71.i
-	MOV	R5, [R0+#58]                    ; 2-byte Folded Reload
+?LBB0_57:
+	MOV	R5, [R0+#58]
 	SUB	R14, R5
 	ADD	R7, R2
 	ADDC	R6, R8
@@ -652,24 +652,24 @@ ___divdf3?F	PROC	FAR
 	MOV	R5, R7
 	CPL	R5
 	OR	R5, R1
-	MOV	R3, [R0+#42]                    ; 2-byte Folded Reload
+	MOV	R3, [R0+#42]
 	CMP	R6, #31
 	JMP	cc_UGT, ?LBB0_59
 ; %bb.58:                               ; %if.end71.i
 	MOV	R15, R8
-?LBB0_59:                               ; %if.end71.i
+?LBB0_59:
 	ADD	R3, R14
 	CMP	R5, #0
 	JMP	cc_EQ, ?LBB0_61
 ; %bb.60:                               ; %if.end71.i
 	MOV	R8, R15
-?LBB0_61:                               ; %if.end71.i
+?LBB0_61:
 	MOV	R5, R3
 	ADD	R5, #1023
-	MOV	[R0+#64], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#64], R5
 	JNB	R8.0, ?LBB0_62
 	JMP	cc_UC, ?LBB0_87
-?LBB0_62:                               ; %if.then144.i
+?LBB0_62:
 	MOV	R8, #0
 	MOV	R9, #1
 	MOV	R1, R9
@@ -677,7 +677,7 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_64
 ; %bb.63:                               ; %if.then144.i
 	MOV	R1, R8
-?LBB0_64:                               ; %if.then144.i
+?LBB0_64:
 	MOV	R2, R6
 	XOR	R2, #16
 	OR	R2, R7
@@ -686,7 +686,7 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_66
 ; %bb.65:                               ; %if.then144.i
 	MOV	R5, R1
-?LBB0_66:                               ; %if.then144.i
+?LBB0_66:
 	MOV	R1, R7
 	SHL	R1, R5
 	MOV	R2, R5
@@ -712,22 +712,22 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_68
 ; %bb.67:
 	ADD	R3, #1022
-	MOV	[R0+#64], R3                    ; 2-byte Folded Spill
-?LBB0_68:                               ; %if.then144.i
-	MOV	R4, [R0+#52]                    ; 2-byte Folded Reload
+	MOV	[R0+#64], R3
+?LBB0_68:
+	MOV	R4, [R0+#52]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#54]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#54]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#50]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#50]
 	MOV	[R0+#14], R4
 	MOV	R6, R13
 	MOV	[R0], R13
 	MOV	[R0+#6], R7
-	MOV	[R0+#62], R2                    ; 2-byte Folded Spill
+	MOV	[R0+#62], R2
 	MOV	[R0+#2], R2
-	MOV	[R0+#70], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#70], R10
 	MOV	[R0+#4], R10
 	MOV	R12, R0
 	ADD	R12, #116
@@ -739,19 +739,19 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_70
 ; %bb.69:                               ; %if.then144.i
 	MOV	R5, R8
-?LBB0_70:                               ; %if.then144.i
-	MOV	R11, [R0+#68]                   ; 2-byte Folded Reload
+?LBB0_70:
+	MOV	R11, [R0+#68]
 	SHL	R11, #5
 	MOV	R3, [R0+#122]
 	MOV	R10, [R0+#120]
-	MOV	R12, [R0+#66]                   ; 2-byte Folded Reload
-	MOV	R14, [R0+#18]                   ; 2-byte Folded Reload
-	MOV	R15, [R0+#16]                   ; 2-byte Folded Reload
+	MOV	R12, [R0+#66]
+	MOV	R14, [R0+#18]
+	MOV	R15, [R0+#16]
 	CMP	R1, #0
 	JMP	cc_NE, ?LBB0_72
 ; %bb.71:                               ; %if.then144.i
 	MOV	R9, R8
-?LBB0_72:                               ; %if.then144.i
+?LBB0_72:
 	MOV	R4, R8
 	SUB	R4, R10
 	SUBC	R11, R3
@@ -760,22 +760,22 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_74
 ; %bb.73:                               ; %if.then144.i
 	MOV	R9, R5
-?LBB0_74:                               ; %if.then144.i
+?LBB0_74:
 	SUB	R4, R9
 	SUBC	R11, R8
 	MOV	R5, R8
 	SUB	R8, R1
 	SUBC	R5, R2
-	MOV	R9, [R0+#64]                    ; 2-byte Folded Reload
+	MOV	R9, [R0+#64]
 	SUB	R9, #1
-	MOV	R6, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R6, [R0+#70]
 	CMP	R9, #2047
 	JMP	cc_SGE, ?LBB0_94
-?LBB0_75:                               ; %if.end167.i
+?LBB0_75:
 	CMP	R9, #1
 	JMP	cc_SLT, ?LBB0_109
 ; %bb.76:                               ; %if.then170.i
-	MOV	[R0+#70], R6                    ; 2-byte Folded Spill
+	MOV	[R0+#70], R6
 	AND	R7, #15
 	SHL	R9, #4
 	OR	R9, R7
@@ -793,41 +793,41 @@ ___divdf3?F	PROC	FAR
 	OR	R11, R4
 	SHL	R8, #1
 	JMP	cc_UC, ?LBB0_129
-?LBB0_77:                               ; %if.then.i
+?LBB0_77:
 	MOV	R4, #1
 	MOV	R3, R4
 	CMP	R11, #0
 	JMP	cc_EQ, ?LBB0_79
 ; %bb.78:                               ; %if.then.i
 	MOV	R3, R2
-?LBB0_79:                               ; %if.then.i
+?LBB0_79:
 	MOV	R1, R9
 	AND	R1, #32767
 	CMP	R13, #0
 	JMP	cc_EQ, ?LBB0_81
 ; %bb.80:                               ; %if.then.i
 	MOV	R3, R2
-?LBB0_81:                               ; %if.then.i
+?LBB0_81:
 	CMP	R1, #32752
 	JMP	cc_ULT, ?LBB0_83
 ; %bb.82:                               ; %if.then.i
 	MOV	R4, R2
-?LBB0_83:                               ; %if.then.i
+?LBB0_83:
 	MOV	R2, R1
 	XOR	R2, #32752
-	MOV	[R0+#70], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#70], R10
 	OR	R10, R2
 	JMP	cc_EQ, ?LBB0_85
 ; %bb.84:                               ; %if.then.i
 	MOV	R3, R4
-?LBB0_85:                               ; %if.then.i
+?LBB0_85:
 	JNB	R3.0, ?LBB0_86
 	JMP	cc_UC, ?LBB0_96
-?LBB0_86:                               ; %if.then22.i
+?LBB0_86:
 	OR	R9, #8
-	MOV	R15, [R0+#70]                   ; 2-byte Folded Reload
+	MOV	R15, [R0+#70]
 	JMP	cc_UC, ?LBB0_156
-?LBB0_87:                               ; %if.else156.i
+?LBB0_87:
 	MOV	R5, R7
 	SHR	R5, #1
 	MOV	R1, R6
@@ -841,15 +841,15 @@ ___divdf3?F	PROC	FAR
 	SHL	R4, #15
 	OR	R13, R4
 	SHR	R6, #1
-	MOV	R4, [R0+#52]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#52]
 	MOV	[R0+#10], R4
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	MOV	[R0+#8], R4
-	MOV	R4, [R0+#54]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#54]
 	MOV	[R0+#12], R4
-	MOV	R4, [R0+#50]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#50]
 	MOV	[R0+#14], R4
-	MOV	[R0+#66], R13                   ; 2-byte Folded Spill
+	MOV	[R0+#66], R13
 	MOV	[R0], R13
 	MOV	[R0+#6], R6
 	MOV	[R0+#2], R7
@@ -867,17 +867,17 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_NE, ?LBB0_89
 ; %bb.88:                               ; %if.else156.i
 	MOV	R10, R8
-?LBB0_89:                               ; %if.else156.i
-	MOV	R1, [R0+#68]                    ; 2-byte Folded Reload
+?LBB0_89:
+	MOV	R1, [R0+#68]
 	SHL	R1, #4
 	MOV	R11, [R0+#130]
 	MOV	R12, [R0+#128]
-	MOV	R13, [R0+#48]                   ; 2-byte Folded Reload
+	MOV	R13, [R0+#48]
 	CMP	R2, #0
 	JMP	cc_NE, ?LBB0_91
 ; %bb.90:                               ; %if.else156.i
 	MOV	R5, R8
-?LBB0_91:                               ; %if.else156.i
+?LBB0_91:
 	MOV	R4, R8
 	SUB	R4, R12
 	SUBC	R1, R11
@@ -885,58 +885,58 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_93
 ; %bb.92:                               ; %if.else156.i
 	MOV	R5, R10
-?LBB0_93:                               ; %if.else156.i
+?LBB0_93:
 	SUB	R4, R5
 	SUBC	R1, R8
 	MOV	R5, R8
 	SUB	R8, R2
 	SUBC	R5, R3
-	MOV	[R0+#62], R7                    ; 2-byte Folded Spill
+	MOV	[R0+#62], R7
 	MOV	R7, R6
-	MOV	R2, [R0+#68]                    ; 2-byte Folded Reload
-	MOV	[R0+#20], R2                    ; 2-byte Folded Spill
+	MOV	R2, [R0+#68]
+	MOV	[R0+#20], R2
 	MOV	R15, R13
-	MOV	R14, [R0+#46]                   ; 2-byte Folded Reload
-	MOV	R12, [R0+#72]                   ; 2-byte Folded Reload
+	MOV	R14, [R0+#46]
+	MOV	R12, [R0+#72]
 	MOV	R11, R1
 	MOV	R6, R9
-	MOV	R13, [R0+#66]                   ; 2-byte Folded Reload
-	MOV	R9, [R0+#64]                    ; 2-byte Folded Reload
+	MOV	R13, [R0+#66]
+	MOV	R9, [R0+#64]
 	CMP	R9, #2047
 	JMP	cc_SLT, ?LBB0_75
-?LBB0_94:                               ; %if.then164.i
-	MOV	R9, [R0+#56]                    ; 2-byte Folded Reload
+?LBB0_94:
+	MOV	R9, [R0+#56]
 	OR	R9, #32752
 	MOV	R11, #0
 	MOV	R13, R11
 	MOV	R15, R11
-?LBB0_95:                               ; %__divXf3__.exit
-	MOV	R12, [R0+#44]                   ; 2-byte Folded Reload
+?LBB0_95:
+	MOV	R12, [R0+#44]
 	JMP	cc_UC, ?LBB0_156
-?LBB0_96:                               ; %if.end.i
-	MOV	[R0+#72], R7                    ; 2-byte Folded Spill
+?LBB0_96:
+	MOV	[R0+#72], R7
 	MOV	R7, R11
 	MOV	R3, #0
 	MOV	R10, #1
 	MOV	R11, R10
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	JMP	cc_EQ, ?LBB0_98
 ; %bb.97:                               ; %if.end.i
 	MOV	R11, R3
-?LBB0_98:                               ; %if.end.i
+?LBB0_98:
 	MOV	R4, R5
 	AND	R4, #32767
 	CMP	R6, #0
 	JMP	cc_EQ, ?LBB0_100
 ; %bb.99:                               ; %if.end.i
 	MOV	R11, R3
-?LBB0_100:                              ; %if.end.i
+?LBB0_100:
 	MOV	R9, R13
 	CMP	R4, #32752
 	JMP	cc_ULT, ?LBB0_102
 ; %bb.101:                              ; %if.end.i
 	MOV	R10, R3
-?LBB0_102:                              ; %if.end.i
+?LBB0_102:
 	MOV	R3, R4
 	XOR	R3, #32752
 	MOV	R13, R15
@@ -944,16 +944,16 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_104
 ; %bb.103:                              ; %if.end.i
 	MOV	R11, R10
-?LBB0_104:                              ; %if.end.i
+?LBB0_104:
 	JB	R11.0, ?LBB0_106
 ; %bb.105:                              ; %if.then27.i
 	OR	R5, #8
-	MOV	R11, [R0+#74]                   ; 2-byte Folded Reload
+	MOV	R11, [R0+#74]
 	MOV	R13, R6
 	MOV	R9, R5
 	JMP	cc_UC, ?LBB0_156
-?LBB0_106:                              ; %if.end31.i
-	MOV	R5, [R0+#70]                    ; 2-byte Folded Reload
+?LBB0_106:
+	MOV	R5, [R0+#70]
 	MOV	R11, R7
 	MOV	R10, R11
 	OR	R10, R5
@@ -962,7 +962,7 @@ ___divdf3?F	PROC	FAR
 	OR	R2, R10
 	JMP	cc_NE, ?LBB0_111
 ; %bb.107:                              ; %if.then34.i
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	OR	R4, R15
 	OR	R3, R6
 	OR	R3, R4
@@ -973,17 +973,17 @@ ___divdf3?F	PROC	FAR
 	MOV	R13, R11
 	MOV	R15, R11
 	JMP	cc_UC, ?LBB0_156
-?LBB0_109:                              ; %if.else176.i
+?LBB0_109:
 	CMP	R9, #65483
 	JMP	cc_SGT, ?LBB0_122
 ; %bb.110:                              ; %if.then180.i
 	MOV	R11, #0
 	MOV	R13, R11
 	MOV	R15, R11
-	MOV	R9, [R0+#56]                    ; 2-byte Folded Reload
+	MOV	R9, [R0+#56]
 	JMP	cc_UC, ?LBB0_95
-?LBB0_111:                              ; %if.end41.i
-	MOV	R2, [R0+#74]                    ; 2-byte Folded Reload
+?LBB0_111:
+	MOV	R2, [R0+#74]
 	OR	R2, R15
 	OR	R3, R6
 	OR	R3, R2
@@ -1005,22 +1005,22 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_UGT, ?LBB0_116
 ; %bb.115:                              ; %if.end58.i
 	MOV	R2, R10
-?LBB0_116:                              ; %if.end58.i
+?LBB0_116:
 	CPL	R5
 	XOR	R1, #15
 	OR	R1, R5
 	MOV	R5, R10
-	MOV	R7, [R0+#72]                    ; 2-byte Folded Reload
+	MOV	R7, [R0+#72]
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB0_118
 ; %bb.117:                              ; %if.end58.i
 	MOV	R5, R2
-?LBB0_118:                              ; %if.end58.i
+?LBB0_118:
 	JNB	R5.0, ?LBB0_119
 	JMP	cc_UC, ?LBB0_158
-?LBB0_119:                              ; %if.then61.i
+?LBB0_119:
 	MOV	R5, R11
-	MOV	R3, [R0+#70]                    ; 2-byte Folded Reload
+	MOV	R3, [R0+#70]
 	OR	R5, R3
 	MOV	R1, R13
 	OR	R1, R7
@@ -1062,9 +1062,9 @@ ___divdf3?F	PROC	FAR
 	AND	R5, #31
 	ADD	R5, #16
 	JMP	cc_UC, ?LBB0_161
-?LBB0_122:                              ; %if.end182.i
+?LBB0_122:
 	MOV	R5, #1
-	MOV	[R0+#72], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#72], R5
 	SUB	R5, R9
 	ADD	R9, #52
 	MOV	R4, #0
@@ -1074,7 +1074,7 @@ ___divdf3?F	PROC	FAR
 	MOV	[R0+#108], R4
 	MOV	R8, R4
 	MOV	[R0+#100], R13
-	MOV	R4, [R0+#62]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#62]
 	MOV	[R0+#102], R4
 	MOV	[R0+#104], R6
 	MOV	[R0+#106], R7
@@ -1108,9 +1108,9 @@ ___divdf3?F	PROC	FAR
 	SHL	R3, R2
 	OR	R3, R5
 	SHR	R9, R4
-	MOV	R4, [R0+#20]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#20]
 	MOV	[R0+#92], R4
-	MOV	[R0+#60], R8                    ; 2-byte Folded Spill
+	MOV	[R0+#60], R8
 	MOV	[R0+#90], R8
 	MOV	[R0+#88], R8
 	MOV	[R0+#86], R8
@@ -1138,37 +1138,37 @@ ___divdf3?F	PROC	FAR
 	OR	R7, R5
 	MOV	R5, [R4+#6]
 	SHL	R5, R13
-	MOV	[R0+#68], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#68], R5
 	MOV	R6, [R4+#4]
 	MOV	R4, R6
 	SHR	R4, #1
 	SHR	R4, R1
-	MOV	[R0+#58], R4                    ; 2-byte Folded Spill
+	MOV	[R0+#58], R4
 	SHL	R6, R13
 	SHR	R2, #1
 	SHR	R2, R1
-	MOV	[R0+#64], R2                    ; 2-byte Folded Spill
+	MOV	[R0+#64], R2
 	SHL	R8, R13
-	MOV	R4, [R0+#52]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#52]
 	MOV	[R0+#2], R4
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	MOV	[R0], R4
-	MOV	R4, [R0+#54]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#54]
 	MOV	[R0+#4], R4
-	MOV	R4, [R0+#50]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#50]
 	MOV	[R0+#6], R4
 	MOV	[R0+#14], R9
-	MOV	[R0+#70], R3                    ; 2-byte Folded Spill
+	MOV	[R0+#70], R3
 	MOV	[R0+#12], R3
-	MOV	[R0+#62], R11                   ; 2-byte Folded Spill
+	MOV	[R0+#62], R11
 	MOV	[R0+#10], R11
-	MOV	[R0+#66], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#66], R10
 	MOV	[R0+#8], R10
 	MOV	R12, R0
 	ADD	R12, #76
 	CALLS	SEG ___muldi3, SOF ___muldi3
-	MOV	R15, [R0+#60]                   ; 2-byte Folded Reload
-	MOV	R14, [R0+#72]                   ; 2-byte Folded Reload
+	MOV	R15, [R0+#60]
+	MOV	R14, [R0+#72]
 	MOV	R4, [R0+#76]
 	MOV	R1, R4
 	SHR	R1, #15
@@ -1189,12 +1189,12 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_124
 ; %bb.123:                              ; %if.end182.i
 	MOV	R10, R15
-?LBB0_124:                              ; %if.end182.i
-	MOV	R12, [R0+#68]                   ; 2-byte Folded Reload
-	MOV	R13, [R0+#58]                   ; 2-byte Folded Reload
+?LBB0_124:
+	MOV	R12, [R0+#68]
+	MOV	R13, [R0+#58]
 	OR	R12, R13
-	MOV	[R0+#68], R12                   ; 2-byte Folded Spill
-	MOV	R12, [R0+#64]                   ; 2-byte Folded Reload
+	MOV	[R0+#68], R12
+	MOV	R12, [R0+#64]
 	OR	R6, R12
 	OR	R2, R11
 	OR	R1, R3
@@ -1202,21 +1202,21 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_126
 ; %bb.125:                              ; %if.end182.i
 	MOV	R14, R15
-?LBB0_126:                              ; %if.end182.i
-	MOV	R11, [R0+#68]                   ; 2-byte Folded Reload
+?LBB0_126:
+	MOV	R11, [R0+#68]
 	SUB	R6, R1
 	SUBC	R11, R2
-	MOV	R13, [R0+#66]                   ; 2-byte Folded Reload
+	MOV	R13, [R0+#66]
 	CMP	R7, R5
 	JMP	cc_EQ, ?LBB0_128
 ; %bb.127:                              ; %if.end182.i
 	MOV	R14, R10
-?LBB0_128:                              ; %if.end182.i
+?LBB0_128:
 	SUB	R6, R14
 	SUBC	R11, R15
 	SUB	R8, R4
 	SUBC	R7, R5
-?LBB0_129:                              ; %if.end192.i
+?LBB0_129:
 	MOV	R10, R13
 	AND	R10, #1
 	MOV	R4, #0
@@ -1230,18 +1230,18 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_131
 ; %bb.130:                              ; %if.end192.i
 	MOV	R3, R4
-?LBB0_131:                              ; %if.end192.i
-	MOV	R12, [R0+#44]                   ; 2-byte Folded Reload
-	MOV	R10, [R0+#56]                   ; 2-byte Folded Reload
-	MOV	[R0+#56], R10                   ; 2-byte Folded Spill
-	MOV	R14, [R0+#54]                   ; 2-byte Folded Reload
-	MOV	R15, [R0+#52]                   ; 2-byte Folded Reload
-	MOV	R8, [R0+#50]                    ; 2-byte Folded Reload
+?LBB0_131:
+	MOV	R12, [R0+#44]
+	MOV	R10, [R0+#56]
+	MOV	[R0+#56], R10
+	MOV	R14, [R0+#54]
+	MOV	R15, [R0+#52]
+	MOV	R8, [R0+#50]
 	CMP	R1, #0
 	JMP	cc_EQ, ?LBB0_133
 ; %bb.132:                              ; %if.end192.i
 	MOV	R3, R4
-?LBB0_133:                              ; %if.end192.i
+?LBB0_133:
 	ADD	R6, R3
 	ADDC	R11, R4
 	MOV	R10, R5
@@ -1249,39 +1249,39 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_UGT, ?LBB0_135
 ; %bb.134:                              ; %if.end192.i
 	MOV	R10, R4
-?LBB0_135:                              ; %if.end192.i
+?LBB0_135:
 	MOV	R3, R5
 	CMP	R6, R14
 	JMP	cc_UGT, ?LBB0_137
 ; %bb.136:                              ; %if.end192.i
 	MOV	R3, R4
-?LBB0_137:                              ; %if.end192.i
+?LBB0_137:
 	MOV	R7, R11
 	CMP	R11, R8
 	JMP	cc_EQ, ?LBB0_139
 ; %bb.138:                              ; %if.end192.i
 	MOV	R3, R10
-?LBB0_139:                              ; %if.end192.i
-	MOV	[R0+#72], R3                    ; 2-byte Folded Spill
+?LBB0_139:
+	MOV	[R0+#72], R3
 	MOV	R3, R13
 	MOV	R11, R5
 	CMP	R1, R15
 	JMP	cc_UGT, ?LBB0_141
 ; %bb.140:                              ; %if.end192.i
 	MOV	R11, R4
-?LBB0_141:                              ; %if.end192.i
+?LBB0_141:
 	MOV	R10, R5
-	MOV	R13, [R0+#74]                   ; 2-byte Folded Reload
+	MOV	R13, [R0+#74]
 	CMP	R2, R13
 	JMP	cc_UGT, ?LBB0_143
 ; %bb.142:                              ; %if.end192.i
 	MOV	R10, R4
-?LBB0_143:                              ; %if.end192.i
+?LBB0_143:
 	CMP	R1, R15
 	JMP	cc_EQ, ?LBB0_145
 ; %bb.144:                              ; %if.end192.i
 	MOV	R10, R11
-?LBB0_145:                              ; %if.end192.i
+?LBB0_145:
 	XOR	R7, R8
 	XOR	R6, R14
 	OR	R6, R7
@@ -1289,9 +1289,9 @@ ___divdf3?F	PROC	FAR
 	CMP	R6, #0
 	JMP	cc_EQ, ?LBB0_147
 ; %bb.146:                              ; %if.end192.i
-	MOV	R10, [R0+#72]                   ; 2-byte Folded Reload
-?LBB0_147:                              ; %if.end192.i
-	MOV	R2, [R0+#62]                    ; 2-byte Folded Reload
+	MOV	R10, [R0+#72]
+?LBB0_147:
+	MOV	R2, [R0+#62]
 	MOV	R13, R2
 	ADD	R11, R10
 	ADDC	R13, R4
@@ -1300,31 +1300,31 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_ULT, ?LBB0_149
 ; %bb.148:                              ; %if.end192.i
 	MOV	R1, R4
-?LBB0_149:                              ; %if.end192.i
-	MOV	R15, [R0+#70]                   ; 2-byte Folded Reload
+?LBB0_149:
+	MOV	R15, [R0+#70]
 	CMP	R11, R3
 	JMP	cc_ULT, ?LBB0_151
 ; %bb.150:                              ; %if.end192.i
 	MOV	R5, R4
-?LBB0_151:                              ; %if.end192.i
+?LBB0_151:
 	CMP	R13, R2
 	JMP	cc_EQ, ?LBB0_153
 ; %bb.152:                              ; %if.end192.i
 	MOV	R5, R1
-?LBB0_153:                              ; %if.end192.i
+?LBB0_153:
 	ADD	R15, R5
 	ADDC	R9, R4
-	MOV	R4, [R0+#56]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#56]
 	OR	R9, R4
 	JMP	cc_UC, ?LBB0_156
-?LBB0_154:                              ; %if.else.i
+?LBB0_154:
 	OR	R14, #32752
-?LBB0_155:                              ; %if.then44.i
+?LBB0_155:
 	MOV	R11, #0
 	MOV	R13, R11
 	MOV	R15, R11
 	MOV	R9, R14
-?LBB0_156:                              ; %__divXf3__.exit
+?LBB0_156:
 	MOV	[R12], R11
 	MOV	[R12+#2], R13
 	MOV	[R12+#4], R15
@@ -1335,14 +1335,14 @@ ___divdf3?F	PROC	FAR
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RETS
-?LBB0_157:                              ; %if.then47.i
+?LBB0_157:
 	OR	R4, R6
 	OR	R2, R4
 	JMP	cc_EQ, ?LBB0_108
 	JMP	cc_UC, ?LBB0_155
 ?LBB0_158:
-	MOV	R5, [R0+#70]                    ; 2-byte Folded Reload
-	MOV	[R0+#46], R5                    ; 2-byte Folded Spill
+	MOV	R5, [R0+#70]
+	MOV	[R0+#46], R5
 	JMP	cc_UC, ?LBB0_168
 ?LBB0_159:
 	MOV	R2, #64
@@ -1378,7 +1378,7 @@ ___divdf3?F	PROC	FAR
 	SHR	R5, #8
 	ADD	R5, R2
 	AND	R5, #31
-?LBB0_161:                              ; %cond.false
+?LBB0_161:
 	MOV	R1, R3
 	OR	R1, R7
 	CMP	R7, #0
@@ -1441,7 +1441,7 @@ ___divdf3?F	PROC	FAR
 	SHR	R2, #8
 	ADD	R2, R10
 	AND	R2, #31
-?LBB0_164:                              ; %cond.false
+?LBB0_164:
 	CMP	R1, #0
 	JMP	cc_NE, ?LBB0_166
 ; %bb.165:                              ; %cond.false
@@ -1449,9 +1449,9 @@ ___divdf3?F	PROC	FAR
 	ADD	R5, #32
 	ADDC	R1, #0
 	MOV	R2, R5
-?LBB0_166:                              ; %cond.false
-	MOV	R3, [R0+#70]                    ; 2-byte Folded Reload
-?LBB0_167:                              ; %cond.end
+?LBB0_166:
+	MOV	R3, [R0+#70]
+?LBB0_167:
 	MOV	R5, R2
 	SUB	R5, #11
 	MOV	[R0+#268], R11
@@ -1486,7 +1486,7 @@ ___divdf3?F	PROC	FAR
 	SHR	R13, #1
 	SHR	R13, R11
 	OR	R13, R10
-	MOV	[R0+#46], R13                   ; 2-byte Folded Spill
+	MOV	[R0+#46], R13
 	SHL	R3, R5
 	MOV	R1, [R1]
 	MOV	R13, R1
@@ -1497,16 +1497,16 @@ ___divdf3?F	PROC	FAR
 	SHL	R11, R5
 	MOV	R10, #12
 	SUB	R10, R2
-?LBB0_168:                              ; %if.end63.i
+?LBB0_168:
 	MOV	R5, #0
 	MOV	R1, #1
 	CMP	R4, #15
 	JMP	cc_UGT, ?LBB0_170
 ; %bb.169:                              ; %if.end63.i
 	MOV	R1, R5
-?LBB0_170:                              ; %if.end63.i
-	MOV	[R0+#56], R14                   ; 2-byte Folded Spill
-	MOV	[R0+#44], R12                   ; 2-byte Folded Spill
+?LBB0_170:
+	MOV	[R0+#56], R14
+	MOV	[R0+#44], R12
 	MOV	R2, R15
 	CPL	R2
 	XOR	R4, #15
@@ -1514,13 +1514,13 @@ ___divdf3?F	PROC	FAR
 	JMP	cc_EQ, ?LBB0_172
 ; %bb.171:                              ; %if.end63.i
 	MOV	R5, R1
-?LBB0_172:                              ; %if.end63.i
-	MOV	[R0+#72], R7                    ; 2-byte Folded Spill
-	MOV	[R0+#68], R11                   ; 2-byte Folded Spill
-	MOV	[R0+#48], R13                   ; 2-byte Folded Spill
+?LBB0_172:
+	MOV	[R0+#72], R7
+	MOV	[R0+#68], R11
+	MOV	[R0+#48], R13
 	JB	R5.0, ?LBB0_176
 ; %bb.173:                              ; %if.then66.i
-	MOV	R4, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R4, [R0+#74]
 	OR	R4, R15
 	MOV	R5, R6
 	OR	R5, R8
@@ -1530,7 +1530,7 @@ ___divdf3?F	PROC	FAR
 	CMP	R6, #0
 	JMP	cc_NE, ?LBB0_178
 ; %bb.175:                              ; %cond.false1
-	MOV	R5, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R5, [R0+#74]
 	MOV	R4, R5
 	SHR	R4, #1
 	OR	R4, R5
@@ -1564,7 +1564,7 @@ ___divdf3?F	PROC	FAR
 	ADD	R4, #16
 	JMP	cc_UC, ?LBB0_179
 ?LBB0_176:
-	MOV	[R0+#42], R10                   ; 2-byte Folded Spill
+	MOV	[R0+#42], R10
 	JMP	cc_UC, ?LBB0_3
 ?LBB0_177:
 	MOV	R12, R10
@@ -1601,7 +1601,7 @@ ___divdf3?F	PROC	FAR
 	SHR	R4, #8
 	ADD	R4, R1
 	AND	R4, #31
-?LBB0_179:                              ; %cond.false1
+?LBB0_179:
 	MOV	R5, R15
 	OR	R5, R8
 	CMP	R8, #0
@@ -1664,7 +1664,7 @@ ___divdf3?F	PROC	FAR
 	SHR	R1, #8
 	ADD	R1, R3
 	AND	R1, #31
-?LBB0_182:                              ; %cond.false1
+?LBB0_182:
 	CMP	R5, #0
 	JMP	cc_NE, ?LBB0_184
 ; %bb.183:                              ; %cond.false1
@@ -1672,12 +1672,12 @@ ___divdf3?F	PROC	FAR
 	ADD	R4, #32
 	ADDC	R5, #0
 	MOV	R1, R4
-?LBB0_184:                              ; %cond.false1
+?LBB0_184:
 	MOV	R12, R10
-?LBB0_185:                              ; %cond.end2
+?LBB0_185:
 	MOV	R4, R1
 	SUB	R4, #11
-	MOV	R5, [R0+#74]                    ; 2-byte Folded Reload
+	MOV	R5, [R0+#74]
 	MOV	[R0+#252], R5
 	MOV	R5, #0
 	MOV	[R0+#250], R5
@@ -1717,13 +1717,12 @@ ___divdf3?F	PROC	FAR
 	SHR	R6, R10
 	OR	R6, R2
 	SHL	R5, R4
-	MOV	[R0+#74], R5                    ; 2-byte Folded Spill
+	MOV	[R0+#74], R5
 	ADD	R12, R1
 	SUB	R12, #12
-	MOV	[R0+#42], R12                   ; 2-byte Folded Spill
+	MOV	[R0+#42], R12
 	JMP	cc_UC, ?LBB0_3
 ___divdf3?F	ENDP
-                                        ; -- End function
 	EXTRN	___muldi3 : NEAR
 DIVDF3_PR	ENDS
 	END

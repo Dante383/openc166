@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FIXDFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixdfsi                      ; -- Begin function __fixdfsi
-___fixdfsi:                             ; @__fixdfsi
+	PUBLIC	___fixdfsi
+___fixdfsi:
 ___fixdfsi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	SUB	R0, #16
@@ -34,7 +34,7 @@ ___fixdfsi?F	PROC	FAR
 	CPL	R1
 	MOV	R4, R1
 	JMP	cc_UC, ?LBB0_7
-?LBB0_3:                                ; %if.then14.i
+?LBB0_3:
 	MOV	R4, [R0+#20]
 	MOV	R5, [R0+#18]
 	MOV	R3, [R0+#16]
@@ -78,14 +78,13 @@ ___fixdfsi?F	PROC	FAR
 	JNB	R1.15, ?LBB0_5
 ; %bb.4:                                ; %if.then14.i
 	MOV	R5, R3
-?LBB0_5:                                ; %if.then14.i
+?LBB0_5:
 	JNB	R1.15, ?LBB0_7
 ; %bb.6:                                ; %if.then14.i
 	MOV	R4, R2
-?LBB0_7:                                ; %__fixint.exit
+?LBB0_7:
 	ADD	R0, #16
 	RETS
 ___fixdfsi?F	ENDP
-                                        ; -- End function
 FIXDFSI_PR	ENDS
 	END

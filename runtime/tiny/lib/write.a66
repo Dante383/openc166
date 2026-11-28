@@ -1,0 +1,29 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+WRITE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	__write
+__write:
+; %bb.0:                                ; %entry
+	MOV	R4, R14
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %for.body.preheader
+	MOV	R5, #0
+?LBB0_2:
+	BCLR	S0TIR
+	MOV	R1, R13
+	ADD	R1, R5
+	MOVB	RL1, [R1]
+	MOVBZ	R1, RL1
+	MOV	S0TBUF, R1
+?LBB0_3:
+	JNB	S0TIR, ?LBB0_3
+; %bb.4:                                ; %for.inc
+	ADD	R5, #1
+	CMP	R5, R4
+	JMP	cc_NE, ?LBB0_2
+?LBB0_5:
+	RET
+WRITE_PR	ENDS
+	END

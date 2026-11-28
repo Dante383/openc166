@@ -1,0 +1,109 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+ASSERT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___assert
+___assert:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R7, R13
+	MOV	R8, R12
+	MOV	R6, R0
+	ADD	R6, #1
+	ADD	R6, #6
+	MOV	R4, #0
+	MOVB	[R0+#7], RL4
+?LBB0_1:
+	MOV	R4, R14
+	MOV	R5, #52429
+	MULU	R4, R5
+	MOV	R14, MDH
+	SHR	R14, #3
+	MOV	R5, #10
+	MUL	R14, R5
+	MOV	R5, MDL
+	MOV	R1, R4
+	SUB	R1, R5
+	OR	R1, #48
+	MOVB	[R6+#65535], RL1
+	SUB	R6, #1
+	CMP	R4, #9
+	JMP	cc_UGT, ?LBB0_1
+; %bb.2:                                ; %do.end
+	MOV	R12, #L_?str
+	MOV	R9, #___c166_iob+12
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, R8
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, #L_?str?1
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, R7
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, #L_?str?2
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, R6
+	MOV	R13, R9
+	CALL	_fputs
+	MOV	R12, #10
+	MOV	R13, R9
+	CALL	_fputc
+	CALL	_abort
+ASSERT_PR	ENDS
+ASSERT_NC	SECTION	DATA WORD PUBLIC 'CNEARROM'
+L_?str:
+	DB	65
+	DB	115
+	DB	115
+	DB	101
+	DB	114
+	DB	116
+	DB	105
+	DB	111
+	DB	110
+	DB	32
+	DB	102
+	DB	97
+	DB	105
+	DB	108
+	DB	101
+	DB	100
+	DB	58
+	DB	32
+	DB	0
+
+L_?str?1:
+	DB	44
+	DB	32
+	DB	102
+	DB	105
+	DB	108
+	DB	101
+	DB	32
+	DB	0
+
+L_?str?2:
+	DB	44
+	DB	32
+	DB	108
+	DB	105
+	DB	110
+	DB	101
+	DB	32
+	DB	0
+
+	EXTRN	___c166_iob : WORD
+	EXTRN	_fputs : NEAR
+	EXTRN	_fputc : NEAR
+	EXTRN	_abort : NEAR
+ASSERT_NC	ENDS
+	END

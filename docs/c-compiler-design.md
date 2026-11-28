@@ -504,6 +504,31 @@ modules (`--lib`) so only what a program uses is pulled in:
      its large-model pointers are `_far` (14-bit page offset, no carry), so
      its pointer arithmetic is 16-bit where ours is 32-bit.
 
+   - The C library. openc166's own (MIT), in `runtime/libc` and
+     `runtime/include`, a function or a few per module so that a program
+     links only what it uses: `string.h`, `stdlib.h` (with a first-fit
+     `malloc` on a heap the program may replace), `stdio.h` on TASKING's
+     `_read`/`_write` (ASC0 by default), `ctype.h`, `setjmp.h` (hand-written
+     for each model), `errno.h`, `assert.h`. `exit` returns from `__cstart`
+     with the status, which now saves R6-R9 itself. `math.h` is LLVM libc's
+     header-only C++ (`libc/shared/math`), each function wrapped in a module
+     of its own by `runtime/build.py`, double and float, without the
+     correctly rounded second pass and with small tables; LLVM libc needed
+     three fixes for a 16-bit `int` (constant shifts in `double_double.h`,
+     `logf.h`, `hypot.h`). The double `sinh`, `cosh` and `tanh` it lacks are
+     written on `expm1`. Found on the way, all fixed in the back end:
+     structs passed by value (now a copy on the user stack, as in TASKING);
+     ODR linkage (C++ inline functions, A166 has no weak symbols: local to
+     each module); `DSB n,v` for runs of a non-zero byte (now `DB`);
+     unaligned word accesses through far pointers (now bytes); `memcpy` and
+     `llvm.modf`/`llvm.frexp` with a near local where a far pointer is
+     wanted. Checked in all four models: the library functions, `exit` and
+     `atexit`, `assert`, `printf` over ASC0, and the math functions against
+     Python's within 1e-15 (double) and 1e-6 (float). Not done:
+     floating-point `printf`, `scanf`. The cost of the math functions in
+     soft float is ROM (`sin`: 30 KB with its helpers) and user stack (up to
+     1.8 KB, so the stack size became settable: `_ustack(n)`).
+
 7. **Later.** Variable-level debug information; an integrated assembler
    generated from `c166.tbl`; a Keil dialect and ABI mode.
 

@@ -1,0 +1,55 @@
+; Compiled from LLVM libc, libc/shared/math/truncf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+TRUNCF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_truncf
+_truncf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R6, [R0+#6]
+	MOV	R4, R6
+	CPL	R4
+	MOV	R7, [R0+#4]
+	AND	R4, #32640
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %if.end.i.i
+	MOV	R4, R6
+	SHR	R4, #7
+	AND	R4, #255
+	CMP	R4, #149
+	JMP	cc_UGT, ?LBB0_5
+; %bb.2:                                ; %if.end3.i.i
+	CMP	R4, #126
+	JMP	cc_UGT, ?LBB0_4
+; %bb.3:                                ; %if.then5.i.i
+	AND	R6, #32768
+	MOV	R7, #0
+	JMP	cc_UC, ?LBB0_5
+?LBB0_4:
+	MOV	R14, #150
+	SUB	R14, R4
+	MOV	R12, #65535
+	MOV	R13, R12
+	CALL	___ashlsi3
+	AND	R7, R4
+	AND	R5, R6
+	AND	R5, #127
+	AND	R6, #65408
+	OR	R6, R5
+?LBB0_5:
+	MOV	R4, R7
+	MOV	R5, R6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RET
+	EXTRN	___ashlsi3 : NEAR
+TRUNCF_PR	ENDS
+	END

@@ -1,0 +1,65 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRNCAT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strncat
+_strncat:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R1, [R0+#4]
+	MOV	R10, R4
+	MOV	R11, R5
+?LBB0_1:
+	MOV	R2, R11
+	MOV	R3, R10
+	EXTS	R2, #1
+	MOVB	RL6, [R3]
+	MOVBZ	R6, RL6
+	AND	R6, #255
+	ADD	R10, #1
+	ADDC	R11, #0
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB0_1
+; %bb.2:                                ; %for.cond.preheader
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_5
+?LBB0_3:
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	MOV	R7, R6
+	AND	R7, #255
+	JMP	cc_EQ, ?LBB0_5
+; %bb.4:                                ; %for.body
+	ADD	R14, #1
+	ADDC	R15, #0
+	MOV	R10, R3
+	MOV	R11, R2
+	ADD	R10, #1
+	ADDC	R11, #0
+	EXTS	R2, #1
+	MOVB	[R3], RL6
+	SUB	R1, #1
+	MOV	R3, R10
+	MOV	R2, R11
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_3
+	JMP	cc_UC, ?LBB0_6
+?LBB0_5:
+	MOV	R10, R3
+	MOV	R11, R2
+?LBB0_6:
+	MOV	R1, #0
+	EXTS	R11, #1
+	MOVB	[R10], RL1
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RET
+STRNCAT_PR	ENDS
+	END

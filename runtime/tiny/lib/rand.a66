@@ -1,0 +1,47 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+RAND_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_rand
+_rand:
+; %bb.0:                                ; %entry
+	MOV	R4, _next+2
+	MOV	R5, _next
+	MOV	R1, #16838
+	MUL	R5, R1
+	MOV	R1, MDL
+	MOV	R2, #20077
+	MULU	R5, R2
+	MOV	R3, MDH
+	ADD	R3, R1
+	MUL	R4, R2
+	MOV	R4, MDL
+	ADD	R4, R3
+	MUL	R5, R2
+	MOV	R5, MDL
+	ADD	R5, #12345
+	ADDC	R4, #0
+	MOV	_next, R5
+	MOV	_next+2, R4
+	AND	R4, #32767
+	RET
+	PUBLIC	_srand
+_srand:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	MOV	_next+2, R4
+	MOV	_next, R12
+	RET
+RAND_PR	ENDS
+C166_DATA	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_next:
+	DSB	4
+C166_DATA	ENDS
+C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
+	EVEN
+	DW	1
+	DW	0
+C166_DATA_INIT	ENDS
+	END

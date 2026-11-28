@@ -1,0 +1,242 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+CTYPE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_isascii
+_isascii:
+; %bb.0:                                ; %entry
+	MOV	R4, #1
+	CMP	R12, #128
+	JMP	cc_ULT, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB0_2:
+	RET
+	PUBLIC	_isblank
+_isblank:
+; %bb.0:                                ; %entry
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R12, #32
+	JMP	cc_EQ, ?LBB1_2
+; %bb.1:                                ; %entry
+	MOV	R4, R1
+?LBB1_2:
+	CMP	R12, #9
+	JMP	cc_EQ, ?LBB1_4
+; %bb.3:                                ; %entry
+	MOV	R5, R1
+?LBB1_4:
+	OR	R4, R5
+	RET
+	PUBLIC	_iscntrl
+_iscntrl:
+; %bb.0:                                ; %entry
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R12, #32
+	JMP	cc_ULT, ?LBB2_2
+; %bb.1:                                ; %entry
+	MOV	R4, R1
+?LBB2_2:
+	CMP	R12, #127
+	JMP	cc_EQ, ?LBB2_4
+; %bb.3:                                ; %entry
+	MOV	R5, R1
+?LBB2_4:
+	OR	R4, R5
+	RET
+	PUBLIC	_isdigit
+_isdigit:
+; %bb.0:                                ; %entry
+	SUB	R12, #48
+	MOV	R4, #1
+	CMP	R12, #10
+	JMP	cc_ULT, ?LBB3_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB3_2:
+	RET
+	PUBLIC	_islower
+_islower:
+; %bb.0:                                ; %entry
+	SUB	R12, #97
+	MOV	R4, #1
+	CMP	R12, #26
+	JMP	cc_ULT, ?LBB4_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB4_2:
+	RET
+	PUBLIC	_isupper
+_isupper:
+; %bb.0:                                ; %entry
+	SUB	R12, #65
+	MOV	R4, #1
+	CMP	R12, #26
+	JMP	cc_ULT, ?LBB5_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB5_2:
+	RET
+	PUBLIC	_isalpha
+_isalpha:
+; %bb.0:                                ; %entry
+	AND	R12, #65503
+	SUB	R12, #65
+	MOV	R4, #1
+	CMP	R12, #26
+	JMP	cc_ULT, ?LBB6_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB6_2:
+	RET
+	PUBLIC	_isalnum
+_isalnum:
+; %bb.0:                                ; %entry
+	MOV	R2, R12
+	AND	R2, #65503
+	SUB	R2, #65
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R2, #26
+	JMP	cc_ULT, ?LBB7_2
+; %bb.1:                                ; %entry
+	MOV	R4, R1
+?LBB7_2:
+	SUB	R12, #48
+	CMP	R12, #10
+	JMP	cc_ULT, ?LBB7_4
+; %bb.3:                                ; %entry
+	MOV	R5, R1
+?LBB7_4:
+	OR	R4, R5
+	RET
+	PUBLIC	_isgraph
+_isgraph:
+; %bb.0:                                ; %entry
+	SUB	R12, #33
+	MOV	R4, #1
+	CMP	R12, #94
+	JMP	cc_ULT, ?LBB8_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB8_2:
+	RET
+	PUBLIC	_isprint
+_isprint:
+; %bb.0:                                ; %entry
+	SUB	R12, #32
+	MOV	R4, #1
+	CMP	R12, #95
+	JMP	cc_ULT, ?LBB9_2
+; %bb.1:                                ; %entry
+	MOV	R4, #0
+?LBB9_2:
+	RET
+	PUBLIC	_ispunct
+_ispunct:
+; %bb.0:                                ; %entry
+	MOV	R5, R12
+	SUB	R5, #127
+	MOV	R4, #0
+	CMP	R5, #65442
+	JMP	cc_ULT, ?LBB10_6
+; %bb.1:                                ; %land.rhs
+	MOV	R2, R12
+	AND	R2, #95
+	SUB	R2, #91
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R2, #65510
+	JMP	cc_ULT, ?LBB10_3
+; %bb.2:                                ; %land.rhs
+	MOV	R4, R1
+?LBB10_3:
+	SUB	R12, #58
+	CMP	R12, #65526
+	JMP	cc_ULT, ?LBB10_5
+; %bb.4:                                ; %land.rhs
+	MOV	R5, R1
+?LBB10_5:
+	AND	R4, R5
+?LBB10_6:
+	RET
+	PUBLIC	_isspace
+_isspace:
+; %bb.0:                                ; %entry
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R12, #32
+	JMP	cc_EQ, ?LBB11_2
+; %bb.1:                                ; %entry
+	MOV	R4, R1
+?LBB11_2:
+	SUB	R12, #9
+	CMP	R12, #5
+	JMP	cc_ULT, ?LBB11_4
+; %bb.3:                                ; %entry
+	MOV	R5, R1
+?LBB11_4:
+	OR	R4, R5
+	RET
+	PUBLIC	_isxdigit
+_isxdigit:
+; %bb.0:                                ; %entry
+	MOV	R2, R12
+	SUB	R2, #48
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	CMP	R2, #10
+	JMP	cc_ULT, ?LBB12_2
+; %bb.1:                                ; %entry
+	MOV	R4, R1
+?LBB12_2:
+	OR	R12, #32
+	SUB	R12, #97
+	CMP	R12, #6
+	JMP	cc_ULT, ?LBB12_4
+; %bb.3:                                ; %entry
+	MOV	R5, R1
+?LBB12_4:
+	OR	R4, R5
+	RET
+	PUBLIC	_toascii
+_toascii:
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	AND	R4, #127
+	RET
+	PUBLIC	_tolower
+_tolower:
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	MOV	R5, R4
+	SUB	R5, #91
+	CMP	R5, #65510
+	JMP	cc_ULT, ?LBB14_2
+; %bb.1:                                ; %entry
+	ADD	R4, #32
+?LBB14_2:
+	RET
+	PUBLIC	_toupper
+_toupper:
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	MOV	R5, R4
+	SUB	R5, #123
+	CMP	R5, #65510
+	JMP	cc_ULT, ?LBB15_2
+; %bb.1:                                ; %entry
+	SUB	R4, #32
+?LBB15_2:
+	RET
+CTYPE_PR	ENDS
+	END

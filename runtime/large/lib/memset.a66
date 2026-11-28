@@ -5,8 +5,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 MEMSET_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	_memset                         ; -- Begin function memset
-_memset:                                ; @memset
+	PUBLIC	_memset
+_memset:
 _memset?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R1, R14
@@ -19,8 +19,7 @@ _memset?F	PROC	FAR
 	MOV	R10, R5
 	MOV	R3, R2
 	MOV	R11, R10
-?LBB0_2:                                ; %while.body
-                                        ; =>This Inner Loop Header: Depth=1
+?LBB0_2:
 	SUB	R15, #1
 	ADD	R3, #1
 	ADDC	R11, #0
@@ -30,9 +29,8 @@ _memset?F	PROC	FAR
 	MOV	R10, R11
 	CMP	R15, #0
 	JMP	cc_NE, ?LBB0_2
-?LBB0_3:                                ; %while.end
+?LBB0_3:
 	RETS
 _memset?F	ENDP
-                                        ; -- End function
 MEMSET_PR	ENDS
 	END

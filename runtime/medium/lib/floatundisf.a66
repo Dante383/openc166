@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FLOATUNDISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___floatundisf                  ; -- Begin function __floatundisf
-___floatundisf:                         ; @__floatundisf
+	PUBLIC	___floatundisf
+___floatundisf:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -129,7 +129,7 @@ ___floatundisf:                         ; @__floatundisf
 	AND	R1, #31
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_3
-?LBB0_6:                                ; %if.end.i
+?LBB0_6:
 	MOV	R4, R12
 	SHR	R4, #1
 	OR	R4, R12
@@ -161,7 +161,7 @@ ___floatundisf:                         ; @__floatundisf
 	ADD	R4, R2
 	AND	R4, #31
 	ADD	R4, #16
-?LBB0_7:                                ; %if.end.i
+?LBB0_7:
 	MOV	R5, R14
 	OR	R5, R15
 	JMP	cc_NE, ?LBB0_9
@@ -170,7 +170,7 @@ ___floatundisf:                         ; @__floatundisf
 	ADD	R4, #32
 	ADDC	R5, #0
 	MOV	R1, R4
-?LBB0_9:                                ; %if.end.i
+?LBB0_9:
 	MOV	R2, R1
 	XOR	R2, #63
 	CMP	R1, #39
@@ -197,7 +197,7 @@ ___floatundisf:                         ; @__floatundisf
 	SHL	R12, #1
 	MOV	R11, R12
 	JMP	cc_UC, ?LBB0_15
-?LBB0_13:                               ; %if.else29.i
+?LBB0_13:
 	SUB	R1, #40
 	MOV	[R0+#42], R12
 	MOV	R4, #0
@@ -227,10 +227,10 @@ ___floatundisf:                         ; @__floatundisf
 	MOV	R11, R12
 	MOV	R3, R13
 	MOV	R5, R14
-?LBB0_15:                               ; %if.end17.i
+?LBB0_15:
 	MOV	R10, R15
 	JMP	cc_UC, ?LBB0_19
-?LBB0_16:                               ; %if.else9.i
+?LBB0_16:
 	MOV	R5, #38
 	SUB	R5, R1
 	MOV	R4, #0
@@ -258,7 +258,7 @@ ___floatundisf:                         ; @__floatundisf
 	MOV	R3, R10
 	SHL	R3, #1
 	SHL	R3, R6
-	MOV	[R0], R3                        ; 2-byte Folded Spill
+	MOV	[R0], R3
 	MOV	R11, [R9+#2]
 	MOV	R3, R11
 	SHR	R3, R8
@@ -306,13 +306,13 @@ ___floatundisf:                         ; @__floatundisf
 	JMP	cc_NE, ?LBB0_18
 ; %bb.17:                               ; %if.else9.i
 	MOV	R12, R4
-?LBB0_18:                               ; %if.else9.i
-	MOV	R4, [R0]                        ; 2-byte Folded Reload
+?LBB0_18:
+	MOV	R4, [R0]
 	OR	R5, R4
 	OR	R3, R7
 	SHR	R10, R8
 	OR	R11, R12
-?LBB0_19:                               ; %if.end17.i
+?LBB0_19:
 	MOV	R4, R11
 	SHR	R4, #2
 	AND	R4, #1
@@ -327,7 +327,7 @@ ___floatundisf:                         ; @__floatundisf
 	JMP	cc_EQ, ?LBB0_21
 ; %bb.20:                               ; %if.end17.i
 	MOV	R12, R11
-?LBB0_21:                               ; %if.end17.i
+?LBB0_21:
 	ADD	R5, R12
 	ADDC	R10, R11
 	JB	R3.10, ?LBB0_23
@@ -339,7 +339,7 @@ ___floatundisf:                         ; @__floatundisf
 	SHR	R3, #2
 	SHL	R5, #14
 	JMP	cc_UC, ?LBB0_24
-?LBB0_23:                               ; %if.then25.i
+?LBB0_23:
 	MOV	R2, #64
 	SUB	R2, R1
 	MOV	R1, R4
@@ -349,19 +349,18 @@ ___floatundisf:                         ; @__floatundisf
 	OR	R4, R1
 	SHR	R3, #3
 	SHL	R5, #13
-?LBB0_24:                               ; %if.end33.i
+?LBB0_24:
 	OR	R5, R3
 	SHL	R2, #7
 	AND	R5, #127
 	OR	R5, R2
 	ADD	R5, #16256
-?LBB0_25:                               ; %__floatXiYf__.exit
+?LBB0_25:
 	ADD	R0, #50
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
 FLOATUNDISF_PR	ENDS
 	END

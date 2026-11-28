@@ -1,0 +1,69 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FPUTC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fputc
+_fputc:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R6, R14
+	MOV	R7, R13
+	MOV	R4, R12
+	MOV	R5, R0
+	ADD	R5, #1
+	MOV	R1, R5
+	AND	R1, #16383
+	SHR	R5, #13
+	AND	R5, #6
+	MOV	R14, [R5+#65024]
+	MOV	R13, R14
+	SHL	R13, #14
+	OR	R13, R1
+	SHR	R14, #2
+	MOVB	[R0+#1], RL4
+	EXTS	R6, #1
+	MOV	R12, [R7]
+	MOV	R15, #1
+	CALL	__write
+	CMP	R4, #1
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %if.end
+	MOVB	RL4, [R0+#1]
+	MOVBZ	R4, RL4
+	JMP	cc_UC, ?LBB0_3
+?LBB0_2:
+	ADD	R7, #4
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	OR	R4, #2
+	EXTS	R6, #1
+	MOVB	[R7], RL4
+	MOV	R4, #65535
+?LBB0_3:
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RET
+	PUBLIC	_putc
+_putc:
+; %bb.0:                                ; %entry
+	CALL	_fputc
+	RET
+	PUBLIC	_putchar
+_putchar:
+; %bb.0:                                ; %entry
+	MOV	R13, #SOF (___c166_iob+6)
+	MOV	R14, #SEG (___c166_iob+6)
+	CALL	_fputc
+	RET
+	EXTRN	__write : NEAR
+	EXTRN	___c166_iob : WORD
+FPUTC_PR	ENDS
+	END

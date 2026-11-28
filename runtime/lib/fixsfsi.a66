@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FIXSFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixsfsi                      ; -- Begin function __fixsfsi
-___fixsfsi:                             ; @__fixsfsi
+	PUBLIC	___fixsfsi
+___fixsfsi:
 ___fixsfsi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
@@ -21,7 +21,7 @@ ___fixsfsi?F	PROC	FAR
 	JNB	R13.15, ?LBB0_2
 ; %bb.1:                                ; %entry
 	MOV	R1, R4
-?LBB0_2:                                ; %entry
+?LBB0_2:
 	MOV	R14, R13
 	SHR	R14, #7
 	AND	R14, #255
@@ -38,13 +38,13 @@ ___fixsfsi?F	PROC	FAR
 	JB	R1.0, ?LBB0_6
 ; %bb.5:                                ; %if.then7.i
 	MOV	R5, #32768
-?LBB0_6:                                ; %if.then7.i
+?LBB0_6:
 	MOV	R4, #65535
 	JB	R1.0, ?LBB0_12
 ; %bb.7:                                ; %if.then7.i
 	MOV	R4, #0
 	JMP	cc_UC, ?LBB0_12
-?LBB0_8:                                ; %if.end11.i
+?LBB0_8:
 	MOV	R12, [R0+#4]
 	MOV	R7, R13
 	ASHR	R7, #15
@@ -60,10 +60,10 @@ ___fixsfsi?F	PROC	FAR
 	MOV	R14, R4
 	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
 	JMP	cc_UC, ?LBB0_11
-?LBB0_10:                               ; %if.else.i
+?LBB0_10:
 	SUB	R14, #150
 	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
-?LBB0_11:                               ; %__fixint.exit
+?LBB0_11:
 	MUL	R4, R7
 	MOV	R1, MDL
 	MULU	R4, R6
@@ -74,12 +74,11 @@ ___fixsfsi?F	PROC	FAR
 	ADD	R5, R2
 	MUL	R4, R6
 	MOV	R4, MDL
-?LBB0_12:                               ; %__fixint.exit
+?LBB0_12:
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	RETS
 ___fixsfsi?F	ENDP
-                                        ; -- End function
 	EXTRN	___lshrsi3 : NEAR
 	EXTRN	___ashlsi3 : NEAR
 FIXSFSI_PR	ENDS

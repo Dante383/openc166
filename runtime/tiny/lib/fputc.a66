@@ -1,0 +1,48 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FPUTC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fputc
+_fputc:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R6, R13
+	MOV	R4, R12
+	MOVB	[R0+#1], RL4
+	MOV	R12, [R6]
+	MOV	R13, R0
+	ADD	R13, #1
+	MOV	R14, #1
+	CALL	__write
+	CMP	R4, #1
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %if.end
+	MOVB	RL4, [R0+#1]
+	MOVBZ	R4, RL4
+	JMP	cc_UC, ?LBB0_3
+?LBB0_2:
+	MOVB	RL4, [R6+#4]
+	OR	R4, #2
+	MOVB	[R6+#4], RL4
+	MOV	R4, #65535
+?LBB0_3:
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	RET
+	PUBLIC	_putc
+_putc:
+; %bb.0:                                ; %entry
+	CALL	_fputc
+	RET
+	PUBLIC	_putchar
+_putchar:
+; %bb.0:                                ; %entry
+	MOV	R13, #___c166_iob+6
+	CALL	_fputc
+	RET
+	EXTRN	__write : NEAR
+	EXTRN	___c166_iob : WORD
+FPUTC_PR	ENDS
+	END

@@ -11,7 +11,9 @@ in R12-R15 (then the user stack), the result in R4 (R4:R5 for 32 bits),
 the user stack in R0, the return address on the system stack.
 """
 
+import math
 import os
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -60,6 +62,8 @@ def compile_c(source, opt="-O2", name="test.c"):
             capture_output=True,
             text=True,
             cwd=tmp,
+            # The C library's headers, from this tree's runtime.
+            env={**os.environ, "OPENC166_RUNTIME": RUNTIME},
         )
         if out.returncode != 0:
             raise AssertionError("clang failed:\n" + out.stderr)
@@ -919,6 +923,380 @@ int main(void) {
             with self.subTest(opt=opt):
                 asm = self.run_model("large", opt).asm[-1][1]
                 self.assertIn("CALLS\tSEG _sum, SOF _sum", asm)
+
+
+# Where the C library tests put things on the 5WY19: code below 64 KB for
+# the near-code models, at 10000H for the far ones; near data in the
+# internal RAM; far data in the external RAM at 90000H.
+def libc_program(sources, model, opt="-Os", big=False):
+    code = [(0x1000, 0x7FFF)] if model in ("tiny", "medium") else [(0x10000, 0x1FFFF)]
+    near_rom = [(0x8000, 0xBFFF)]
+    near_ram = [(0xF200, 0xF9FF)]
+    if big:  # all the math functions: code in six segments, and the C167CS's
+        assert model == "large"  # XRAM2 for their user stack
+        code = [(0x10000, 0x1FFFF), (0x30000, 0x7FFFF)]
+        near_ram = [(0xC000, 0xD7FF)] + near_ram
+    return Program(
+        sources,
+        opt,
+        startup=True,
+        image=bytes(0x80000 * [0xFF]),
+        board="5wy19",
+        model=model,
+        classes={
+            "CPROGRAM": code,
+            "CNEARROM": near_rom,
+            "CNEAR": near_ram,
+            "CHUGE": [(0x90000, 0x93FFF)],
+            "CHUGEROM": [(0x20000, 0x2FFFF)],
+        },
+    )
+
+
+def run_cstart(p, instructions=3000000):
+    """Calls __cstart as a loader would; returns the simulator at the end.
+    The watchdog is frozen: the library does not service it, and the 64-bit
+    divisions of printf("%lld") take longer than its period."""
+    s = p.simulator()
+    s.watchdog_frozen = True
+    s.sfr["ADDRSEL2"] = 0x0904  # 64 KB of external RAM at 90000H
+    s.sfr["BUSCON2"] = 0x0480
+    s.sfr["SYSCON"] |= 0x0004  # XPEN: the on-chip XRAM
+    s.sfr["XPERCON"] |= 0x0800  # XRAM2 at 0C000H
+    push_return(s, far=p.far_code)
+    s.r[0] = USER_STACK
+    for reg in (6, 7, 8, 9):
+        s.r[reg] = 0x1100 * reg
+    s.break_at(HALT)
+    s.pc = p.address("__cstart")
+    stop = s.cont(instructions)
+    # A trap runs on through the empty vectors into HALT too: R0 tells.
+    if s.pc != HALT or s.r[0] != USER_STACK:
+        raise AssertionError(f"__cstart did not return: {stop}, pc={s.pc:06X}, "
+                             f"R0={s.r[0]:04X}, TFR={s.sfr['TFR']:04X}")
+    return s
+
+
+MODELS = ("tiny", "small", "medium", "large")
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class CLibraryTest(unittest.TestCase):
+    """openc166's C library (runtime/libc, headers in runtime/include) in
+    every memory model."""
+
+    # Output goes to the program's own _write, so the library's (ASC0) is
+    # not linked; a small heap of its own, too.
+    SOURCE = r"""
+#include <ctype.h>
+#include <errno.h>
+#include <setjmp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char out[64];
+int outn;
+size_t _write(int fd, char *b, size_t n) {
+  for (size_t i = 0; i < n; i++)
+    if (outn < (int)sizeof out)
+      out[outn++] = b[i];
+  return n;
+}
+char __c166_heap[300];
+const size_t __c166_heap_size = sizeof __c166_heap;
+
+static jmp_buf jb;
+static int cmp(const void *a, const void *b) {
+  return *(const int *)a - *(const int *)b;
+}
+static void deep(int n) {
+  if (n == 0)
+    longjmp(jb, 42);
+  deep(n - 1);
+}
+
+int main(void) {
+  int fail = 0;
+  char buf[80];
+  strcpy(buf, "hello");
+  strcat(buf, ", world");
+  if (strlen(buf) != 12 || strcmp(buf, "hello, world") ||
+      strncmp(buf, "help", 3) || !strncmp(buf, "help", 4))
+    fail |= 1;
+  if (strchr(buf, 'o') != buf + 4 || strrchr(buf, 'o') != buf + 8 ||
+      strstr(buf, "wor") != buf + 7 || strpbrk(buf, " ,") != buf + 5 ||
+      strspn(buf, "hel") != 4 || strcspn(buf, ",") != 5)
+    fail |= 2;
+  char tok[] = "a,b;;c";
+  char *t1 = strtok(tok, ",;"), *t2 = strtok(NULL, ",;");
+  char *t3 = strtok(NULL, ",;"), *t4 = strtok(NULL, ",;");
+  if (strcmp(t1, "a") || strcmp(t2, "b") || strcmp(t3, "c") || t4)
+    fail |= 4;
+  snprintf(buf, sizeof buf, "[%5d|%-4x|%04X|%+d|%s|%.2s|%c|%lu|%lld|%%|%o|%#x|%.3d]",
+           -42, 255, 0xbeef, 7, "str", "abc", 'Z', 4000000000UL,
+           -1234567890123LL, 8, 255, 5);
+  if (strcmp(buf, "[  -42|ff  |BEEF|+7|str|ab|Z|4000000000|-1234567890123|%|10|0xff|005]"))
+    fail |= 8;
+  if (snprintf(buf, 4, "%ld", 123456L) != 6 || strcmp(buf, "123"))
+    fail |= 16;
+  char *end;
+  if (strtol("  -0x1F!", &end, 0) != -31 || *end != '!' ||
+      strtoul("777", NULL, 8) != 511 || atoi("123") != 123 ||
+      strtoll("9223372036854775807", NULL, 10) != 9223372036854775807LL)
+    fail |= 32;
+  errno = 0;
+  if (strtol("99999999999", NULL, 10) != 2147483647L || errno != ERANGE)
+    fail |= 64;
+  int a[] = {5, 3, 9, 1, 7, 2}, key = 7;
+  qsort(a, 6, sizeof a[0], cmp);
+  if (a[0] != 1 || a[3] != 5 || a[5] != 9 ||
+      bsearch(&key, a, 6, sizeof a[0], cmp) != &a[4])
+    fail |= 128;
+  /* Through volatiles: LLVM may assume what malloc returns differs from
+     a freed pointer, and that a malloc whose result is unused succeeds. */
+  char *volatile p = malloc(100), *volatile q = malloc(100);
+  if (!p || !q || p == q)
+    fail |= 256;
+  free(p);
+  char *volatile r = malloc(50);
+  if (r != p)
+    fail |= 512;
+  free(q);
+  free(r);
+  char *volatile big = malloc(250);   /* only fits if the freed blocks merged */
+  char *volatile again = malloc(250);
+  char *volatile small = realloc(big, 10);
+  if (!big || small != big || again)
+    fail |= 1024;
+  if (!isdigit('7') || isdigit('a') || toupper('q') != 'Q' ||
+      !isspace('\n') || !isxdigit('F') || ispunct('a') || !ispunct('!'))
+    fail |= 2048;
+  volatile int tries = 0;
+  int v = setjmp(jb);
+  if (v == 0) {
+    tries++;
+    deep(5);
+  }
+  if (v != 42 || tries != 1)
+    fail |= 4096;
+  printf("n=%d;", 12);
+  puts("ok");
+  fputs("err", stderr);
+  putchar('!');
+  if (outn != 12 || memcmp(out, "n=12;ok\nerr!", 12))
+    fail |= 8192;
+  div_t d = div(-7, 2);
+  if (d.quot != -3 || d.rem != -1 || abs(-5) != 5 || labs(-70000L) != 70000L)
+    fail |= 16384;
+  return fail;
+}
+"""
+
+    EXIT = r"""
+#include <stdlib.h>
+int count;
+static void f1(void) { count += 1; }
+static void f2(void) { count *= 10; }
+static void inner(int n) {
+  if (n)
+    inner(n - 1);
+  exit(40 + count);
+}
+int main(void) {
+  atexit(f1);
+  atexit(f2);
+  count = 2;
+  inner(3);
+  return 1;
+}
+"""
+
+    ASSERT = r"""
+#include <assert.h>
+#include <stddef.h>
+char out[80];
+int outn;
+size_t _write(int fd, char *b, size_t n) {
+  for (size_t i = 0; i < n; i++)
+    if (outn < (int)sizeof out)
+      out[outn++] = b[i];
+  return n;
+}
+volatile int two = 2;
+int main(void) {
+  assert(two == 2);
+  assert(two + two == 5);
+  return 0;
+}
+"""
+
+    ASC0 = r"""
+#include <reg167.h>
+#include <stdio.h>
+int main(void) {
+  P3 |= 0x0400;
+  DP3 |= 0x0400;
+  S0BG = 77;
+  S0CON = 0x8011;
+  printf("%s %d\n", "hi", -3);
+  return 0;
+}
+"""
+
+    def test_library(self):
+        for model in MODELS:
+            with self.subTest(model=model):
+                s = run_cstart(libc_program([self.SOURCE], model))
+                self.assertEqual(s.r[4], 0)  # a bit per failed check
+
+    def test_exit_and_atexit(self):
+        for model in MODELS:
+            with self.subTest(model=model):
+                p = libc_program([self.EXIT], model)
+                s = run_cstart(p)
+                # exit's status, after f2 then f1; the caller's registers
+                self.assertEqual(s.r[4], 42)
+                self.assertEqual(s.read16(p.address("_count")), 21)
+                self.assertEqual(s.r[0], USER_STACK)
+                self.assertEqual([s.r[i] for i in (6, 7, 8, 9)],
+                                 [0x1100 * i for i in (6, 7, 8, 9)])
+
+    def test_assert(self):
+        p = libc_program([self.ASSERT], "small")
+        s = run_cstart(p)
+        self.assertEqual(s.r[4], 1)  # abort: EXIT_FAILURE
+        n = s.read16(p.address("_outn"))
+        text = s.read(p.address("_out"), n).decode()
+        self.assertEqual(text, "Assertion failed: two + two == 5, file m0.c, line 15\n")
+
+    def test_printf_over_asc0(self):
+        """The library's own _write: ASC0."""
+        p = libc_program([self.ASC0], "small")
+        s = p.simulator()
+        s.watchdog_frozen = True
+        s.serial_echo = False
+        push_return(s)
+        s.r[0] = USER_STACK
+        s.break_at(HALT)
+        s.pc = p.address("__cstart")
+        s.run_for(0.02)
+        self.assertEqual(s.pc, HALT)
+        self.assertEqual(s.serial_receive(), b"hi -3\n")
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class StructByValueTest(unittest.TestCase):
+    """Structs passed by value: a copy on the user stack, and every argument
+    after it there too (TASKING); in every memory model."""
+
+    SOURCE = r"""
+struct p { int x, y; long z; char c; };
+struct p g = {1, 2, 300000, 4};
+__attribute__((noinline)) long take(int a, struct p s, int b) {
+  s.x += 100;  /* the callee's own copy */
+  return a + s.x + s.y + s.z + s.c + b;
+}
+__attribute__((noinline)) int two(struct p a, struct p b) { return a.c * 10 + b.c; }
+int main(void) {
+  struct p l = {5, 6, 7, 8};
+  int fail = 0;
+  if (take(10, g, 20) != 10 + 101 + 2 + 300000 + 4 + 20) fail |= 1;
+  if (take(1, l, 2) != 1 + 105 + 6 + 7 + 8 + 2) fail |= 2;
+  if (g.x != 1 || l.x != 5) fail |= 4;
+  if (two(g, l) != 48) fail |= 8;
+  return fail;
+}
+"""
+
+    def test_models(self):
+        for model in MODELS:
+            with self.subTest(model=model):
+                s = run_cstart(libc_program([self.SOURCE], model))
+                self.assertEqual(s.r[4], 0)  # a bit per failed check
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class MathLibraryTest(unittest.TestCase):
+    """<math.h>: LLVM libc's functions, checked against Python's."""
+
+    # Volatile inputs, or Clang computes the results itself.
+    # The functions need about 2 KB of user stack.
+    SOURCE = r"""
+#include <c166.h>
+#include <math.h>
+_ustack(3072);
+double out[33];
+float outf[8];
+int main(void) {
+  volatile double a = 0.5, b = 2.0, c = -2.5, d = 10.0, e = 7.5, f = 1e-3, g = 3.0;
+  out[0] = sin(a); out[1] = cos(a); out[2] = tan(a); out[3] = asin(a);
+  out[4] = acos(a); out[5] = atan(a); out[6] = atan2(a, b); out[7] = exp(a);
+  out[8] = log(d); out[9] = log10(d); out[10] = pow(b, a); out[11] = sqrt(b);
+  out[12] = floor(c); out[13] = ceil(c); out[14] = fmod(e, b);
+  out[15] = sinh(a); out[16] = cosh(a); out[17] = tanh(a); out[18] = cbrt(g);
+  out[19] = hypot(g, 2 * b); out[20] = expm1(f); out[21] = log1p(f);
+  out[22] = log2(d); out[23] = exp2(a); out[24] = round(c); out[25] = trunc(c);
+  out[26] = fabs(c);
+  int ex;
+  out[27] = frexp(d, &ex);
+  out[28] = ex;
+  out[29] = ldexp(a, 4);
+  double ip;
+  out[30] = modf(c, &ip);
+  out[31] = ip;
+  out[32] = lround(c);
+  outf[0] = sinf(a); outf[1] = expf(a); outf[2] = logf(d); outf[3] = sqrtf(b);
+  outf[4] = powf(b, a); outf[5] = sinhf(a); outf[6] = atan2f(a, b);
+  outf[7] = hypotf(g, 2 * b);
+  return 0;
+}
+"""
+    A, B, C, D, E, F, G = 0.5, 2.0, -2.5, 10.0, 7.5, 1e-3, 3.0
+    EXPECTED = [
+        math.sin(A), math.cos(A), math.tan(A), math.asin(A), math.acos(A),
+        math.atan(A), math.atan2(A, B), math.exp(A), math.log(D), math.log10(D),
+        math.pow(B, A), math.sqrt(B), math.floor(C), math.ceil(C), math.fmod(E, B),
+        math.sinh(A), math.cosh(A), math.tanh(A), G ** (1 / 3), math.hypot(G, 2 * B),
+        math.expm1(F), math.log1p(F), math.log2(D), 2 ** A, -3.0, -2.0, 2.5,
+        0.625, 4, A * 16, -0.5, -2.0, -3,
+    ]
+    EXPECTED_F = [math.sin(A), math.exp(A), math.log(D), math.sqrt(B),
+                  math.pow(B, A), math.sinh(A), math.atan2(A, B), math.hypot(G, 2 * B)]
+
+    def test_functions(self):
+        # All of them at once take 200 KB of code: the large model, whose
+        # constants are far too.
+        for model in ("large",):
+            with self.subTest(model=model):
+                p = libc_program([self.SOURCE], model, big=True)
+                s = run_cstart(p, 20000000)
+                got = struct.unpack("<33d", s.read(p.address("_out"), 33 * 8))
+                for i, (g, want) in enumerate(zip(got, self.EXPECTED)):
+                    self.assertTrue(math.isclose(g, want, rel_tol=1e-15), (i, g, want))
+                got = struct.unpack("<8f", s.read(p.address("_outf"), 8 * 4))
+                for i, (g, want) in enumerate(zip(got, self.EXPECTED_F)):
+                    self.assertTrue(math.isclose(g, want, rel_tol=1e-6), (i, g, want))
+
+    def test_single_precision_double(self):
+        """-mdouble=32: double is float, and sin is sinf."""
+        source = r"""
+#include <c166.h>
+#include <math.h>
+_ustack(1024);  /* sinf needs more than the 512 bytes of user stack */
+double r;
+int main(void) {
+  volatile double a = 0.5;
+  r = sin(a) + sqrt(a);
+  return sizeof(double);
+}
+"""
+        p = libc_program([source], "small", "-Os -mdouble=32")
+        s = run_cstart(p, 20000000)
+        self.assertEqual(s.r[4], 4)
+        (r,) = struct.unpack("<f", s.read(p.address("_r"), 4))
+        self.assertTrue(math.isclose(r, math.sin(0.5) + math.sqrt(0.5), rel_tol=1e-6))
+        self.assertIn("_sinf", p.asm[-1][1])
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

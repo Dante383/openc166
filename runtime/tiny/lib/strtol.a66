@@ -1,0 +1,384 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+STRTOL_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strtoul
+_strtoul:
+; %bb.0:                                ; %entry
+	SUB	R0, #6
+	MOV	R4, R0
+	ADD	R4, #2
+	MOV	[R0], R4
+	MOV	R15, R0
+	ADD	R15, #4
+	CALL	_convert
+	MOV	R1, [R0+#2]
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.then
+	MOV	R4, #34
+	MOV	_errno, R4
+	MOV	R4, #65535
+	MOV	R5, R4
+	JMP	cc_UC, ?LBB0_6
+?LBB0_2:
+	MOV	R2, [R0+#4]
+	MOV	R1, #0
+	MOV	R3, R1
+	SUB	R1, R4
+	SUBC	R3, R5
+	CMP	R2, #0
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %if.end
+	MOV	R5, R3
+?LBB0_4:
+	CMP	R2, #0
+	JMP	cc_EQ, ?LBB0_6
+; %bb.5:                                ; %if.end
+	MOV	R4, R1
+?LBB0_6:
+	ADD	R0, #6
+	RET
+_convert:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	R6, R15
+	MOV	R8, R14
+	MOV	[R0+#2], R13
+	MOV	R4, [R0+#24]
+	MOV	[R0+#4], R4
+	MOV	[R0], R12
+	MOV	R7, R12
+?LBB1_1:
+	MOVB	RL4, [R7+]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALL	_isspace
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB1_1
+; %bb.2:                                ; %while.end
+	MOV	R4, #0
+	MOV	[R6], R4
+	MOVB	RL5, [R7+#65535]
+	MOVBZ	R5, RL5
+	CMP	R5, #43
+	JMP	cc_EQ, ?LBB1_4
+; %bb.3:                                ; %while.end
+	CMP	R5, #45
+	JMP	cc_NE, ?LBB1_7
+?LBB1_4:
+	MOV	R1, #1
+	CMP	R5, #45
+	JMP	cc_EQ, ?LBB1_6
+; %bb.5:                                ; %if.then
+	MOV	R1, R4
+?LBB1_6:
+	MOV	[R6], R1
+	JMP	cc_UC, ?LBB1_8
+?LBB1_7:
+	SUB	R7, #1
+?LBB1_8:
+	MOV	R14, R8
+	MOV	R4, R14
+	OR	R4, #16
+	CMP	R4, #16
+	JMP	cc_NE, ?LBB1_20
+; %bb.9:                                ; %land.lhs.true
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	CMP	R4, #48
+	JMP	cc_NE, ?LBB1_17
+; %bb.10:                               ; %land.lhs.true18
+	MOVB	RL5, [R7+#1]
+	MOVBZ	R5, RL5
+	AND	R5, #223
+	CMP	R5, #88
+	JMP	cc_NE, ?LBB1_17
+; %bb.11:                               ; %land.lhs.true23
+	MOVB	RL4, [R7+#2]
+	MOVBZ	R12, RL4
+	CALL	_isxdigit
+	MOV	[R0+#12], R7
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB1_13
+; %bb.12:                               ; %land.lhs.true23
+	MOV	R5, R7
+	ADD	R5, #2
+	MOV	[R0+#12], R5
+?LBB1_13:
+	MOV	R5, R4
+	MOV	R14, R8
+	OR	R5, R14
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB1_15
+; %bb.14:                               ; %land.lhs.true23
+	MOV	R14, #16
+?LBB1_15:
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB1_21
+; %bb.16:                               ; %land.lhs.true23.if.then31_crit_edge
+	MOVB	RL4, [R7]
+	JMP	cc_UC, ?LBB1_18
+?LBB1_17:
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB1_20
+?LBB1_18:
+	AND	R4, #255
+	MOV	R14, #8
+	CMP	R4, #48
+	JMP	cc_EQ, ?LBB1_20
+; %bb.19:                               ; %if.then31
+	MOV	R14, #10
+?LBB1_20:
+	MOV	[R0+#12], R7
+?LBB1_21:
+	MOV	R15, R14
+	ASHR	R15, #15
+	MOV	R12, #65535
+	MOV	R13, R12
+	MOV	[R0+#8], R14
+	MOV	[R0+#10], R15
+	CALL	___udivsi3
+	MOV	[R0+#14], R4
+	MOV	[R0+#6], R5
+	MOV	R7, #0
+	MOV	R4, [R0+#4]
+	MOV	[R4], R7
+	MOV	R9, R7
+	MOV	R6, R7
+?LBB1_22:
+	MOV	R8, [R0+#12]
+	ADD	R8, R9
+	MOVB	RL4, [R8]
+	MOVBZ	R12, RL4
+	CALL	_isdigit
+	MOVB	RL5, [R8]
+	MOVBZ	R12, RL5
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB1_24
+; %bb.23:                               ; %if.then41
+	SUB	R12, #48
+	MOV	R3, [R0+#8]
+	CMP	R12, R3
+	JMP	cc_SGE, ?LBB1_41
+	JMP	cc_UC, ?LBB1_26
+?LBB1_24:
+	CALL	_isalpha
+	MOV	R3, [R0+#8]
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB1_41
+; %bb.25:                               ; %if.then47
+	MOV	R4, [R0+#12]
+	ADD	R4, R9
+	MOVB	RL4, [R4]
+	MOVBZ	R12, RL4
+	OR	R12, #32
+	SUB	R12, #87
+	CMP	R12, R3
+	JMP	cc_SGE, ?LBB1_41
+?LBB1_26:
+	MOV	R1, #0
+	MOV	R5, #1
+	MOV	R4, R5
+	MOV	R2, [R0+#14]
+	CMP	R7, R2
+	JMP	cc_UGT, ?LBB1_28
+; %bb.27:                               ; %if.end57
+	MOV	R4, R1
+?LBB1_28:
+	MOV	R11, [R0+#6]
+	CMP	R6, R11
+	JMP	cc_ULE, ?LBB1_31
+; %bb.29:                               ; %if.end57
+	CMP	R6, R11
+	JMP	cc_NE, ?LBB1_32
+?LBB1_30:
+	JNB	R4.0, ?LBB1_33
+	JMP	cc_UC, ?LBB1_39
+?LBB1_31:
+	MOV	R5, R1
+	CMP	R6, R11
+	JMP	cc_EQ, ?LBB1_30
+?LBB1_32:
+	MOV	R4, R5
+	JB	R4.0, ?LBB1_39
+?LBB1_33:
+	MOV	R4, R7
+	MOV	R5, [R0+#14]
+	XOR	R4, R5
+	MOV	R5, R6
+	XOR	R5, R11
+	OR	R5, R4
+	JMP	cc_NE, ?LBB1_40
+; %bb.34:                               ; %land.lhs.true63
+	MOV	R4, [R0+#14]
+	MUL	R4, R3
+	MOV	R1, MDL
+	CPL	R1
+	MOV	R4, #1
+	MOV	R5, R4
+	CMP	R1, R12
+	JMP	cc_UGE, ?LBB1_36
+; %bb.35:                               ; %land.lhs.true63
+	MOV	R5, #0
+?LBB1_36:
+	MOV	R10, [R0+#14]
+	MULU	R10, R3
+	MOV	R1, MDH
+	MOV	R2, [R0+#10]
+	MUL	R10, R2
+	MOV	R2, MDL
+	ADD	R2, R1
+	MUL	R11, R3
+	MOV	R1, MDL
+	ADD	R1, R2
+	CMP	R1, #65535
+	JMP	cc_EQ, ?LBB1_38
+; %bb.37:                               ; %land.lhs.true63
+	MOV	R5, R4
+?LBB1_38:
+	JB	R5.0, ?LBB1_40
+?LBB1_39:
+	MOV	R4, #1
+	MOV	R5, [R0+#4]
+	MOV	[R5], R4
+?LBB1_40:
+	MULU	R7, R3
+	MOV	R4, MDH
+	MOV	R5, [R0+#10]
+	MUL	R7, R5
+	MOV	R5, MDL
+	ADD	R5, R4
+	MUL	R6, R3
+	MOV	R6, MDL
+	ADD	R6, R5
+	MUL	R7, R3
+	MOV	R7, MDL
+	MOV	R4, R12
+	ASHR	R4, #15
+	ADD	R7, R12
+	ADDC	R6, R4
+	ADD	R9, #1
+	JMP	cc_UC, ?LBB1_22
+?LBB1_41:
+	MOV	R4, [R0+#2]
+	JMP	cc_EQ, ?LBB1_45
+; %bb.42:                               ; %if.then75
+	MOV	R5, [R0]
+	CMP	R9, #0
+	JMP	cc_EQ, ?LBB1_44
+; %bb.43:                               ; %if.then75
+	MOV	R5, R8
+?LBB1_44:
+	MOV	[R4], R5
+?LBB1_45:
+	MOV	R4, R7
+	MOV	R5, R6
+	ADD	R0, #16
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	PUBLIC	_strtol
+_strtol:
+; %bb.0:                                ; %entry
+	SUB	R0, #6
+	MOV	R4, R0
+	ADD	R4, #2
+	MOV	[R0], R4
+	MOV	R15, R0
+	ADD	R15, #4
+	CALL	_convert
+	MOV	R2, [R0+#2]
+	MOV	R1, [R0+#4]
+	CMP	R2, #0
+	JMP	cc_NE, ?LBB2_5
+; %bb.1:                                ; %lor.lhs.false
+	MOV	R2, R1
+	ASHR	R2, #15
+	MOV	R11, R1
+	ADD	R11, #65535
+	ADDC	R2, #32767
+	MOV	R12, #0
+	MOV	R3, #1
+	MOV	R10, R3
+	CMP	R5, R2
+	JMP	cc_UGT, ?LBB2_10
+; %bb.2:                                ; %lor.lhs.false
+	CMP	R4, R11
+	JMP	cc_UGT, ?LBB2_11
+?LBB2_3:
+	CMP	R5, R2
+	JMP	cc_NE, ?LBB2_12
+?LBB2_4:
+	JB	R3.0, ?LBB2_13
+?LBB2_5:
+	MOV	R4, #34
+	MOV	_errno, R4
+	MOV	R5, #32767
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB2_7
+; %bb.6:                                ; %if.then
+	MOV	R5, #32768
+?LBB2_7:
+	MOV	R4, #65535
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB2_9
+; %bb.8:                                ; %if.then
+	MOV	R4, #0
+?LBB2_9:
+	ADD	R0, #6
+	RET
+?LBB2_10:
+	MOV	R10, R12
+	CMP	R4, R11
+	JMP	cc_ULE, ?LBB2_3
+?LBB2_11:
+	MOV	R3, R12
+	CMP	R5, R2
+	JMP	cc_EQ, ?LBB2_4
+?LBB2_12:
+	MOV	R3, R10
+	JNB	R3.0, ?LBB2_5
+?LBB2_13:
+	MOV	R2, #0
+	MOV	R3, R2
+	SUB	R2, R4
+	SUBC	R3, R5
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB2_15
+; %bb.14:                               ; %if.end
+	MOV	R5, R3
+?LBB2_15:
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB2_9
+; %bb.16:                               ; %if.end
+	MOV	R4, R2
+	JMP	cc_UC, ?LBB2_9
+	PUBLIC	_atoi
+_atoi:
+; %bb.0:                                ; %entry
+	MOV	R13, #0
+	MOV	R14, #10
+	CALL	_strtol
+	RET
+	PUBLIC	_atol
+_atol:
+; %bb.0:                                ; %entry
+	MOV	R13, #0
+	MOV	R14, #10
+	CALL	_strtol
+	RET
+	EXTRN	_errno : WORD
+	EXTRN	_isspace : NEAR
+	EXTRN	_isxdigit : NEAR
+	EXTRN	___udivsi3 : NEAR
+	EXTRN	_isdigit : NEAR
+	EXTRN	_isalpha : NEAR
+STRTOL_PR	ENDS
+	END

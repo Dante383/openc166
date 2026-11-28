@@ -1,0 +1,66 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FGETS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fgets
+_fgets:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R7, R14
+	MOV	R8, R13
+	MOV	R6, R12
+	CMP	R8, #1
+	JMP	cc_SLT, ?LBB0_10
+; %bb.1:                                ; %while.cond.preheader
+	MOV	R5, R6
+	CMP	R8, #1
+	JMP	cc_EQ, ?LBB0_9
+; %bb.2:                                ; %while.body.preheader
+	SUB	R8, #2
+	MOV	R5, #0
+?LBB0_3:
+	MOV	R9, R5
+	MOV	R12, R7
+	CALL	_fgetc
+	CMP	R4, #65535
+	JMP	cc_EQ, ?LBB0_7
+; %bb.4:                                ; %if.end6
+	MOV	R5, R6
+	ADD	R5, R9
+	MOVB	[R5], RL4
+	MOV	R5, R9
+	ADD	R5, #1
+	CMP	R4, #10
+	JMP	cc_EQ, ?LBB0_6
+; %bb.5:                                ; %if.end6
+	CMP	R8, R9
+	JMP	cc_NE, ?LBB0_3
+?LBB0_6:
+	ADD	R5, R6
+	JMP	cc_UC, ?LBB0_9
+?LBB0_7:
+	CMP	R9, #0
+	JMP	cc_EQ, ?LBB0_10
+; %bb.8:
+	ADD	R9, R6
+	MOV	R5, R9
+?LBB0_9:
+	MOV	R4, #0
+	MOVB	[R5], RL4
+	JMP	cc_UC, ?LBB0_11
+?LBB0_10:
+	MOV	R6, #0
+?LBB0_11:
+	MOV	R4, R6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	_fgetc : NEAR
+FGETS_PR	ENDS
+	END

@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FIXUNSSFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___fixunssfsi                   ; -- Begin function __fixunssfsi
-___fixunssfsi:                          ; @__fixunssfsi
+	PUBLIC	___fixunssfsi
+___fixunssfsi:
 ___fixunssfsi?F	PROC	FAR
 ; %bb.0:                                ; %entry
 	MOV	R13, [R0+#2]
@@ -42,13 +42,12 @@ ___fixunssfsi?F	PROC	FAR
 	MOV	R14, R4
 	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
 	RETS
-?LBB0_5:                                ; %if.else.i
+?LBB0_5:
 	SUB	R14, #150
 	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
-?LBB0_6:                                ; %__fixuint.exit
+?LBB0_6:
 	RETS
 ___fixunssfsi?F	ENDP
-                                        ; -- End function
 	EXTRN	___lshrsi3 : NEAR
 	EXTRN	___ashlsi3 : NEAR
 FIXUNSSFSI_PR	ENDS

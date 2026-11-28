@@ -1,0 +1,143 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRERROR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strerror
+_strerror:
+_strerror?F	PROC	FAR
+; %bb.0:                                ; %entry
+	CMP	R12, #33
+	JMP	cc_SGT, ?LBB0_4
+; %bb.1:                                ; %entry
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB0_8
+; %bb.2:                                ; %entry
+	CMP	R12, #33
+	JMP	cc_NE, ?LBB0_7
+; %bb.3:                                ; %sw.bb1
+	MOV	R5, #SEG L_?str?1
+	MOV	R4, #SOF L_?str?1
+	RETS
+?LBB0_4:
+	CMP	R12, #34
+	JMP	cc_EQ, ?LBB0_9
+; %bb.5:                                ; %entry
+	CMP	R12, #84
+	JMP	cc_NE, ?LBB0_7
+; %bb.6:                                ; %sw.bb3
+	MOV	R5, #SEG L_?str?3
+	MOV	R4, #SOF L_?str?3
+	RETS
+?LBB0_7:
+	MOV	R5, #SEG L_?str?4
+	MOV	R4, #SOF L_?str?4
+	RETS
+?LBB0_8:
+	MOV	R5, #SEG L_?str
+	MOV	R4, #SOF L_?str
+	RETS
+?LBB0_9:
+	MOV	R5, #SEG L_?str?2
+	MOV	R4, #SOF L_?str?2
+	RETS
+_strerror?F	ENDP
+STRERROR_PR	ENDS
+STRERROR_HC	SECTION	HCONST WORD PUBLIC 'CHUGEROM'
+L_?str:
+	DB	110
+	DB	111
+	DB	32
+	DB	101
+	DB	114
+	DB	114
+	DB	111
+	DB	114
+	DB	0
+L_?str?1:
+	DB	97
+	DB	114
+	DB	103
+	DB	117
+	DB	109
+	DB	101
+	DB	110
+	DB	116
+	DB	32
+	DB	111
+	DB	117
+	DB	116
+	DB	32
+	DB	111
+	DB	102
+	DB	32
+	DB	100
+	DB	111
+	DB	109
+	DB	97
+	DB	105
+	DB	110
+	DB	0
+L_?str?2:
+	DB	114
+	DB	101
+	DB	115
+	DB	117
+	DB	108
+	DB	116
+	DB	32
+	DB	111
+	DB	117
+	DB	116
+	DB	32
+	DB	111
+	DB	102
+	DB	32
+	DB	114
+	DB	97
+	DB	110
+	DB	103
+	DB	101
+	DB	0
+L_?str?3:
+	DB	105
+	DB	108
+	DB	108
+	DB	101
+	DB	103
+	DB	97
+	DB	108
+	DB	32
+	DB	98
+	DB	121
+	DB	116
+	DB	101
+	DB	32
+	DB	115
+	DB	101
+	DB	113
+	DB	117
+	DB	101
+	DB	110
+	DB	99
+	DB	101
+	DB	0
+L_?str?4:
+	DB	117
+	DB	110
+	DB	107
+	DB	110
+	DB	111
+	DB	119
+	DB	110
+	DB	32
+	DB	101
+	DB	114
+	DB	114
+	DB	111
+	DB	114
+	DB	0
+STRERROR_HC	ENDS
+	END

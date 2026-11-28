@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FLOATDIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___floatdidf                    ; -- Begin function __floatdidf
-___floatdidf:                           ; @__floatdidf
+	PUBLIC	___floatdidf
+___floatdidf:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R9
 	MOV	[-R0], R8
@@ -88,7 +88,6 @@ ___floatdidf:                           ; @__floatdidf
 	MOV	R8, [R0+]
 	MOV	R9, [R0+]
 	RET
-                                        ; -- End function
 	EXTRN	___floatsidf : NEAR
 	EXTRN	___muldf3 : NEAR
 	EXTRN	___adddf3 : NEAR

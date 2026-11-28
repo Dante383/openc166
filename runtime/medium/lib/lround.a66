@@ -1,0 +1,223 @@
+; Compiled from LLVM libc, libc/shared/math/lround.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+LROUND_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_lround
+_lround:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #56
+	MOV	R6, [R0+#70]
+	MOV	R8, [R0+#68]
+	MOV	R9, [R0+#66]
+	MOV	R7, [R0+#64]
+	MOV	R4, #0
+	MOV	[R0+#14], R4
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	[R0+#6], R6
+	MOV	[R0+#4], R8
+	MOV	[R0+#2], R9
+	MOV	[R0], R7
+	CALL	___eqdf2
+	OR	R5, R4
+	JMP	cc_EQ, ?LBB0_8
+; %bb.1:                                ; %entry
+	MOV	R4, R6
+	AND	R4, #32752
+	CMP	R4, #32752
+	JMP	cc_EQ, ?LBB0_8
+; %bb.2:                                ; %if.end.i.i.i
+	MOV	R5, R6
+	SHR	R5, #4
+	AND	R5, #2047
+	CMP	R5, #1074
+	JMP	cc_UGT, ?LBB0_8
+; %bb.3:                                ; %if.end4.i.i.i
+	CMP	R5, #1022
+	JMP	cc_NE, ?LBB0_5
+; %bb.4:                                ; %if.then6.i.i.i
+	AND	R6, #32768
+	OR	R6, #16368
+	JMP	cc_UC, ?LBB0_7
+?LBB0_5:
+	CMP	R5, #1021
+	JMP	cc_UGT, ?LBB0_15
+; %bb.6:                                ; %if.then11.i.i.i
+	AND	R6, #32768
+?LBB0_7:
+	MOV	R7, #0
+	MOV	R9, R7
+	MOV	R8, R7
+?LBB0_8:
+	MOV	R4, R6
+	CPL	R4
+	AND	R4, #32752
+	JMP	cc_EQ, ?LBB0_12
+; %bb.9:                                ; %if.end.i4.i.i
+	MOV	R4, R6
+	SHR	R4, #4
+	AND	R4, #2047
+	CMP	R4, #1055
+	JMP	cc_UGE, ?LBB0_12
+; %bb.10:                               ; %if.else.i7.i.i
+	MOV	R5, R6
+	AND	R5, #32783
+	MOV	R1, R7
+	OR	R1, R8
+	XOR	R5, #32768
+	OR	R5, R9
+	OR	R5, R1
+	JMP	cc_EQ, ?LBB0_14
+; %bb.11:                               ; %if.else.i7.i.i
+	CMP	R4, #1054
+	JMP	cc_NE, ?LBB0_14
+?LBB0_12:
+	MOV	R4, #33
+	EXTS	#SEG _errno, #1
+	MOV	SOF _errno, R4
+	ASHR	R6, #15
+	MOV	R5, R6
+	XOR	R5, #32767
+	CPL	R6
+?LBB0_13:
+	MOV	R4, R6
+	ADD	R0, #56
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+?LBB0_14:
+	MOV	[R0+#2], R9
+	MOV	[R0], R7
+	MOV	[R0+#4], R8
+	MOV	[R0+#6], R6
+	CALL	___fixdfsi
+	MOV	R6, R4
+	JMP	cc_UC, ?LBB0_13
+?LBB0_15:
+	MOV	R4, #1075
+	SUB	R4, R5
+	MOV	R5, #65535
+	MOV	[R0+#54], R5
+	MOV	[R0+#52], R5
+	MOV	[R0+#50], R5
+	MOV	[R0+#48], R5
+	MOV	R3, #0
+	MOV	[R0+#46], R3
+	MOV	[R0+#44], R3
+	MOV	[R0+#42], R3
+	MOV	[R0+#40], R3
+	MOV	R11, R4
+	AND	R11, #15
+	MOV	R5, R4
+	SHR	R5, #3
+	AND	R5, #6
+	MOV	R2, R0
+	ADD	R2, #40
+	ADD	R2, #8
+	SUB	R2, R5
+	MOV	R1, [R2+#6]
+	SHL	R1, R11
+	MOV	R12, R11
+	XOR	R12, #15
+	MOV	R13, [R2+#4]
+	MOV	R5, R13
+	SHR	R5, #1
+	SHR	R5, R12
+	OR	R5, R1
+	MOV	R1, [R2+#2]
+	MOV	R14, R1
+	SHL	R14, R11
+	MOV	R2, [R2]
+	MOV	R10, R2
+	SHR	R10, #1
+	SHR	R10, R12
+	OR	R10, R14
+	SHL	R13, R11
+	SHR	R1, #1
+	SHR	R1, R12
+	OR	R1, R13
+	SHL	R2, R11
+	AND	R1, R8
+	AND	R10, R9
+	AND	R5, R6
+	AND	R2, R7
+	MOV	R11, R5
+	XOR	R11, R6
+	MOV	R12, R10
+	XOR	R12, R9
+	OR	R12, R11
+	MOV	R11, R1
+	XOR	R11, R8
+	MOV	R13, R2
+	XOR	R13, R7
+	OR	R13, R11
+	OR	R13, R12
+	JMP	cc_EQ, ?LBB0_8
+; %bb.16:                               ; %if.end26.i.i.i
+	MOV	R11, R6
+	AND	R11, #15
+	SUB	R4, #1
+	MOV	[R0+#38], R3
+	MOV	[R0+#36], R3
+	MOV	[R0+#34], R3
+	MOV	[R0+#32], R3
+	MOV	[R0+#24], R7
+	MOV	[R0+#26], R9
+	MOV	[R0+#28], R8
+	MOV	[R0+#30], R11
+	MOV	R3, R4
+	SHR	R3, #3
+	AND	R3, #6
+	MOV	R11, R0
+	ADD	R11, #24
+	ADD	R11, R3
+	MOV	R3, [R11]
+	AND	R4, #15
+	SHR	R3, R4
+	JNB	R3.0, ?LBB0_18
+; %bb.17:                               ; %if.else.i.i.i
+	AND	R6, #32768
+	OR	R6, #16368
+	MOV	[R0+#10], R10
+	MOV	[R0+#8], R2
+	MOV	R4, #0
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R4
+	MOV	[R0], R4
+	MOV	[R0+#12], R1
+	MOV	[R0+#14], R5
+	MOV	[R0+#6], R6
+	MOV	R12, R0
+	ADD	R12, #16
+	CALL	___adddf3
+	MOV	R6, [R0+#22]
+	MOV	R8, [R0+#20]
+	MOV	R9, [R0+#18]
+	MOV	R7, [R0+#16]
+	JMP	cc_UC, ?LBB0_8
+?LBB0_18:
+	MOV	R7, R2
+	MOV	R9, R10
+	MOV	R8, R1
+	MOV	R6, R5
+	JMP	cc_UC, ?LBB0_8
+	EXTRN	___eqdf2 : NEAR
+	EXTRN	_errno : WORD
+	EXTRN	___fixdfsi : NEAR
+	EXTRN	___adddf3 : NEAR
+LROUND_PR	ENDS
+	END

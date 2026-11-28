@@ -3,10 +3,10 @@
 ;
 ; __cstart sets up the user stack, copies the initial values of initialised
 ; variables from ROM (C166_DATA_INIT) to RAM (C166_DATA), clears the
-; zero-initialised ones (C166_BSS) and the _bitword variables
-; (C166_BITWORD, in the bit-addressable RAM), calls main and returns
-; main's result in R4. It keeps the caller's R0 and R6-R9, so a loader or
-; existing firmware can CALL a C program and get control back.
+; zero-initialised ones (C166_BSS) and the _bitword variables (C166_BITWORD,
+; in the bit-addressable RAM), calls main and returns main's result in R4
+; (or the status given to exit). It keeps the caller's R0 and R6-R9, so a
+; loader or existing firmware can CALL a C program and get control back.
 ;
 ; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
 ; watchdog: a program that starts from reset must set those up first.
@@ -14,10 +14,14 @@
 
 $NOMACRO
 $CASE
+$MOD167
+$INCLUDE(REG167.INC)
 
-        PUBLIC  __cstart
+        PUBLIC  __cstart, __exit
         EXTRN   _main : NEAR
         EXTRN   ?SECTION_START?C166_DATA : WORD
+        EXTRN   ?SECTION_START?C166_USTACK : WORD
+        EXTRN   ?SECTION_SIZE?C166_USTACK : DATA16
         EXTRN   ?SECTION_SIZE?C166_DATA : DATA16
         EXTRN   ?SECTION_START?C166_DATA_INIT : WORD
         EXTRN   ?SECTION_START?C166_BSS : WORD
@@ -36,16 +40,28 @@ C166_BSS        ENDS
 C166_BITWORD    SECTION DATA BITADDRESSABLE PUBLIC 'CBITWORDS'
 C166_BITWORD    ENDS
 
-; The user stack (R0), 512 bytes; it grows downwards.
+; The system stack pointer while main runs, for _exit.
+C166_EXIT       SECTION DATA WORD PUBLIC 'CNEAR'
+?EXIT_SP:       DSW     1
+C166_EXIT       ENDS
+
+; The user stack (R0), 512 bytes and what other modules add to the
+; section; it grows downwards.
 C166_USTACK     SECTION DATA WORD PUBLIC 'CNEAR'
                 DSB     512
-?USTACK_TOP:
 C166_USTACK     ENDS
 
 C166_CSTART     SECTION CODE WORD PUBLIC 'CPROGRAM'
 __cstart:
         PUSH    R0
-        MOV     R0, #?USTACK_TOP
+        PUSH    R6
+        PUSH    R7
+        PUSH    R8
+        PUSH    R9
+        ; The top of C166_USTACK, which other modules may make larger
+        ; (_ustack in c166.h).
+        MOV     R0, #?SECTION_START?C166_USTACK
+        ADD     R0, #?SECTION_SIZE?C166_USTACK
 
         MOV     R4, #?SECTION_START?C166_DATA_INIT
         MOV     R5, #?SECTION_START?C166_DATA
@@ -78,8 +94,23 @@ __cstart:
         SUB     R10, #1
         JMP     cc_UC, ?CLEARBW
 ?BWCLEARED:
+        MOV     ?EXIT_SP, SP     ; for _exit
         CALL    _main
+?MAIN_DONE:
+        POP     R9
+        POP     R8
+        POP     R7
+        POP     R6
         POP     R0
         RET
+
+; void _exit(int status): back to __cstart's caller with status in R4, as
+; if main had returned it (exit runs the atexit functions first). The
+; system stack goes back to where it was when main was called.
+__exit:
+        MOV     R4, R12
+        MOV     SP, ?EXIT_SP
+        NOP                             ; SP written: no implicit use next
+        JMP     cc_UC, ?MAIN_DONE
 C166_CSTART     ENDS
         END

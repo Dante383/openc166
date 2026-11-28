@@ -1,0 +1,109 @@
+; Compiled from LLVM libc, libc/shared/math/roundf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+ROUNDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_roundf
+_roundf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #10
+	MOV	R6, [R0+#20]
+	MOV	R7, [R0+#18]
+	MOV	R4, #0
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R6
+	MOV	[R0], R7
+	CALL	___eqsf2
+	OR	R5, R4
+	JMP	cc_EQ, ?LBB0_8
+; %bb.1:                                ; %entry
+	MOV	R4, R6
+	AND	R4, #32640
+	CMP	R4, #32640
+	JMP	cc_EQ, ?LBB0_8
+; %bb.2:                                ; %if.end.i.i
+	MOV	R4, R6
+	SHR	R4, #7
+	AND	R4, #255
+	CMP	R4, #149
+	JMP	cc_UGT, ?LBB0_8
+; %bb.3:                                ; %if.end4.i.i
+	CMP	R4, #126
+	JMP	cc_NE, ?LBB0_5
+; %bb.4:                                ; %if.then6.i.i
+	AND	R6, #32768
+	OR	R6, #16256
+	JMP	cc_UC, ?LBB0_7
+?LBB0_5:
+	CMP	R4, #125
+	JMP	cc_UGT, ?LBB0_9
+; %bb.6:                                ; %if.then10.i.i
+	AND	R6, #32768
+?LBB0_7:
+	MOV	R7, #0
+?LBB0_8:
+	MOV	R4, R7
+	MOV	R5, R6
+	ADD	R0, #10
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+?LBB0_9:
+	MOV	R8, #150
+	SUB	R8, R4
+	MOV	R12, #65535
+	MOV	R13, R12
+	MOV	R14, R8
+	CALL	___ashlsi3
+	MOV	R9, R5
+	AND	R4, R7
+	AND	R9, R6
+	MOV	R1, R9
+	XOR	R1, R6
+	MOV	R5, R4
+	XOR	R5, R7
+	OR	R5, R1
+	JMP	cc_EQ, ?LBB0_8
+; %bb.10:                               ; %if.end21.i.i
+	MOV	[R0+#8], R4
+	MOV	R13, R6
+	AND	R13, #127
+	SUB	R8, #1
+	MOV	R12, R7
+	MOV	R14, R8
+	CALL	___lshrsi3
+	JNB	R4.0, ?LBB0_12
+; %bb.11:                               ; %if.else.i.i
+	AND	R6, #32768
+	OR	R6, #16256
+	MOV	[R0+#6], R9
+	MOV	R4, [R0+#8]
+	MOV	[R0+#4], R4
+	MOV	R4, #0
+	MOV	[R0], R4
+	MOV	[R0+#2], R6
+	CALL	___addsf3
+	MOV	R7, R4
+	MOV	R6, R5
+	JMP	cc_UC, ?LBB0_8
+?LBB0_12:
+	MOV	R7, [R0+#8]
+	MOV	R6, R9
+	JMP	cc_UC, ?LBB0_8
+	EXTRN	___eqsf2 : NEAR
+	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___lshrsi3 : NEAR
+	EXTRN	___addsf3 : NEAR
+ROUNDF_PR	ENDS
+	END

@@ -5,8 +5,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 MEMCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	_memcpy                         ; -- Begin function memcpy
-_memcpy:                                ; @memcpy
+	PUBLIC	_memcpy
+_memcpy:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R6
 	MOV	R5, R13
@@ -20,8 +20,7 @@ _memcpy:                                ; @memcpy
 	MOV	R10, R15
 	MOV	R11, R3
 	MOV	R13, R12
-?LBB0_2:                                ; %while.body
-                                        ; =>This Inner Loop Header: Depth=1
+?LBB0_2:
 	SUB	R1, #1
 	ADD	R2, #1
 	ADDC	R10, #0
@@ -38,9 +37,8 @@ _memcpy:                                ; @memcpy
 	MOV	R12, R13
 	CMP	R1, #0
 	JMP	cc_NE, ?LBB0_2
-?LBB0_3:                                ; %while.end
+?LBB0_3:
 	MOV	R6, [R0+]
 	RET
-                                        ; -- End function
 MEMCPY_PR	ENDS
 	END

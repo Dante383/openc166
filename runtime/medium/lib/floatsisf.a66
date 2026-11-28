@@ -9,8 +9,8 @@ $SEGMENTED
 $INCLUDE(REG167.INC)
 	ASSUME	DPP3:SYSTEM
 FLOATSISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
-	PUBLIC	___floatsisf                    ; -- Begin function __floatsisf
-___floatsisf:                           ; @__floatsisf
+	PUBLIC	___floatsisf
+___floatsisf:
 ; %bb.0:                                ; %entry
 	MOV	[-R0], R7
 	MOV	[-R0], R6
@@ -27,10 +27,10 @@ ___floatsisf:                           ; @__floatsisf
 	JNB	R6.15, ?LBB0_6
 ; %bb.2:                                ; %if.end
 	JNB	R6.15, ?LBB0_7
-?LBB0_3:                                ; %if.end
+?LBB0_3:
 	CMP	R13, #0
 	JMP	cc_NE, ?LBB0_8
-?LBB0_4:                                ; %if.end
+?LBB0_4:
 	MOV	R4, R12
 	SHR	R4, #1
 	OR	R4, R12
@@ -67,10 +67,10 @@ ___floatsisf:                           ; @__floatsisf
 	MOV	R4, #0
 	MOV	R5, R4
 	JMP	cc_UC, ?LBB0_17
-?LBB0_6:                                ; %if.end
+?LBB0_6:
 	MOV	R12, R4
 	JB	R6.15, ?LBB0_3
-?LBB0_7:                                ; %if.end
+?LBB0_7:
 	MOV	R13, R6
 	JMP	cc_EQ, ?LBB0_4
 ?LBB0_8:
@@ -104,7 +104,7 @@ ___floatsisf:                           ; @__floatsisf
 	SHR	R7, #8
 	ADD	R7, R4
 	AND	R7, #31
-?LBB0_9:                                ; %if.end
+?LBB0_9:
 	AND	R6, #32768
 	CMP	R7, #8
 	JMP	cc_ULT, ?LBB0_11
@@ -114,7 +114,7 @@ ___floatsisf:                           ; @__floatsisf
 	CALL	___ashlsi3
 	XOR	R5, #128
 	JMP	cc_UC, ?LBB0_16
-?LBB0_11:                               ; %if.else
+?LBB0_11:
 	MOV	R4, #8
 	SUB	R4, R7
 	MOV	R5, R12
@@ -138,18 +138,18 @@ ___floatsisf:                           ; @__floatsisf
 	JMP	cc_UGT, ?LBB0_13
 ; %bb.12:                               ; %if.else
 	MOV	R2, R5
-?LBB0_13:                               ; %if.else
+?LBB0_13:
 	ADD	R1, R2
 	ADDC	R13, R5
 	CMP	R12, #32768
 	JMP	cc_EQ, ?LBB0_15
 ; %bb.14:                               ; %if.else
 	MOV	R4, R5
-?LBB0_15:                               ; %if.else
+?LBB0_15:
 	AND	R4, R1
 	ADD	R4, R1
 	ADDC	R5, R13
-?LBB0_16:                               ; %if.end21
+?LBB0_16:
 	MOV	R1, #158
 	SUB	R1, R7
 	SHL	R1, #7
@@ -157,11 +157,10 @@ ___floatsisf:                           ; @__floatsisf
 	ADD	R4, R2
 	ADDC	R5, R1
 	OR	R5, R6
-?LBB0_17:                               ; %cleanup
+?LBB0_17:
 	MOV	R6, [R0+]
 	MOV	R7, [R0+]
 	RET
-                                        ; -- End function
 	EXTRN	___ashlsi3 : NEAR
 FLOATSISF_PR	ENDS
 	END
