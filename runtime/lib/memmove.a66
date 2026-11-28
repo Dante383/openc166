@@ -1,0 +1,50 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMMOVE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memmove
+_memmove:
+_memmove?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	CMP	R4, R13
+	JMP	cc_UGE, ?LBB0_4
+; %bb.1:                                ; %while.cond.preheader
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_7
+; %bb.2:                                ; %while.body.preheader
+	MOV	R5, R4
+?LBB0_3:
+	SUB	R14, #1
+	MOVB	RL1, [R13+]
+	MOVB	[R5], RL1
+	ADD	R5, #1
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_3
+	JMP	cc_UC, ?LBB0_7
+?LBB0_4:
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_7
+; %bb.5:                                ; %while.body6.preheader
+	SUB	R13, #1
+	MOV	R5, R4
+	SUB	R5, #1
+	MOV	R1, R14
+?LBB0_6:
+	SUB	R1, #1
+	MOV	R2, R13
+	ADD	R2, R14
+	MOVB	RL2, [R2]
+	ADD	R14, R5
+	MOVB	[R14], RL2
+	MOV	R14, R1
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_6
+?LBB0_7:
+	RETS
+_memmove?F	ENDP
+MEMMOVE_PR	ENDS
+	END

@@ -1,0 +1,93 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+ABS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_abs
+_abs:
+; %bb.0:                                ; %entry
+	MOV	R4, R12
+	MOV	R5, R4
+	ASHR	R5, #15
+	XOR	R4, R5
+	SUB	R4, R5
+	RET
+	PUBLIC	_labs
+_labs:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	MOV	R5, R4
+	SUB	R4, R12
+	SUBC	R5, R13
+	JNB	R13.15, ?LBB1_3
+; %bb.1:                                ; %entry
+	JNB	R13.15, ?LBB1_4
+?LBB1_2:
+	RET
+?LBB1_3:
+	MOV	R4, R12
+	JB	R13.15, ?LBB1_2
+?LBB1_4:
+	MOV	R5, R13
+	RET
+	PUBLIC	_llabs
+_llabs:
+; %bb.0:                                ; %entry
+	MOV	R5, #0
+	MOV	R4, #1
+	MOV	R1, R4
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB2_13
+; %bb.1:                                ; %entry
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB2_14
+?LBB2_2:
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB2_4
+?LBB2_3:
+	MOV	R4, R1
+?LBB2_4:
+	MOV	R1, R5
+	MOV	R2, R5
+	SUB	R1, R14
+	SUBC	R2, R15
+	SUB	R1, R4
+	SUBC	R2, R5
+	JB	R15.15, ?LBB2_6
+; %bb.5:                                ; %entry
+	MOV	R1, R14
+?LBB2_6:
+	JB	R15.15, ?LBB2_8
+; %bb.7:                                ; %entry
+	MOV	R2, R15
+?LBB2_8:
+	MOV	R3, R5
+	SUB	R5, R12
+	SUBC	R3, R13
+	JB	R15.15, ?LBB2_10
+; %bb.9:                                ; %entry
+	MOV	R5, R12
+?LBB2_10:
+	MOV	R4, R0
+	JB	R15.15, ?LBB2_12
+; %bb.11:                               ; %entry
+	MOV	R3, R13
+?LBB2_12:
+	MOV	[R4+#2], R3
+	MOV	[R4], R5
+	MOV	[R4+#6], R2
+	MOV	[R4+#4], R1
+	RET
+?LBB2_13:
+	MOV	R1, R5
+	CMP	R12, #0
+	JMP	cc_NE, ?LBB2_2
+?LBB2_14:
+	MOV	R4, R5
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB2_3
+	JMP	cc_UC, ?LBB2_4
+ABS_PR	ENDS
+	END

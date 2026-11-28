@@ -1,0 +1,21 @@
+; Compiled from LLVM compiler-rt, lib/builtins/fp_mode.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FP_MODE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___fe_getround
+___fe_getround:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	RET
+	PUBLIC	___fe_raise_inexact
+___fe_raise_inexact:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	RET
+FP_MODE_PR	ENDS
+	END

@@ -1,0 +1,115 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+SHIFTS_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___ashlsi3
+___ashlsi3:
+___ashlsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, R12
+	MOV	R4, R14
+	AND	R4, #31
+	CMP	R4, #16
+	JMP	cc_ULT, ?LBB0_2
+; %bb.1:                                ; %if.then
+	SUB	R4, #16
+	SHL	R5, R4
+	MOV	R4, #0
+	RETS
+?LBB0_2:
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %if.then3
+	MOV	R1, R14
+	AND	R1, #15
+	SHL	R13, R1
+	MOV	R1, R5
+	SHR	R1, #1
+	CPL	R14
+	AND	R14, #15
+	SHR	R1, R14
+	OR	R1, R13
+	SHL	R5, R4
+	MOV	R4, R5
+	MOV	R5, R1
+	RETS
+?LBB0_4:
+	MOV	R4, R5
+	MOV	R5, R13
+	RETS
+___ashlsi3?F	ENDP
+	PUBLIC	___lshrsi3
+___lshrsi3:
+___lshrsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, R13
+	MOV	R1, R14
+	AND	R1, #31
+	CMP	R1, #16
+	JMP	cc_ULT, ?LBB1_2
+; %bb.1:                                ; %if.then
+	SUB	R1, #16
+	SHR	R4, R1
+	MOV	R5, #0
+	RETS
+?LBB1_2:
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB1_4
+; %bb.3:                                ; %if.then4
+	MOV	R5, R14
+	AND	R5, #15
+	SHR	R12, R5
+	MOV	R2, R4
+	SHL	R2, #1
+	CPL	R14
+	AND	R14, #15
+	SHL	R2, R14
+	OR	R2, R12
+	MOV	R5, R4
+	SHR	R5, R1
+	MOV	R4, R2
+	RETS
+?LBB1_4:
+	MOV	R5, R4
+	MOV	R4, R12
+	RETS
+___lshrsi3?F	ENDP
+	PUBLIC	___ashrsi3
+___ashrsi3:
+___ashrsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R1, R14
+	AND	R1, #31
+	CMP	R1, #16
+	JMP	cc_ULT, ?LBB2_2
+; %bb.1:                                ; %if.then
+	SUB	R1, #16
+	MOV	R4, R5
+	ASHR	R4, R1
+	ASHR	R5, #15
+	RETS
+?LBB2_2:
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB2_4
+; %bb.3:                                ; %if.then6
+	MOV	R2, R14
+	AND	R2, #15
+	MOV	R3, R4
+	SHR	R3, R2
+	MOV	R4, R5
+	SHL	R4, #1
+	CPL	R14
+	AND	R14, #15
+	SHL	R4, R14
+	OR	R4, R3
+	ASHR	R5, R1
+?LBB2_4:
+	RETS
+___ashrsi3?F	ENDP
+SHIFTS_PR	ENDS
+	END

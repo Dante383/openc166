@@ -1,0 +1,93 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+BSEARCH_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_bsearch
+_bsearch:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #14
+	MOV	R6, R15
+	MOV	[R0+#4], R13
+	MOV	[R0+#2], R12
+	MOV	R8, [R0+#22]
+	JMP	cc_EQ, ?LBB0_10
+; %bb.1:                                ; %while.body.lr.ph
+	MOV	R4, [R0+#26]
+	MOV	[R0], R4
+	MOV	R9, [R0+#24]
+	MOV	[R0+#10], R14
+	MOV	R7, R14
+?LBB0_2:
+	MOV	[R0+#8], R8
+	SHR	R8, #1
+	MUL	R8, R9
+	MOV	R4, MDL
+	MOV	R5, #0
+	MOV	[R0+#6], R6
+	MOV	[R0+#12], R5
+	ADD	R7, R4
+	ADDC	R6, R5
+	MOV	R12, [R0+#2]
+	MOV	R13, [R0+#4]
+	MOV	R14, R7
+	MOV	R15, R6
+	MOV	R4, [R0]
+	CALLI	cc_UC, [R4]
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_12
+; %bb.3:                                ; %cleanup
+	MOV	R5, [R0+#12]
+	ADD	R7, R9
+	ADDC	R6, R5
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_8
+; %bb.4:                                ; %cleanup
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_9
+?LBB0_5:
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_7
+?LBB0_6:
+	CPL	R8
+	MOV	R4, [R0+#8]
+	ADD	R4, R8
+	MOV	R8, R4
+?LBB0_7:
+	MOV	[R0+#10], R7
+	CMP	R8, #0
+	JMP	cc_NE, ?LBB0_2
+	JMP	cc_UC, ?LBB0_11
+?LBB0_8:
+	MOV	R6, [R0+#6]
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_5
+?LBB0_9:
+	MOV	R7, [R0+#10]
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_6
+	JMP	cc_UC, ?LBB0_7
+?LBB0_10:
+	MOV	R5, #0
+?LBB0_11:
+	MOV	R6, R5
+	JMP	cc_UC, ?LBB0_13
+?LBB0_12:
+	MOV	R5, R7
+?LBB0_13:
+	MOV	R4, R5
+	MOV	R5, R6
+	ADD	R0, #14
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+BSEARCH_PR	ENDS
+	END

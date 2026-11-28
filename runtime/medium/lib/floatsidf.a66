@@ -1,0 +1,167 @@
+; Compiled from LLVM compiler-rt, lib/builtins/floatsidf.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOATSIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___floatsidf
+___floatsidf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	R4, R0
+	ADD	R4, #18
+	MOV	R5, R12
+	OR	R5, R13
+	JMP	cc_EQ, ?LBB0_7
+; %bb.1:                                ; %if.end
+	MOV	R5, #0
+	MOV	R2, R5
+	MOV	R1, R5
+	SUB	R2, R12
+	SUBC	R1, R13
+	JB	R13.15, ?LBB0_3
+; %bb.2:                                ; %if.end
+	MOV	R1, R13
+?LBB0_3:
+	JB	R13.15, ?LBB0_5
+; %bb.4:                                ; %if.end
+	MOV	R2, R12
+?LBB0_5:
+	AND	R13, #32768
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_8
+; %bb.6:                                ; %if.end
+	MOV	R3, R2
+	SHR	R3, #1
+	OR	R3, R2
+	MOV	R10, R3
+	SHR	R10, #2
+	OR	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	OR	R3, R10
+	MOV	R10, R3
+	SHR	R10, #8
+	OR	R10, R3
+	CPL	R10
+	MOV	R3, R10
+	SHR	R3, #1
+	AND	R3, #21845
+	SUB	R10, R3
+	MOV	R3, R10
+	AND	R3, #13107
+	SHR	R10, #2
+	AND	R10, #13107
+	ADD	R10, R3
+	MOV	R11, R10
+	SHR	R11, #4
+	ADD	R11, R10
+	AND	R11, #3855
+	MOV	R3, R11
+	SHR	R3, #8
+	ADD	R3, R11
+	AND	R3, #31
+	ADD	R3, #16
+	JMP	cc_UC, ?LBB0_9
+?LBB0_7:
+	MOV	R2, #0
+	MOV	R10, R2
+	MOV	R1, R2
+	MOV	R11, R2
+	JMP	cc_UC, ?LBB0_10
+?LBB0_8:
+	MOV	R3, R1
+	SHR	R3, #1
+	OR	R3, R1
+	MOV	R10, R3
+	SHR	R10, #2
+	OR	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	OR	R3, R10
+	MOV	R10, R3
+	SHR	R10, #8
+	OR	R10, R3
+	CPL	R10
+	MOV	R3, R10
+	SHR	R3, #1
+	AND	R3, #21845
+	SUB	R10, R3
+	MOV	R3, R10
+	AND	R3, #13107
+	SHR	R10, #2
+	AND	R10, #13107
+	ADD	R10, R3
+	MOV	R11, R10
+	SHR	R11, #4
+	ADD	R11, R10
+	AND	R11, #3855
+	MOV	R3, R11
+	SHR	R3, #8
+	ADD	R3, R11
+	AND	R3, #31
+?LBB0_9:
+	MOV	R10, R3
+	ADD	R10, #21
+	MOV	[R0+#14], R5
+	MOV	[R0+#12], R5
+	MOV	[R0+#6], R5
+	MOV	[R0+#4], R5
+	MOV	[R0+#2], R5
+	MOV	[R0], R5
+	MOV	[R0+#8], R2
+	MOV	[R0+#10], R1
+	MOV	R12, R10
+	AND	R12, #15
+	SHR	R10, #3
+	AND	R10, #6
+	MOV	R14, R0
+	ADD	R14, #8
+	SUB	R14, R10
+	MOV	R1, [R14+#2]
+	MOV	R11, R1
+	SHL	R11, R12
+	MOV	R15, R12
+	XOR	R15, #15
+	MOV	R2, [R14]
+	MOV	R10, R2
+	SHR	R10, #1
+	SHR	R10, R15
+	OR	R10, R11
+	MOV	R11, [R14+#4]
+	MOV	R6, R11
+	SHL	R6, R12
+	SHR	R1, #1
+	SHR	R1, R15
+	OR	R1, R6
+	MOV	R14, [R14+#6]
+	SHL	R14, R12
+	SHR	R11, #1
+	SHR	R11, R15
+	OR	R11, R14
+	SHL	R2, R12
+	XOR	R11, #16
+	MOV	R12, #1054
+	SUB	R12, R3
+	SHL	R12, #4
+	ADD	R1, R5
+	ADDC	R11, R12
+	OR	R11, R13
+?LBB0_10:
+	MOV	[R4], R2
+	MOV	[R4+#2], R10
+	MOV	[R4+#4], R1
+	MOV	[R4+#6], R11
+	MOV	R4, R0
+	ADD	R4, #18
+	ADD	R0, #16
+	MOV	R6, [R0+]
+	RET
+FLOATSIDF_PR	ENDS
+	END

@@ -1,0 +1,127 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+BSEARCH_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_bsearch
+_bsearch:
+_bsearch?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #20
+	MOV	R7, R15
+	MOV	[R0+#10], R13
+	MOV	[R0+#8], R12
+	MOV	R5, [R0+#30]
+	MOV	R1, [R0+#28]
+	MOV	R4, R1
+	OR	R4, R5
+	JMP	cc_EQ, ?LBB0_12
+; %bb.1:                                ; %while.body.preheader
+	MOV	R4, [R0+#38]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#36]
+	MOV	[R0+#4], R4
+	MOV	R10, [R0+#34]
+	MOV	R11, [R0+#32]
+	MOV	R6, R14
+	MOV	[R0+#2], R11
+	MOV	[R0], R10
+?LBB0_2:
+	MOV	[R0+#12], R14
+	MOV	[R0+#16], R1
+	MOV	R4, R1
+	SHR	R4, #1
+	MOV	R9, R5
+	SHL	R9, #15
+	OR	R9, R4
+	MOV	[R0+#18], R5
+	MOV	R8, R5
+	SHR	R8, #1
+	MUL	R9, R10
+	MOV	R4, MDL
+	MULU	R9, R11
+	MOV	R5, MDH
+	ADD	R5, R4
+	MUL	R8, R11
+	MOV	R4, MDL
+	ADD	R4, R5
+	MUL	R9, R11
+	MOV	R5, MDL
+	MOV	[R0+#14], R7
+	ADD	R6, R5
+	ADDC	R7, R4
+	MOV	R12, [R0+#8]
+	MOV	R13, [R0+#10]
+	MOV	R14, R6
+	MOV	R15, R7
+	MOV	R4, [R0+#4]
+	MOV	R5, [R0+#6]
+	CALLS	SEG ___c166_icall, SOF ___c166_icall
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_13
+; %bb.3:                                ; %cleanup
+	MOV	R5, [R0+#2]
+	MOV	R1, [R0]
+	ADD	R6, R5
+	ADDC	R7, R1
+	MOV	R10, R1
+	MOV	R11, R5
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_5
+; %bb.4:                                ; %cleanup
+	MOV	R7, [R0+#14]
+?LBB0_5:
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_7
+; %bb.6:                                ; %cleanup
+	MOV	R6, [R0+#12]
+?LBB0_7:
+	MOV	R5, R9
+	CPL	R5
+	MOV	R1, R8
+	CPL	R1
+	MOV	R2, [R0+#18]
+	MOV	R3, [R0+#16]
+	ADD	R3, R5
+	ADDC	R2, R1
+	MOV	R1, R3
+	MOV	R5, R2
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_9
+; %bb.8:                                ; %cleanup
+	MOV	R5, R8
+?LBB0_9:
+	CMP	R4, #0
+	JMP	cc_SGT, ?LBB0_11
+; %bb.10:                               ; %cleanup
+	MOV	R1, R9
+?LBB0_11:
+	MOV	R4, R1
+	OR	R4, R5
+	MOV	R14, R6
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_12:
+	MOV	R4, #0
+	MOV	R7, R4
+	JMP	cc_UC, ?LBB0_14
+?LBB0_13:
+	MOV	R4, R6
+?LBB0_14:
+	MOV	R5, R7
+	ADD	R0, #20
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_bsearch?F	ENDP
+	EXTRN	___c166_icall : NEAR
+BSEARCH_PR	ENDS
+	END

@@ -1,0 +1,54 @@
+; Compiled from LLVM compiler-rt, lib/builtins/fixunssfsi.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FIXUNSSFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___fixunssfsi
+___fixunssfsi:
+___fixunssfsi?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R13, [R0+#2]
+	MOV	R5, #0
+	MOV	R4, R5
+	JB	R13.15, ?LBB0_6
+; %bb.1:                                ; %entry
+	MOV	R1, R13
+	SHR	R1, #7
+	MOVBZ	R14, RL1
+	CMP	R14, #127
+	JMP	cc_ULT, ?LBB0_6
+; %bb.2:                                ; %if.end.i
+	MOV	R1, R14
+	SUB	R1, #159
+	MOV	R4, #65535
+	MOV	R5, R4
+	CMP	R1, #65504
+	JMP	cc_ULT, ?LBB0_6
+; %bb.3:                                ; %if.end9.i
+	MOV	R12, [R0]
+	AND	R13, #127
+	OR	R13, #128
+	CMP	R14, #149
+	JMP	cc_UGT, ?LBB0_5
+; %bb.4:                                ; %if.then12.i
+	MOV	R4, #150
+	SUB	R4, R14
+	MOV	R14, R4
+	CALLS	SEG ___lshrsi3, SOF ___lshrsi3
+	RETS
+?LBB0_5:
+	SUB	R14, #150
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
+?LBB0_6:
+	RETS
+___fixunssfsi?F	ENDP
+	EXTRN	___lshrsi3 : NEAR
+	EXTRN	___ashlsi3 : NEAR
+FIXUNSSFSI_PR	ENDS
+	END

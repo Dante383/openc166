@@ -1,0 +1,29 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+STRCHR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strchr
+_strchr:
+; %bb.0:                                ; %entry
+	MOV	R5, R13
+	MOV	R4, R12
+	MOVBZ	R5, RL5
+	MOVB	RL1, [R4]
+?LBB0_1:
+	MOVBZ	R1, RL1
+	CMP	R1, R5
+	JMP	cc_EQ, ?LBB0_5
+; %bb.2:                                ; %if.end
+	MOVBZ	R1, RL1
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %for.inc
+	MOVB	RL1, [R4+#1]
+	ADD	R4, #1
+	JMP	cc_UC, ?LBB0_1
+?LBB0_4:
+	MOV	R4, #0
+?LBB0_5:
+	RET
+STRCHR_PR	ENDS
+	END

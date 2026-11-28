@@ -1,0 +1,68 @@
+; Compiled from LLVM compiler-rt, lib/builtins/floatundidf.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOATUNDIDF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___floatundidf
+___floatundidf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #40
+	MOV	R7, R13
+	MOV	R8, R12
+	MOV	R6, R0
+	ADD	R6, #48
+	MOV	R4, #50480
+	MOV	[R0+#14], R4
+	MOV	R9, #0
+	MOV	[R0+#12], R9
+	MOV	R4, #16
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R9
+	MOV	R4, #17712
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R9
+	MOV	[R0+#2], R15
+	MOV	[R0], R14
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	R3, #17200
+	MOV	[R0+#14], R3
+	MOV	[R0+#12], R9
+	MOV	[R0+#10], R7
+	MOV	[R0+#8], R8
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	CALL	___adddf3
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#22]
+	MOV	[R6+#6], R2
+	MOV	[R6+#4], R1
+	MOV	[R6+#2], R5
+	MOV	[R6], R4
+	MOV	R4, R6
+	ADD	R0, #40
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	___adddf3 : NEAR
+FLOATUNDIDF_PR	ENDS
+	END

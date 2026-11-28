@@ -1,0 +1,23 @@
+; Compiled from LLVM libc, libc/shared/math/copysignf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+COPYSIGNF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_copysignf
+_copysignf:
+; %bb.0:                                ; %entry
+	MOV	R4, [R0]
+	MOV	R5, [R0+#2]
+	MOV	R1, [R0+#6]
+	XOR	R1, R5
+	JNB	R1.15, ?LBB0_2
+; %bb.1:
+	XOR	R5, #32768
+?LBB0_2:
+	RET
+COPYSIGNF_PR	ENDS
+	END

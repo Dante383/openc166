@@ -1,0 +1,90 @@
+; Compiled from LLVM compiler-rt, lib/builtins/fixdfsi.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FIXDFSI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___fixdfsi
+___fixdfsi:
+___fixdfsi?F	PROC	FAR
+; %bb.0:                                ; %entry
+	SUB	R0, #16
+	MOV	R1, [R0+#22]
+	MOV	R2, R1
+	SHR	R2, #4
+	AND	R2, #2047
+	MOV	R4, #0
+	MOV	R5, R4
+	CMP	R2, #1023
+	JMP	cc_ULT, ?LBB0_7
+; %bb.1:                                ; %if.end.i
+	MOV	R4, R2
+	SUB	R4, #1055
+	CMP	R4, #65503
+	JMP	cc_UGT, ?LBB0_3
+; %bb.2:                                ; %if.then7.i
+	ASHR	R1, #15
+	MOV	R5, R1
+	XOR	R5, #32767
+	CPL	R1
+	MOV	R4, R1
+	JMP	cc_UC, ?LBB0_7
+?LBB0_3:
+	MOV	R4, [R0+#20]
+	MOV	R5, [R0+#18]
+	MOV	R3, [R0+#16]
+	MOV	R10, R1
+	AND	R10, #15
+	OR	R10, #16
+	MOV	R11, #1075
+	SUB	R11, R2
+	MOV	R2, #0
+	MOV	[R0+#14], R2
+	MOV	[R0+#12], R2
+	MOV	[R0+#10], R2
+	MOV	[R0+#8], R2
+	MOV	[R0], R3
+	MOV	[R0+#2], R5
+	MOV	[R0+#4], R4
+	MOV	[R0+#6], R10
+	MOV	R3, R11
+	AND	R3, #15
+	SHR	R11, #3
+	AND	R11, #6
+	MOV	R10, R0
+	ADD	R10, R11
+	MOV	R4, [R10+#2]
+	MOV	R11, R4
+	SHR	R11, R3
+	MOV	R12, R3
+	XOR	R12, #15
+	MOV	R5, [R10+#4]
+	SHL	R5, #1
+	SHL	R5, R12
+	OR	R5, R11
+	MOV	R10, [R10]
+	SHR	R10, R3
+	SHL	R4, #1
+	SHL	R4, R12
+	OR	R4, R10
+	MOV	R3, R2
+	SUB	R2, R4
+	SUBC	R3, R5
+	JNB	R1.15, ?LBB0_5
+; %bb.4:                                ; %if.then14.i
+	MOV	R5, R3
+?LBB0_5:
+	JNB	R1.15, ?LBB0_7
+; %bb.6:                                ; %if.then14.i
+	MOV	R4, R2
+?LBB0_7:
+	ADD	R0, #16
+	RETS
+___fixdfsi?F	ENDP
+FIXDFSI_PR	ENDS
+	END

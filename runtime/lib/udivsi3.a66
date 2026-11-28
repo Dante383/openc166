@@ -1,0 +1,229 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+UDIVSI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___udivsi3
+___udivsi3:
+___udivsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	SUB	R0, #6
+	MOV	R4, R0
+	ADD	R4, #2
+	MOV	[R0], R4
+	CALL	_divmod
+	ADD	R0, #6
+	RETS
+___udivsi3?F	ENDP
+_divmod:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R1, #0
+	MOV	R3, #32
+	MOV	R2, [R0+#8]
+	MOV	R7, R1
+	MOV	R10, R1
+	MOV	R4, R1
+	MOV	R5, R1
+?LBB1_1:
+	MOV	R11, R7
+	SHR	R11, #15
+	SHL	R10, #1
+	OR	R10, R11
+	MOV	R6, #1
+	MOV	R8, R6
+	CMP	R10, R15
+	JMP	cc_UGE, ?LBB1_3
+; %bb.2:                                ; %for.body
+	MOV	R8, R1
+?LBB1_3:
+	SHL	R7, #1
+	MOV	R11, R13
+	SHR	R11, #15
+	OR	R11, R7
+	CMP	R11, R14
+	JMP	cc_UGE, ?LBB1_5
+; %bb.4:                                ; %for.body
+	MOV	R6, R1
+?LBB1_5:
+	CMP	R10, R15
+	JMP	cc_EQ, ?LBB1_7
+; %bb.6:                                ; %for.body
+	MOV	R6, R8
+?LBB1_7:
+	MOV	R7, R15
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB1_9
+; %bb.8:                                ; %for.body
+	MOV	R7, R1
+?LBB1_9:
+	MOV	R8, R14
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB1_11
+; %bb.10:                               ; %for.body
+	MOV	R8, R1
+?LBB1_11:
+	MOV	R9, R12
+	SHR	R9, #15
+	SHL	R13, #1
+	OR	R13, R9
+	SHL	R12, #1
+	MOV	R9, R4
+	SHR	R9, #15
+	SHL	R5, #1
+	OR	R5, R9
+	SHL	R4, #1
+	OR	R4, R6
+	SUB	R11, R8
+	SUBC	R10, R7
+	SUB	R3, #1
+	MOV	R7, R11
+	CMP	R3, #0
+	JMP	cc_NE, ?LBB1_1
+; %bb.12:                               ; %for.cond.cleanup
+	MOV	[R2], R11
+	MOV	[R2+#2], R10
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	PUBLIC	___umodsi3
+___umodsi3:
+___umodsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	SUB	R0, #6
+	MOV	R4, R0
+	ADD	R4, #2
+	MOV	[R0], R4
+	CALL	_divmod
+	MOV	R5, [R0+#4]
+	MOV	R4, [R0+#2]
+	ADD	R0, #6
+	RETS
+___umodsi3?F	ENDP
+	PUBLIC	___divsi3
+___divsi3:
+___divsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #6
+	MOV	R7, R13
+	MOV	R4, R12
+	MOV	R6, #0
+	MOV	R12, R6
+	MOV	R13, R6
+	SUB	R12, R4
+	SUBC	R13, R7
+	JB	R7.15, ?LBB3_2
+; %bb.1:                                ; %entry
+	MOV	R12, R4
+?LBB3_2:
+	JB	R7.15, ?LBB3_4
+; %bb.3:                                ; %entry
+	MOV	R13, R7
+?LBB3_4:
+	MOV	R4, R6
+	MOV	R5, R6
+	SUB	R4, R14
+	SUBC	R5, R15
+	JB	R15.15, ?LBB3_6
+; %bb.5:                                ; %entry
+	MOV	R4, R14
+?LBB3_6:
+	XOR	R7, R15
+	JB	R15.15, ?LBB3_8
+; %bb.7:                                ; %entry
+	MOV	R5, R15
+?LBB3_8:
+	MOV	R1, R0
+	ADD	R1, #2
+	MOV	[R0], R1
+	MOV	R14, R4
+	MOV	R15, R5
+	CALL	_divmod
+	MOV	R1, R5
+	MOV	R5, R6
+	SUB	R6, R4
+	SUBC	R5, R1
+	JB	R7.15, ?LBB3_10
+; %bb.9:                                ; %entry
+	MOV	R6, R4
+?LBB3_10:
+	JB	R7.15, ?LBB3_12
+; %bb.11:                               ; %entry
+	MOV	R5, R1
+?LBB3_12:
+	MOV	R4, R6
+	ADD	R0, #6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+___divsi3?F	ENDP
+	PUBLIC	___modsi3
+___modsi3:
+___modsi3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #6
+	MOV	R7, R13
+	MOV	R4, R12
+	MOV	R6, #0
+	MOV	R12, R6
+	MOV	R13, R6
+	SUB	R12, R4
+	SUBC	R13, R7
+	JB	R7.15, ?LBB4_2
+; %bb.1:                                ; %entry
+	MOV	R12, R4
+?LBB4_2:
+	JB	R7.15, ?LBB4_4
+; %bb.3:                                ; %entry
+	MOV	R13, R7
+?LBB4_4:
+	MOV	R4, R6
+	MOV	R5, R6
+	SUB	R4, R14
+	SUBC	R5, R15
+	JB	R15.15, ?LBB4_6
+; %bb.5:                                ; %entry
+	MOV	R4, R14
+?LBB4_6:
+	JB	R15.15, ?LBB4_8
+; %bb.7:                                ; %entry
+	MOV	R5, R15
+?LBB4_8:
+	MOV	R1, R0
+	ADD	R1, #2
+	MOV	[R0], R1
+	MOV	R14, R4
+	MOV	R15, R5
+	CALL	_divmod
+	MOV	R4, [R0+#4]
+	MOV	R1, [R0+#2]
+	MOV	R5, R6
+	SUB	R6, R1
+	SUBC	R5, R4
+	JB	R7.15, ?LBB4_10
+; %bb.9:                                ; %entry
+	MOV	R6, R1
+?LBB4_10:
+	JB	R7.15, ?LBB4_12
+; %bb.11:                               ; %entry
+	MOV	R5, R4
+?LBB4_12:
+	MOV	R4, R6
+	ADD	R0, #6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+___modsi3?F	ENDP
+UDIVSI3_PR	ENDS
+	END

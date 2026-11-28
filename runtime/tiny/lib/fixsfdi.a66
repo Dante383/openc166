@@ -1,0 +1,112 @@
+; Compiled from LLVM compiler-rt, lib/builtins/fixsfdi.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FIXSFDI_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___fixsfdi
+___fixsfdi:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #28
+	MOV	R7, [R0+#36]
+	MOV	R8, [R0+#34]
+	MOV	R6, #0
+	MOV	[R0+#6], R6
+	MOV	[R0+#4], R6
+	MOV	[R0+#2], R7
+	MOV	[R0], R8
+	CALL	___ltsf2
+	MOV	R4, #1
+	MOV	R1, R4
+	JNB	R5.15, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R1, R6
+?LBB0_2:
+	CMP	R5, #0
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %entry
+	MOV	R4, R1
+?LBB0_4:
+	MOV	R6, R0
+	ADD	R6, #38
+	JB	R4.0, ?LBB0_10
+; %bb.5:                                ; %if.then
+	MOV	[R0], R8
+	XOR	R7, #32768
+	MOV	[R0+#2], R7
+	CALL	___fixunssfdi
+	MOV	R3, [R0+#10]
+	MOV	[R0+#18], R3
+	MOV	R11, [R0+#8]
+	MOV	[R0+#16], R11
+	MOV	R1, [R0+#6]
+	MOV	[R0+#14], R1
+	MOV	R10, [R0+#4]
+	MOV	[R0+#12], R10
+	MOV	R4, #0
+	MOV	R12, #1
+	MOV	R5, R12
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_12
+; %bb.6:                                ; %if.then
+	CMP	R10, #0
+	JMP	cc_EQ, ?LBB0_13
+?LBB0_7:
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_9
+?LBB0_8:
+	MOV	R12, R5
+?LBB0_9:
+	MOV	R2, R4
+	MOV	R5, R4
+	SUB	R2, R11
+	SUBC	R5, R3
+	SUB	R2, R12
+	SUBC	R5, R4
+	MOV	R3, R4
+	SUB	R4, R10
+	SUBC	R3, R1
+	JMP	cc_UC, ?LBB0_11
+?LBB0_10:
+	MOV	[R0+#2], R7
+	MOV	[R0], R8
+	CALL	___fixunssfdi
+	MOV	R5, [R0+#10]
+	MOV	[R0+#26], R5
+	MOV	R2, [R0+#8]
+	MOV	[R0+#24], R2
+	MOV	R3, [R0+#6]
+	MOV	[R0+#22], R3
+	MOV	R4, [R0+#4]
+	MOV	[R0+#20], R4
+?LBB0_11:
+	MOV	[R6], R4
+	MOV	[R6+#2], R3
+	MOV	[R6+#4], R2
+	MOV	[R6+#6], R5
+	MOV	R4, R0
+	ADD	R4, #38
+	ADD	R0, #28
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	RET
+?LBB0_12:
+	MOV	R5, R4
+	CMP	R10, #0
+	JMP	cc_NE, ?LBB0_7
+?LBB0_13:
+	MOV	R12, R4
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_8
+	JMP	cc_UC, ?LBB0_9
+	EXTRN	___ltsf2 : NEAR
+	EXTRN	___fixunssfdi : NEAR
+FIXSFDI_PR	ENDS
+	END

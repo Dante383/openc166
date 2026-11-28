@@ -1,0 +1,21 @@
+; A call through a far function pointer (small memory model): the compiler
+; puts the pointer in R4 (segment offset) and R5 (segment) and CALLS this,
+; which jumps to the function with the caller's return address still on
+; the system stack, so the function returns straight to the caller. The
+; stock 5WY19 firmware does the same at 2000H. Hand-written; part of
+; openc166 (MIT).
+
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+
+ICALL_PR        SECTION CODE WORD PUBLIC 'CPROGRAM'
+        PUBLIC  ___c166_icall
+___c166_icall   PROC    FAR
+        PUSH    R5
+        PUSH    R4
+        RETS
+___c166_icall   ENDP
+ICALL_PR        ENDS
+        END

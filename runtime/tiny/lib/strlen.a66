@@ -1,0 +1,22 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+STRLEN_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strlen
+_strlen:
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+?LBB0_1:
+	MOV	R5, R12
+	ADD	R5, R4
+	MOVB	RL5, [R5]
+	MOVBZ	R5, RL5
+	ADD	R4, #1
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB0_1
+; %bb.2:                                ; %while.end
+	SUB	R4, #1
+	RET
+STRLEN_PR	ENDS
+	END

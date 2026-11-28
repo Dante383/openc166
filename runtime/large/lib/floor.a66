@@ -1,0 +1,240 @@
+; Compiled from LLVM libc, libc/shared/math/floor.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOOR_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_floor
+_floor:
+_floor?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #66
+	MOV	R7, [R0+#80]
+	MOV	R5, R7
+	MOV	R14, [R0+#78]
+	MOV	R15, [R0+#76]
+	MOV	R9, [R0+#74]
+	MOV	R6, R0
+	ADD	R6, #82
+	JB	R7.15, ?LBB0_3
+; %bb.1:                                ; %if.else.i.i
+	MOV	R4, R7
+	AND	R4, #32752
+	MOV	R1, #0
+	CMP	R4, #32752
+	JMP	cc_NE, ?LBB0_8
+; %bb.2:
+	MOV	R7, R5
+	JMP	cc_UC, ?LBB0_14
+?LBB0_3:
+	XOR	R7, #32768
+	MOV	R4, #0
+	MOV	[R0+#14], R4
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	R8, R15
+	MOV	[R0+#2], R15
+	MOV	[R0+#24], R9
+	MOV	[R0], R9
+	MOV	R9, R14
+	MOV	[R0+#4], R14
+	MOV	[R0+#6], R5
+	CALLS	SEG ___eqdf2, SOF ___eqdf2
+	OR	R5, R4
+	JMP	cc_EQ, ?LBB0_11
+; %bb.4:                                ; %if.then.i.i
+	MOV	R4, R7
+	AND	R4, #32752
+	CMP	R4, #32752
+	JMP	cc_EQ, ?LBB0_11
+; %bb.5:                                ; %if.end.i.i.i
+	MOV	R4, R7
+	SHR	R4, #4
+	MOV	R14, R9
+	MOV	R15, R8
+	CMP	R4, #1074
+	JMP	cc_UGT, ?LBB0_12
+; %bb.6:                                ; %if.end5.i.i.i
+	MOV	R9, [R0+#24]
+	CMP	R4, #1023
+	JMP	cc_UGE, ?LBB0_16
+; %bb.7:
+	MOV	R7, #16368
+	MOV	R9, #0
+	MOV	R15, R9
+	MOV	R14, R9
+	JMP	cc_UC, ?LBB0_13
+?LBB0_8:
+	MOV	R5, R7
+	SHR	R5, #4
+	CMP	R5, #1074
+	JMP	cc_UGT, ?LBB0_14
+; %bb.9:                                ; %if.end3.i.i.i
+	CMP	R5, #1023
+	JMP	cc_UGE, ?LBB0_15
+; %bb.10:
+	MOV	R9, #0
+	MOV	R15, R9
+	MOV	R14, R9
+	MOV	R7, R9
+	JMP	cc_UC, ?LBB0_14
+?LBB0_11:
+	MOV	R14, R9
+	MOV	R15, R8
+?LBB0_12:
+	MOV	R9, [R0+#24]
+?LBB0_13:
+	XOR	R7, #32768
+?LBB0_14:
+	MOV	[R6], R9
+	MOV	[R6+#2], R15
+	MOV	[R6+#4], R14
+	MOV	[R6+#6], R7
+	MOV	R4, R0
+	ADD	R4, #82
+	ADD	R0, #66
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+?LBB0_15:
+	MOV	R1, #1075
+	SUB	R1, R5
+	MOV	R5, #65535
+	MOV	[R0+#64], R5
+	MOV	[R0+#62], R5
+	MOV	[R0+#60], R5
+	MOV	[R0+#58], R5
+	MOV	R5, #0
+	MOV	[R0+#56], R5
+	MOV	[R0+#54], R5
+	MOV	[R0+#52], R5
+	MOV	[R0+#50], R5
+	MOV	R5, R1
+	AND	R5, #15
+	SHR	R1, #3
+	AND	R1, #6
+	MOV	R2, R0
+	ADD	R2, #50
+	ADD	R2, #8
+	SUB	R2, R1
+	MOV	R1, [R2+#4]
+	MOV	R3, R1
+	SHL	R3, R5
+	MOV	R10, R5
+	XOR	R10, #15
+	MOV	R11, [R2+#2]
+	MOV	R12, R11
+	SHR	R12, #1
+	SHR	R12, R10
+	OR	R12, R3
+	AND	R14, R12
+	SHL	R11, R5
+	MOV	R3, [R2]
+	MOV	R12, R3
+	SHR	R12, #1
+	SHR	R12, R10
+	OR	R12, R11
+	AND	R15, R12
+	MOV	R2, [R2+#6]
+	SHL	R2, R5
+	SHR	R1, #1
+	SHR	R1, R10
+	OR	R1, R2
+	AND	R7, R1
+	SHL	R3, R5
+	AND	R9, R3
+	AND	R7, #15
+	OR	R7, R4
+	JMP	cc_UC, ?LBB0_14
+?LBB0_16:
+	MOV	R5, #1075
+	SUB	R5, R4
+	MOV	R4, #65535
+	MOV	[R0+#48], R4
+	MOV	[R0+#46], R4
+	MOV	[R0+#44], R4
+	MOV	[R0+#42], R4
+	MOV	R4, #0
+	MOV	[R0+#40], R4
+	MOV	[R0+#38], R4
+	MOV	[R0+#36], R4
+	MOV	[R0+#34], R4
+	MOV	R10, R5
+	AND	R10, #15
+	SHR	R5, #3
+	AND	R5, #6
+	MOV	R2, R0
+	ADD	R2, #34
+	ADD	R2, #8
+	SUB	R2, R5
+	MOV	R1, [R2+#6]
+	SHL	R1, R10
+	MOV	R11, R10
+	XOR	R11, #15
+	MOV	R12, [R2+#4]
+	MOV	R5, R12
+	SHR	R5, #1
+	SHR	R5, R11
+	OR	R5, R1
+	MOV	R1, [R2+#2]
+	MOV	R13, R1
+	SHL	R13, R10
+	MOV	R2, [R2]
+	MOV	R3, R2
+	SHR	R3, #1
+	SHR	R3, R11
+	OR	R3, R13
+	SHL	R12, R10
+	SHR	R1, #1
+	SHR	R1, R11
+	OR	R1, R12
+	SHL	R2, R10
+	AND	R1, R14
+	AND	R3, R15
+	AND	R5, R7
+	AND	R2, R9
+	MOV	R10, R7
+	XOR	R10, R5
+	MOV	R11, R3
+	XOR	R11, R15
+	OR	R11, R10
+	MOV	R10, R1
+	XOR	R10, R14
+	MOV	R12, R2
+	XOR	R12, R9
+	OR	R12, R10
+	OR	R12, R11
+	JMP	cc_EQ, ?LBB0_13
+; %bb.17:                               ; %if.end14.i.i.i
+	MOV	R10, #16368
+	MOV	[R0+#14], R10
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	[R0+#2], R3
+	MOV	[R0], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#6], R5
+	CALLS	SEG ___adddf3, SOF ___adddf3
+	MOV	R7, [R0+#22]
+	MOV	R14, [R0+#20]
+	MOV	R15, [R0+#18]
+	MOV	R9, [R0+#16]
+	JMP	cc_UC, ?LBB0_13
+_floor?F	ENDP
+	EXTRN	___eqdf2 : NEAR
+	EXTRN	___adddf3 : NEAR
+FLOOR_PR	ENDS
+	END

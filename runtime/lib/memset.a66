@@ -1,0 +1,28 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMSET_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memset
+_memset:
+_memset?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, R13
+	MOV	R4, R12
+	CMP	R14, #0
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %while.body.lr.ph
+	MOV	R1, R4
+?LBB0_2:
+	SUB	R14, #1
+	MOVB	[R1], RL5
+	ADD	R1, #1
+	CMP	R14, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_3:
+	RETS
+_memset?F	ENDP
+MEMSET_PR	ENDS
+	END

@@ -1,0 +1,137 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+ASSERT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___assert
+___assert:
+___assert?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	[R0+#6], R15
+	MOV	[R0+#4], R14
+	MOV	[R0+#2], R13
+	MOV	[R0], R12
+	MOV	R5, [R0+#24]
+	MOV	R4, #0
+	MOVB	[R0+#15], RL4
+	MOV	R4, R0
+	ADD	R4, #9
+	ADD	R4, #5
+?LBB0_1:
+	MOV	R2, R5
+	MOV	R1, R4
+	MOV	R5, #52429
+	MULU	R2, R5
+	MOV	R5, MDH
+	SHR	R5, #3
+	MOV	R3, #10
+	MUL	R5, R3
+	MOV	R3, MDL
+	MOV	R6, R2
+	SUB	R6, R3
+	OR	R6, #48
+	MOV	R3, R1
+	SHR	R3, #13
+	AND	R3, #6
+	MOV	R8, [R3+#65024]
+	MOVB	[R1], RL6
+	SUB	R4, #1
+	CMP	R2, #9
+	JMP	cc_UGT, ?LBB0_1
+; %bb.2:                                ; %do.end
+	AND	R1, #16383
+	MOV	R7, R8
+	SHL	R7, #14
+	OR	R7, R1
+	SHR	R8, #2
+	MOV	R12, #SOF L_?str
+	MOV	R13, #SEG L_?str
+	MOV	R9, #SOF (___c166_iob+12)
+	MOV	R6, #SEG (___c166_iob+12)
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, [R0]
+	MOV	R13, [R0+#2]
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, #SOF L_?str?1
+	MOV	R13, #SEG L_?str?1
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, [R0+#4]
+	MOV	R13, [R0+#6]
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, #SOF L_?str?2
+	MOV	R13, #SEG L_?str?2
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, R7
+	MOV	R13, R8
+	MOV	R14, R9
+	MOV	R15, R6
+	CALLS	SEG _fputs, SOF _fputs
+	MOV	R12, #10
+	MOV	R13, R9
+	MOV	R14, R6
+	CALLS	SEG _fputc, SOF _fputc
+	CALLS	SEG _abort, SOF _abort
+___assert?F	ENDP
+ASSERT_PR	ENDS
+ASSERT_HC	SECTION	HCONST WORD PUBLIC 'CHUGEROM'
+L_?str:
+	DB	65
+	DB	115
+	DB	115
+	DB	101
+	DB	114
+	DB	116
+	DB	105
+	DB	111
+	DB	110
+	DB	32
+	DB	102
+	DB	97
+	DB	105
+	DB	108
+	DB	101
+	DB	100
+	DB	58
+	DB	32
+	DB	0
+L_?str?1:
+	DB	44
+	DB	32
+	DB	102
+	DB	105
+	DB	108
+	DB	101
+	DB	32
+	DB	0
+L_?str?2:
+	DB	44
+	DB	32
+	DB	108
+	DB	105
+	DB	110
+	DB	101
+	DB	32
+	DB	0
+	EXTRN	___c166_iob : WORD
+	EXTRN	_fputs : NEAR
+	EXTRN	_fputc : NEAR
+	EXTRN	_abort : NEAR
+ASSERT_HC	ENDS
+	END

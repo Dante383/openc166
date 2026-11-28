@@ -1,0 +1,64 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+WRITE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	__write
+__write:
+__write?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, [R0+#2]
+	MOV	R4, [R0]
+	MOV	R1, R4
+	OR	R1, R5
+	JMP	cc_EQ, ?LBB0_11
+; %bb.1:                                ; %for.body.preheader
+	MOV	R1, #0
+	MOV	R2, R1
+?LBB0_2:
+	BCLR	S0TIR
+	MOV	R3, R13
+	MOV	R10, R14
+	ADD	R3, R2
+	ADDC	R10, R1
+	EXTS	R10, #1
+	MOVB	RL3, [R3]
+	MOVBZ	R3, RL3
+	MOV	S0TBUF, R3
+?LBB0_3:
+	JNB	S0TIR, ?LBB0_3
+; %bb.4:                                ; %for.inc
+	ADD	R2, #1
+	ADDC	R1, #0
+	MOV	R11, #0
+	MOV	R3, #1
+	MOV	R10, R3
+	CMP	R1, R5
+	JMP	cc_UGE, ?LBB0_8
+; %bb.5:                                ; %for.inc
+	CMP	R2, R4
+	JMP	cc_UGE, ?LBB0_9
+?LBB0_6:
+	CMP	R1, R5
+	JMP	cc_NE, ?LBB0_10
+?LBB0_7:
+	JB	R3.0, ?LBB0_2
+	JMP	cc_UC, ?LBB0_11
+?LBB0_8:
+	MOV	R10, R11
+	CMP	R2, R4
+	JMP	cc_ULT, ?LBB0_6
+?LBB0_9:
+	MOV	R3, R11
+	CMP	R1, R5
+	JMP	cc_EQ, ?LBB0_7
+?LBB0_10:
+	MOV	R3, R10
+	JB	R3.0, ?LBB0_2
+?LBB0_11:
+	RETS
+__write?F	ENDP
+WRITE_PR	ENDS
+	END

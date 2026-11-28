@@ -1,0 +1,265 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+PRINTF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_vfprintf
+_vfprintf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #48
+	MOV	[R0+#8], R13
+	MOV	R7, R12
+	MOV	R4, [R0+#56]
+	MOV	R5, [R0+#58]
+	MOV	R1, R0
+	ADD	R1, #10
+	MOV	R2, R1
+	AND	R2, #16382
+	SHR	R1, #13
+	AND	R1, #6
+	MOV	R6, [R1+#65024]
+	MOV	R9, R6
+	SHL	R9, #14
+	OR	R9, R2
+	SHR	R6, #2
+	MOV	[R0+#12], R13
+	MOV	[R0+#10], R7
+	MOV	R1, #0
+	MOV	[R0+#14], R1
+	MOV	[R0+#6], R5
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R15
+	MOV	[R0], R14
+	MOV	R12, #_put
+	MOV	R13, R9
+	MOV	R14, R6
+	CALL	___c166_format
+	MOV	R8, R4
+	MOV	R12, R9
+	MOV	R13, R6
+	CALL	_flush
+	MOV	R12, R7
+	MOV	R13, [R0+#8]
+	CALL	_ferror
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R8, #65535
+?LBB0_2:
+	MOV	R4, R8
+	ADD	R0, #48
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+_put:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #10
+	MOV	R9, R15
+	MOV	R8, R14
+	MOV	[R0+#8], R13
+	MOV	[R0+#6], R12
+	MOV	R6, [R0+#18]
+	JMP	cc_EQ, ?LBB1_5
+; %bb.1:                                ; %while.body.lr.ph
+	MOV	R5, [R0+#6]
+	MOV	R13, R5
+	MOV	R4, [R0+#8]
+	MOV	R14, R4
+	ADD	R13, #4
+	ADDC	R14, #0
+	MOV	R15, R5
+	MOV	R7, R4
+	ADD	R15, #6
+	ADDC	R7, #0
+	EXTS	R14, #1
+	MOV	R4, [R13]
+	MOV	[R0+#4], R13
+	MOV	[R0+#2], R15
+	MOV	[R0], R7
+?LBB1_2:
+	CMP	R4, #32
+	JMP	cc_NE, ?LBB1_4
+; %bb.3:                                ; %if.then
+	MOV	R12, [R0+#6]
+	MOV	R13, [R0+#8]
+	MOV	R7, R14
+	CALL	_flush
+	MOV	R15, [R0+#2]
+	MOV	R14, R7
+	MOV	R7, [R0]
+	MOV	R13, [R0+#4]
+	EXTS	R14, #1
+	MOV	R4, [R13]
+?LBB1_4:
+	SUB	R6, #1
+	MOV	R5, R8
+	MOV	R1, R9
+	ADD	R5, #1
+	ADDC	R1, #0
+	EXTS	R9, #1
+	MOVB	RL2, [R8]
+	MOVBZ	R2, RL2
+	MOV	R3, R4
+	ADD	R3, #1
+	EXTS	R14, #1
+	MOV	[R13], R3
+	MOV	R10, #0
+	MOV	R11, R15
+	MOV	R12, R7
+	ADD	R11, R4
+	ADDC	R12, R10
+	EXTS	R12, #1
+	MOVB	[R11], RL2
+	MOV	R4, R3
+	MOV	R8, R5
+	MOV	R9, R1
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB1_2
+?LBB1_5:
+	ADD	R0, #10
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+_flush:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R14, R13
+	MOV	R13, R12
+	MOV	R6, R13
+	MOV	R7, R14
+	ADD	R6, #4
+	ADDC	R7, #0
+	EXTS	R7, #1
+	MOV	R15, [R6]
+	CMP	R15, #0
+	JMP	cc_EQ, ?LBB2_3
+; %bb.1:                                ; %land.lhs.true
+	MOV	R8, R14
+	MOV	R5, R13
+	MOV	R9, R13
+	ADD	R9, #2
+	EXTS	R8, #1
+	MOV	R4, [R9]
+	MOV	[R0], R5
+	EXTS	R8, #1
+	MOV	R5, [R5]
+	EXTS	R4, #1
+	MOV	R12, [R5]
+	ADD	R13, #6
+	ADDC	R14, #0
+	CALL	__write
+	EXTS	R7, #1
+	MOV	R5, [R6]
+	CMP	R4, R5
+	JMP	cc_EQ, ?LBB2_3
+; %bb.2:                                ; %if.then
+	EXTS	R8, #1
+	MOV	R4, [R9]
+	MOV	R5, [R0]
+	EXTS	R8, #1
+	MOV	R5, [R5]
+	ADD	R5, #4
+	ADDC	R4, #0
+	EXTS	R4, #1
+	MOVB	RL1, [R5]
+	MOVBZ	R1, RL1
+	OR	R1, #2
+	EXTS	R4, #1
+	MOVB	[R5], RL1
+?LBB2_3:
+	MOV	R4, #0
+	EXTS	R7, #1
+	MOV	[R6], R4
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	PUBLIC	_fprintf
+_fprintf:
+; %bb.0:                                ; %entry
+	SUB	R0, #8
+	MOV	R4, R0
+	ADD	R4, #8
+	MOV	R5, R4
+	SHR	R5, #13
+	AND	R5, #6
+	MOV	R5, [R5+#65024]
+	MOV	R1, R5
+	SHR	R1, #2
+	MOV	[R0+#6], R1
+	AND	R4, #16382
+	SHL	R5, #14
+	OR	R5, R4
+	MOV	[R0+#4], R5
+	MOV	[R0+#2], R1
+	MOV	[R0], R5
+	CALL	_vfprintf
+	ADD	R0, #8
+	RET
+	PUBLIC	_vprintf
+_vprintf:
+; %bb.0:                                ; %entry
+	SUB	R0, #4
+	MOV	R4, R13
+	MOV	R5, R12
+	MOV	[R0+#2], R15
+	MOV	[R0], R14
+	MOV	R12, #SOF (___c166_iob+6)
+	MOV	R13, #SEG (___c166_iob+6)
+	MOV	R14, R5
+	MOV	R15, R4
+	CALL	_vfprintf
+	ADD	R0, #4
+	RET
+	PUBLIC	_printf
+_printf:
+; %bb.0:                                ; %entry
+	SUB	R0, #8
+	MOV	R15, R13
+	MOV	R14, R12
+	MOV	R4, R0
+	ADD	R4, #8
+	MOV	R5, R4
+	SHR	R5, #13
+	AND	R5, #6
+	MOV	R5, [R5+#65024]
+	MOV	R1, R5
+	SHR	R1, #2
+	MOV	[R0+#6], R1
+	AND	R4, #16382
+	SHL	R5, #14
+	OR	R5, R4
+	MOV	[R0+#4], R5
+	MOV	[R0+#2], R1
+	MOV	[R0], R5
+	MOV	R12, #SOF (___c166_iob+6)
+	MOV	R13, #SEG (___c166_iob+6)
+	CALL	_vfprintf
+	ADD	R0, #8
+	RET
+	EXTRN	___c166_format : NEAR
+	EXTRN	_ferror : NEAR
+	EXTRN	__write : NEAR
+	EXTRN	___c166_iob : WORD
+PRINTF_PR	ENDS
+	END

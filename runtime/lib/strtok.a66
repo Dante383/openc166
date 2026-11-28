@@ -1,0 +1,73 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRTOK_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strtok
+_strtok:
+_strtok?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R7, R13
+	MOV	R8, R12
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:
+	MOV	R8, SOF _strtok?next
+?LBB0_2:
+	CMP	R8, #0
+	JMP	cc_EQ, ?LBB0_6
+; %bb.3:                                ; %if.end3
+	MOV	R12, R8
+	MOV	R13, R7
+	CALLS	SEG _strspn, SOF _strspn
+	MOV	R6, R4
+	ADD	R6, R8
+	MOVB	RL4, [R6]
+	MOVBZ	R4, RL4
+	MOV	R8, #0
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_7
+; %bb.4:                                ; %if.end6
+	MOV	R12, R6
+	MOV	R13, R7
+	CALLS	SEG _strcspn, SOF _strcspn
+	ADD	R4, R6
+	MOVB	RL5, [R4]
+	MOVBZ	R5, RL5
+	JMP	cc_EQ, ?LBB0_8
+; %bb.5:                                ; %if.then10
+	MOV	R5, #0
+	MOVB	[R4], RL5
+	ADD	R4, #1
+	JMP	cc_UC, ?LBB0_9
+?LBB0_6:
+	MOV	R6, #0
+	JMP	cc_UC, ?LBB0_10
+?LBB0_7:
+	MOV	R4, R8
+	MOV	R6, R8
+	JMP	cc_UC, ?LBB0_9
+?LBB0_8:
+	MOV	R4, R8
+?LBB0_9:
+	MOV	SOF _strtok?next, R4
+?LBB0_10:
+	MOV	R4, R6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	RETS
+_strtok?F	ENDP
+STRTOK_PR	ENDS
+C166_BSS	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_strtok?next:
+	DSB	2
+	EXTRN	_strspn : NEAR
+	EXTRN	_strcspn : NEAR
+C166_BSS	ENDS
+	END

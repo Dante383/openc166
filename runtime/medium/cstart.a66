@@ -1,0 +1,204 @@
+; C startup code for openc166's C166 compiler, medium memory model (TASKING's:
+; near code, far data; -mabi=medium). runtime/cstart.a66 is the small and
+; large models' startup code, which this one follows; the difference is
+; that C functions here are near: __cstart is CALLed and CALLs main.
+;
+; __cstart sets up the user stack, copies the initial values of initialised
+; variables from ROM to RAM and clears the zero-initialised ones: near ones
+; (C166_DATA from C166_DATA_INIT, C166_BSS, C166_BITWORD), and _huge and
+; _far ones, which in this model are all unqualified variables (C166_HDATA,
+; C166_FDATA from their _INIT sections; C166_HBSS, C166_FBSS cleared). It
+; calls main and returns main's result in R4 (or the status given to exit).
+; It keeps the caller's R0 and R6-R9, so a loader or existing firmware can
+; call a C program (CALL, from the same segment) and get control back.
+;
+; It does not touch SYSCON, BUSCON, the DPPs, the system stack or the
+; watchdog: a program that starts from reset must set those up first.
+; The DPPs must map the near data and the user stack (default: DPPn = n,
+; the first 64 KB).
+
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+; Near data is in the first 64 KB with DPPn = n, as in the compiler's output:
+; addresses are written with SOF.
+
+        PUBLIC  __cstart, __exit
+        EXTRN   _main : NEAR
+        EXTRN   ?SECTION_START?C166_DATA : WORD
+        EXTRN   ?SECTION_START?C166_USTACK : WORD
+        EXTRN   ?SECTION_SIZE?C166_USTACK : DATA16
+        EXTRN   ?SECTION_SIZE?C166_DATA : DATA16
+        EXTRN   ?SECTION_START?C166_DATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_BSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_BSS : DATA16
+        EXTRN   ?SECTION_START?C166_BITWORD : WORD
+        EXTRN   ?SECTION_SIZE?C166_BITWORD : DATA16
+        EXTRN   ?SECTION_START?C166_HDATA : WORD
+        EXTRN   ?SECTION_SIZE?C166_HDATA : DATA16
+        EXTRN   ?SECTION_START?C166_HDATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_HBSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_HBSS : DATA16
+        EXTRN   ?SECTION_START?C166_FDATA : WORD
+        EXTRN   ?SECTION_SIZE?C166_FDATA : DATA16
+        EXTRN   ?SECTION_START?C166_FDATA_INIT : WORD
+        EXTRN   ?SECTION_START?C166_FBSS : WORD
+        EXTRN   ?SECTION_SIZE?C166_FBSS : DATA16
+
+; The sections the compiler puts variables in, so that they exist even when
+; no module has any.
+C166_DATA       SECTION DATA WORD PUBLIC 'CNEAR'
+C166_DATA       ENDS
+C166_DATA_INIT  SECTION DATA WORD PUBLIC 'CNEARROM'
+C166_DATA_INIT  ENDS
+C166_BSS        SECTION DATA WORD PUBLIC 'CNEAR'
+C166_BSS        ENDS
+C166_BITWORD    SECTION DATA BITADDRESSABLE PUBLIC 'CBITWORDS'
+C166_BITWORD    ENDS
+; _huge and _far variables, anywhere in the 16 MB.
+C166_HDATA      SECTION HDATA WORD PUBLIC 'CHUGE'
+C166_HDATA      ENDS
+C166_HDATA_INIT SECTION HCONST WORD PUBLIC 'CHUGEROM'
+C166_HDATA_INIT ENDS
+C166_HBSS       SECTION HDATA WORD PUBLIC 'CHUGE'
+C166_HBSS       ENDS
+C166_FDATA      SECTION DATA WORD PUBLIC 'CFAR'
+C166_FDATA      ENDS
+C166_FDATA_INIT SECTION CONST WORD PUBLIC 'CFARROM'
+C166_FDATA_INIT ENDS
+C166_FBSS       SECTION DATA WORD PUBLIC 'CFAR'
+C166_FBSS       ENDS
+
+; The system stack pointer while main runs, for _exit.
+C166_EXIT       SECTION DATA WORD PUBLIC 'CNEAR'
+?EXIT_SP:       DSW     1
+C166_EXIT       ENDS
+
+; The user stack (R0), 512 bytes and what other modules add to the
+; section; it grows downwards.
+C166_USTACK     SECTION DATA WORD PUBLIC 'CNEAR'
+                DSB     512
+C166_USTACK     ENDS
+
+C166_CSTART     SECTION CODE WORD PUBLIC 'CPROGRAM'
+__cstart        PROC    NEAR
+        PUSH    R0
+        PUSH    R6
+        PUSH    R7
+        PUSH    R8
+        PUSH    R9
+        ; The top of C166_USTACK, which other modules may make larger
+        ; (_ustack in c166.h).
+        MOV     R0, #SOF ?SECTION_START?C166_USTACK
+        ADD     R0, #?SECTION_SIZE?C166_USTACK
+
+        MOV     R4, #SOF ?SECTION_START?C166_DATA_INIT
+        MOV     R5, #SOF ?SECTION_START?C166_DATA
+        MOV     R10, #?SECTION_SIZE?C166_DATA
+?COPY:  CMP     R10, #0
+        JMP     cc_EQ, ?COPIED
+        MOVB    RL1, [R4+]
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?COPY
+?COPIED:
+        MOV     R5, #SOF ?SECTION_START?C166_BSS
+        MOV     R10, #?SECTION_SIZE?C166_BSS
+        MOV     R1, #0
+?CLEAR: CMP     R10, #0
+        JMP     cc_EQ, ?CLEARED
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?CLEAR
+?CLEARED:
+        MOV     R5, #SOF ?SECTION_START?C166_BITWORD
+        MOV     R10, #?SECTION_SIZE?C166_BITWORD
+?CLEARBW:
+        CMP     R10, #0
+        JMP     cc_EQ, ?BWCLEARED
+        MOVB    [R5], RL1
+        ADD     R5, #1
+        SUB     R10, #1
+        JMP     cc_UC, ?CLEARBW
+?BWCLEARED:
+        ; _huge and _far variables: the same, with 24-bit addresses.
+        MOV     R1, #SOF ?SECTION_START?C166_HDATA_INIT
+        MOV     R2, #SEG ?SECTION_START?C166_HDATA_INIT
+        MOV     R3, #SOF ?SECTION_START?C166_HDATA
+        MOV     R4, #SEG ?SECTION_START?C166_HDATA
+        MOV     R10, #?SECTION_SIZE?C166_HDATA
+        CALL    ?FARCOPY
+        MOV     R1, #SOF ?SECTION_START?C166_FDATA_INIT
+        MOV     R2, #SEG ?SECTION_START?C166_FDATA_INIT
+        MOV     R3, #SOF ?SECTION_START?C166_FDATA
+        MOV     R4, #SEG ?SECTION_START?C166_FDATA
+        MOV     R10, #?SECTION_SIZE?C166_FDATA
+        CALL    ?FARCOPY
+        MOV     R3, #SOF ?SECTION_START?C166_HBSS
+        MOV     R4, #SEG ?SECTION_START?C166_HBSS
+        MOV     R10, #?SECTION_SIZE?C166_HBSS
+        CALL    ?FARCLEAR
+        MOV     R3, #SOF ?SECTION_START?C166_FBSS
+        MOV     R4, #SEG ?SECTION_START?C166_FBSS
+        MOV     R10, #?SECTION_SIZE?C166_FBSS
+        CALL    ?FARCLEAR
+        MOV     SOF ?EXIT_SP, SP     ; for _exit
+        CALL    _main
+?MAIN_DONE:
+        POP     R9
+        POP     R8
+        POP     R7
+        POP     R6
+        POP     R0
+        RET
+__cstart        ENDP
+
+; void _exit(int status): back to __cstart's caller with status in R4, as
+; if main had returned it (exit runs the atexit functions first). The
+; system stack goes back to where it was when main was called.
+__exit          PROC    NEAR
+        MOV     R4, R12
+        MOV     SP, SOF ?EXIT_SP
+        NOP                             ; SP written: no implicit use next
+        JMP     cc_UC, ?MAIN_DONE
+__exit          ENDP
+
+; Copy R10 bytes from R2:R1 to R4:R3 (segment:offset), a byte at a time.
+?FARCOPY        PROC    NEAR
+        CMP     R10, #0
+        JMP     cc_EQ, ?FCDONE
+        EXTS    R2, #1
+        MOVB    RL5, [R1]
+        EXTS    R4, #1
+        MOVB    [R3], RL5
+        ADD     R1, #1
+        ADDC    R2, #0
+        ADD     R3, #1
+        ADDC    R4, #0
+        SUB     R10, #1
+        JMP     cc_UC, ?FARCOPY
+?FCDONE:
+        RET
+?FARCOPY        ENDP
+
+; Clear R10 bytes at R4:R3.
+?FARCLEAR       PROC    NEAR
+        MOV     R5, #0
+?FCLOOP:
+        CMP     R10, #0
+        JMP     cc_EQ, ?FZDONE
+        EXTS    R4, #1
+        MOVB    [R3], RL5
+        ADD     R3, #1
+        ADDC    R4, #0
+        SUB     R10, #1
+        JMP     cc_UC, ?FCLOOP
+?FZDONE:
+        RET
+?FARCLEAR       ENDP
+C166_CSTART     ENDS
+        END

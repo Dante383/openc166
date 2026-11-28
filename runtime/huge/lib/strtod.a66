@@ -1,0 +1,588 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRTOD_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strtod
+_strtod:
+_strtod?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #136
+	MOV	[R0+#34], R15
+	MOV	[R0+#32], R14
+	MOV	R6, R13
+	MOV	R7, R12
+	MOV	R4, R0
+	ADD	R4, #144
+	MOV	[R0+#36], R4
+	MOV	[R0+#28], R7
+	MOV	[R0+#40], R6
+?LBB0_1:
+	MOV	R8, R6
+	MOV	R9, R7
+	EXTS	R8, #1
+	MOVB	RL4, [R9]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isspace, SOF _isspace
+	ADD	R7, #1
+	ADDC	R6, #0
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_1
+; %bb.2:                                ; %while.end
+	EXTS	R8, #1
+	MOVB	RL4, [R9]
+	MOVBZ	R4, RL4
+	MOVBZ	R5, RL4
+	CMP	R5, #45
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %while.end
+	CMP	R5, #43
+	JMP	cc_NE, ?LBB0_7
+?LBB0_4:
+	MOV	R4, #1
+	CMP	R5, #45
+	JMP	cc_NE, ?LBB0_6
+; %bb.5:                                ; %if.then
+	MOV	R4, #0
+?LBB0_6:
+	MOV	[R0+#30], R4
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	JMP	cc_UC, ?LBB0_8
+?LBB0_7:
+	MOV	R5, #1
+	MOV	[R0+#30], R5
+	MOV	R7, R9
+	MOV	R6, R8
+?LBB0_8:
+	MOVBZ	R12, RL4
+	CALLS	SEG _isdigit, SOF _isdigit
+	MOV	[R0+#42], R4
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_11
+; %bb.9:                                ; %for.body.preheader
+	MOV	R9, #0
+	MOV	[R0+#54], R9
+	MOV	[R0+#52], R9
+	MOV	R8, R9
+	MOV	[R0+#44], R9
+?LBB0_10:
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	SUB	R4, #48
+	MOV	R5, R4
+	ASHR	R5, #15
+	MOV	R12, R4
+	MOV	R13, R5
+	CALLS	SEG ___floatsidf, SOF ___floatsidf
+	MOV	R4, [R0]
+	MOV	[R0+#50], R4
+	MOV	R4, [R0+#2]
+	MOV	[R0+#48], R4
+	MOV	R5, R9
+	MOV	R4, [R0+#4]
+	MOV	[R0+#46], R4
+	MOV	R9, [R0+#6]
+	MOV	R4, #16420
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#44]
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#52]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#54]
+	MOV	[R0], R4
+	MOV	[R0+#4], R8
+	MOV	[R0+#6], R5
+	CALLS	SEG ___muldf3, SOF ___muldf3
+	MOV	[R0+#14], R9
+	MOV	R4, [R0+#46]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#48]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#50]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALLS	SEG ___adddf3, SOF ___adddf3
+	MOV	R9, [R0+#22]
+	MOV	R8, [R0+#20]
+	MOV	R4, [R0+#18]
+	MOV	[R0+#52], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#54], R4
+	ADD	R7, #1
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_10
+	JMP	cc_UC, ?LBB0_12
+?LBB0_11:
+	MOV	R9, #0
+	MOV	[R0+#52], R9
+	MOV	R8, R9
+	MOV	[R0+#54], R9
+?LBB0_12:
+	MOV	[R0+#38], R8
+	MOV	R4, [R0+#52]
+	MOV	[R0+#52], R4
+	MOV	R8, [R0+#54]
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	MOVBZ	R4, RL4
+	MOV	[R0+#54], R8
+	MOV	[R0+#46], R9
+	CMP	R4, #46
+	JMP	cc_NE, ?LBB0_16
+; %bb.13:                               ; %for.cond21.preheader
+	ADD	R7, #1
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_16
+; %bb.14:                               ; %for.body25.preheader
+	MOV	R4, #0
+	MOV	[R0+#42], R4
+	MOV	R8, R4
+	MOV	R9, [R0+#38]
+?LBB0_15:
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	SUB	R4, #48
+	MOV	R5, R4
+	ASHR	R5, #15
+	MOV	R12, R4
+	MOV	R13, R5
+	CALLS	SEG ___floatsidf, SOF ___floatsidf
+	MOV	R4, [R0]
+	MOV	[R0+#50], R4
+	MOV	R4, [R0+#2]
+	MOV	[R0+#48], R4
+	MOV	R4, [R0+#4]
+	MOV	[R0+#44], R4
+	MOV	R1, R9
+	MOV	R9, [R0+#6]
+	MOV	R4, #16420
+	MOV	[R0+#14], R4
+	MOV	R4, [R0+#42]
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#52]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#54]
+	MOV	[R0], R4
+	MOV	[R0+#4], R1
+	MOV	R4, [R0+#46]
+	MOV	[R0+#6], R4
+	CALLS	SEG ___muldf3, SOF ___muldf3
+	MOV	[R0+#14], R9
+	MOV	R4, [R0+#44]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#48]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#50]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#22]
+	MOV	[R0+#6], R4
+	MOV	R4, [R0+#20]
+	MOV	[R0+#4], R4
+	MOV	R4, [R0+#18]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0], R4
+	CALLS	SEG ___adddf3, SOF ___adddf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#46], R4
+	MOV	R9, [R0+#20]
+	MOV	R4, [R0+#18]
+	MOV	[R0+#52], R4
+	MOV	R4, [R0+#16]
+	MOV	[R0+#54], R4
+	SUB	R8, #1
+	ADD	R7, #1
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_15
+	JMP	cc_UC, ?LBB0_17
+?LBB0_16:
+	MOV	R4, #0
+	MOV	R8, R4
+	MOV	R9, [R0+#38]
+	MOV	R4, [R0+#42]
+	JMP	cc_EQ, ?LBB0_24
+?LBB0_17:
+	MOV	R2, R9
+	MOV	R4, [R0+#46]
+	MOV	[R0+#46], R4
+	MOV	R4, [R0+#52]
+	MOV	[R0+#52], R4
+	MOV	R4, [R0+#54]
+	MOV	[R0+#54], R4
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	AND	R4, #223
+	MOV	[R0+#38], R2
+	CMP	R4, #69
+	JMP	cc_NE, ?LBB0_23
+; %bb.18:                               ; %if.then43
+	MOV	[R0+#50], R8
+	MOV	R4, R7
+	MOV	R5, R6
+	ADD	R4, #1
+	ADDC	R5, #0
+	MOV	R8, R4
+	MOV	R9, R5
+	EXTS	R5, #1
+	MOVB	RL4, [R4]
+	MOVBZ	R4, RL4
+	MOVBZ	R5, RL4
+	CMP	R5, #45
+	JMP	cc_EQ, ?LBB0_20
+; %bb.19:                               ; %if.then43
+	CMP	R5, #43
+	JMP	cc_NE, ?LBB0_27
+?LBB0_20:
+	MOV	R8, R7
+	MOV	R9, R6
+	ADD	R8, #2
+	ADDC	R9, #0
+	MOV	R4, #1
+	CMP	R5, #45
+	JMP	cc_NE, ?LBB0_22
+; %bb.21:                               ; %if.then51
+	MOV	R4, #0
+?LBB0_22:
+	MOV	[R0+#48], R4
+	EXTS	R9, #1
+	MOVB	RL4, [R8]
+	MOVBZ	R4, RL4
+	JMP	cc_UC, ?LBB0_28
+?LBB0_23:
+	MOV	R5, R7
+	MOV	R9, R6
+	MOV	R6, R8
+	MOV	R4, [R0+#54]
+	MOV	R11, [R0+#52]
+	MOV	R7, [R0+#46]
+	MOV	R8, R5
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_35
+	JMP	cc_UC, ?LBB0_40
+?LBB0_24:
+	MOV	R1, [R0+#32]
+	MOV	R4, R1
+	MOV	R5, [R0+#34]
+	OR	R4, R5
+	JMP	cc_EQ, ?LBB0_26
+; %bb.25:                               ; %if.then37
+	MOV	R4, [R0+#28]
+	EXTS	R5, #1
+	MOV	[R1], R4
+	ADD	R1, #2
+	ADDC	R5, #0
+	MOV	R4, [R0+#40]
+	EXTS	R5, #1
+	MOV	[R1], R4
+?LBB0_26:
+	MOV	R4, #0
+	MOV	R2, R4
+	MOV	R1, R4
+	MOV	R5, R4
+	JMP	cc_UC, ?LBB0_58
+?LBB0_27:
+	MOV	R5, #1
+	MOV	[R0+#48], R5
+?LBB0_28:
+	MOVBZ	R12, RL4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_34
+; %bb.29:                               ; %for.cond61.preheader
+	EXTS	R9, #1
+	MOVB	RL4, [R8]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_EQ, ?LBB0_36
+; %bb.30:                               ; %for.body65.preheader
+	MOV	R6, #0
+	MOV	R7, [R0+#46]
+?LBB0_31:
+	CMP	R6, #9999
+	JMP	cc_SGT, ?LBB0_33
+; %bb.32:                               ; %if.then68
+	MOV	R4, #10
+	MUL	R6, R4
+	MOV	R4, MDL
+	EXTS	R9, #1
+	MOVB	RL6, [R8]
+	MOVBZ	R6, RL6
+	ADD	R6, R4
+	SUB	R6, #48
+?LBB0_33:
+	ADD	R8, #1
+	ADDC	R9, #0
+	EXTS	R9, #1
+	MOVB	RL4, [R8]
+	MOVBZ	R4, RL4
+	MOV	R12, R4
+	CALLS	SEG _isdigit, SOF _isdigit
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_31
+	JMP	cc_UC, ?LBB0_37
+?LBB0_34:
+	MOV	R8, R7
+	MOV	R9, R6
+	MOV	R6, [R0+#50]
+	MOV	R2, [R0+#38]
+	MOV	R4, [R0+#54]
+	MOV	R11, [R0+#52]
+	MOV	R7, [R0+#46]
+	CMP	R6, #0
+	JMP	cc_NE, ?LBB0_40
+?LBB0_35:
+	MOV	R5, #16368
+	MOV	R1, #0
+	MOV	R10, R1
+	MOV	R3, R1
+	JMP	cc_UC, ?LBB0_52
+?LBB0_36:
+	MOV	R6, #0
+	MOV	R7, [R0+#46]
+?LBB0_37:
+	MOV	R4, [R0+#48]
+	JB	R4.0, ?LBB0_39
+; %bb.38:                               ; %for.end74
+	NEG	R6
+?LBB0_39:
+	MOV	R4, [R0+#54]
+	MOV	R11, [R0+#52]
+	MOV	R5, [R0+#50]
+	ADD	R6, R5
+	MOV	R2, [R0+#38]
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_35
+?LBB0_40:
+	MOV	[R0+#26], R9
+	MOV	[R0+#28], R8
+	MOV	R4, R6
+	ASHR	R4, #15
+	MOV	[R0+#24], R6
+	MOV	R7, R6
+	XOR	R7, R4
+	SUB	R7, R4
+	MOV	R1, #16420
+	MOV	R6, #0
+	MOV	R5, #16368
+	MOV	[R0+#40], R6
+	MOV	[R0+#42], R6
+	MOV	R8, R6
+	MOV	R9, R6
+	MOV	[R0+#44], R6
+?LBB0_41:
+	MOV	R4, [R0+#40]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#44]
+	MOV	[R0+#8], R4
+	MOV	[R0+#2], R9
+	MOV	[R0], R8
+	MOV	R4, [R0+#42]
+	MOV	[R0+#12], R4
+	MOV	[R0+#4], R6
+	MOV	[R0+#50], R5
+	MOV	[R0+#14], R5
+	MOV	[R0+#48], R1
+	MOV	[R0+#6], R1
+	CALLS	SEG ___muldf3, SOF ___muldf3
+	JNB	R7.0, ?LBB0_43
+; %bb.42:                               ; %for.body89
+	MOV	R4, [R0+#22]
+	MOV	[R0+#50], R4
+?LBB0_43:
+	MOV	R4, [R0+#16]
+	MOV	R5, [R0+#18]
+	JNB	R7.0, ?LBB0_45
+; %bb.44:                               ; %for.body89
+	MOV	R1, [R0+#20]
+	MOV	[R0+#42], R1
+?LBB0_45:
+	MOV	R1, [R0+#48]
+	JNB	R7.0, ?LBB0_47
+; %bb.46:                               ; %for.body89
+	MOV	[R0+#40], R5
+?LBB0_47:
+	JNB	R7.0, ?LBB0_49
+; %bb.48:                               ; %for.body89
+	MOV	[R0+#44], R4
+?LBB0_49:
+	SHR	R7, #1
+	MOV	[R0+#10], R9
+	MOV	[R0+#8], R8
+	MOV	[R0+#2], R9
+	MOV	[R0], R8
+	MOV	[R0+#12], R6
+	MOV	[R0+#4], R6
+	MOV	[R0+#14], R1
+	MOV	[R0+#6], R1
+	CALLS	SEG ___muldf3, SOF ___muldf3
+	MOV	R1, [R0+#22]
+	MOV	R6, [R0+#20]
+	MOV	R9, [R0+#18]
+	MOV	R8, [R0+#16]
+	MOV	R5, [R0+#50]
+	CMP	R7, #0
+	JMP	cc_NE, ?LBB0_41
+; %bb.50:                               ; %for.end96
+	MOV	R4, [R0+#24]
+	JB	R4.15, ?LBB0_53
+; %bb.51:
+	MOV	R7, [R0+#46]
+	MOV	R2, [R0+#38]
+	MOV	R4, [R0+#54]
+	MOV	R11, [R0+#52]
+	MOV	R8, [R0+#28]
+	MOV	R9, [R0+#26]
+	MOV	R1, [R0+#44]
+	MOV	R3, [R0+#42]
+	MOV	R10, [R0+#40]
+?LBB0_52:
+	MOV	[R0+#10], R10
+	MOV	[R0+#8], R1
+	MOV	[R0+#2], R11
+	MOV	[R0], R4
+	MOV	[R0+#12], R3
+	MOV	[R0+#4], R2
+	MOV	[R0+#14], R5
+	MOV	[R0+#6], R7
+	CALLS	SEG ___muldf3, SOF ___muldf3
+	MOV	R5, [R0+#22]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#18]
+	MOV	R4, [R0+#16]
+	JMP	cc_UC, ?LBB0_54
+?LBB0_53:
+	MOV	R4, [R0+#40]
+	MOV	[R0+#10], R4
+	MOV	R4, [R0+#44]
+	MOV	[R0+#8], R4
+	MOV	R4, [R0+#52]
+	MOV	[R0+#2], R4
+	MOV	R4, [R0+#54]
+	MOV	[R0], R4
+	MOV	R4, [R0+#42]
+	MOV	[R0+#12], R4
+	MOV	R4, [R0+#38]
+	MOV	[R0+#4], R4
+	MOV	[R0+#14], R5
+	MOV	R4, [R0+#46]
+	MOV	[R0+#6], R4
+	CALLS	SEG ___divdf3, SOF ___divdf3
+	MOV	R5, [R0+#22]
+	MOV	R1, [R0+#20]
+	MOV	R2, [R0+#18]
+	MOV	R4, [R0+#16]
+	MOV	R8, [R0+#28]
+	MOV	R9, [R0+#26]
+?LBB0_54:
+	MOV	R11, [R0+#32]
+	MOV	R3, R11
+	MOV	R10, [R0+#34]
+	OR	R3, R10
+	JMP	cc_EQ, ?LBB0_56
+; %bb.55:                               ; %if.then105
+	EXTS	R10, #1
+	MOV	[R11], R8
+	ADD	R11, #2
+	ADDC	R10, #0
+	EXTS	R10, #1
+	MOV	[R11], R9
+?LBB0_56:
+	MOV	R3, [R0+#30]
+	JB	R3.0, ?LBB0_58
+; %bb.57:                               ; %if.end106
+	XOR	R5, #32768
+?LBB0_58:
+	MOV	R3, [R0+#36]
+	MOV	[R3], R4
+	MOV	[R3+#2], R2
+	MOV	[R3+#4], R1
+	MOV	[R3+#6], R5
+	MOV	R4, R0
+	ADD	R4, #144
+	ADD	R0, #136
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_strtod?F	ENDP
+	PUBLIC	_atof
+_atof:
+_atof?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #16
+	MOV	R6, R0
+	ADD	R6, #18
+	MOV	R14, #0
+	MOV	R15, R14
+	CALLS	SEG _strtod, SOF _strtod
+	MOV	R4, [R0+#6]
+	MOV	[R0+#14], R4
+	MOV	R5, [R0+#4]
+	MOV	[R0+#12], R5
+	MOV	R1, [R0+#2]
+	MOV	[R0+#10], R1
+	MOV	R2, [R0]
+	MOV	[R0+#8], R2
+	MOV	[R6], R2
+	MOV	[R6+#2], R1
+	MOV	[R6+#6], R4
+	MOV	[R6+#4], R5
+	MOV	R4, R6
+	ADD	R0, #16
+	MOV	R6, [R0+]
+	RETS
+_atof?F	ENDP
+	EXTRN	_isspace : NEAR
+	EXTRN	_isdigit : NEAR
+	EXTRN	___floatsidf : NEAR
+	EXTRN	___muldf3 : NEAR
+	EXTRN	___adddf3 : NEAR
+	EXTRN	___divdf3 : NEAR
+STRTOD_PR	ENDS
+	END

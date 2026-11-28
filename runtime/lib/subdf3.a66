@@ -1,0 +1,57 @@
+; Compiled from LLVM compiler-rt, lib/builtins/subdf3.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+SUBDF3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___subdf3
+___subdf3:
+___subdf3?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	SUB	R0, #32
+	MOV	R6, R0
+	ADD	R6, #50
+	MOV	R4, [R0+#34]
+	MOV	R5, [R0+#36]
+	MOV	R1, [R0+#38]
+	MOV	R2, [R0+#40]
+	MOV	R3, [R0+#42]
+	MOV	R10, [R0+#44]
+	MOV	R11, [R0+#46]
+	MOV	R12, [R0+#48]
+	XOR	R12, #32768
+	MOV	[R0+#14], R12
+	MOV	[R0+#12], R11
+	MOV	[R0+#10], R10
+	MOV	[R0+#8], R3
+	MOV	[R0+#6], R2
+	MOV	[R0+#4], R1
+	MOV	[R0+#2], R5
+	MOV	[R0], R4
+	CALLS	SEG ___adddf3, SOF ___adddf3
+	MOV	R4, [R0+#22]
+	MOV	[R0+#30], R4
+	MOV	R5, [R0+#20]
+	MOV	[R0+#28], R5
+	MOV	R1, [R0+#18]
+	MOV	[R0+#26], R1
+	MOV	R2, [R0+#16]
+	MOV	[R0+#24], R2
+	MOV	[R6], R2
+	MOV	[R6+#2], R1
+	MOV	[R6+#6], R4
+	MOV	[R6+#4], R5
+	MOV	R4, R6
+	ADD	R0, #32
+	MOV	R6, [R0+]
+	RETS
+___subdf3?F	ENDP
+	EXTRN	___adddf3 : NEAR
+SUBDF3_PR	ENDS
+	END

@@ -1,0 +1,46 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+STRXFRM_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_strxfrm
+_strxfrm:
+_strxfrm?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R6, R14
+	MOV	R7, R13
+	MOV	R9, R12
+	MOV	R12, R7
+	CALLS	SEG _strlen, SOF _strlen
+	MOV	R8, R4
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_4
+; %bb.1:                                ; %if.then
+	CMP	R8, R6
+	JMP	cc_UGE, ?LBB0_3
+; %bb.2:
+	MOV	R6, R8
+	ADD	R6, #1
+?LBB0_3:
+	MOV	R12, R9
+	MOV	R13, R7
+	MOV	R14, R6
+	CALLS	SEG _memcpy, SOF _memcpy
+?LBB0_4:
+	MOV	R4, R8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_strxfrm?F	ENDP
+	EXTRN	_strlen : NEAR
+	EXTRN	_memcpy : NEAR
+STRXFRM_PR	ENDS
+	END

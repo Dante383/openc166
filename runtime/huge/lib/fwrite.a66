@@ -1,0 +1,86 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FWRITE_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fwrite
+_fwrite:
+_fwrite?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R6, R15
+	MOV	R7, R14
+	MOV	R14, R13
+	MOV	R13, R12
+	MOV	R1, R7
+	OR	R1, R6
+	MOV	R5, #0
+	MOV	R4, R5
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %entry
+	MOV	R2, [R0+#18]
+	MOV	R1, [R0+#16]
+	MOV	R3, R1
+	OR	R3, R2
+	JMP	cc_EQ, ?LBB0_5
+; %bb.2:                                ; %if.end
+	MOV	R4, [R0+#22]
+	MOV	R5, [R0+#20]
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R5
+	EXTS	R4, #1
+	MOV	R12, [R5]
+	MULU	R1, R7
+	MOV	R4, MDH
+	MUL	R1, R6
+	MOV	R5, MDL
+	ADD	R5, R4
+	MUL	R2, R7
+	MOV	R8, MDL
+	ADD	R8, R5
+	MUL	R1, R7
+	MOV	R9, MDL
+	MOV	[R0+#2], R8
+	MOV	[R0], R9
+	CALLS	SEG __write, SOF __write
+	XOR	R8, R5
+	MOV	R1, R4
+	XOR	R1, R9
+	OR	R1, R8
+	JMP	cc_EQ, ?LBB0_4
+; %bb.3:                                ; %if.then3
+	MOV	R2, [R0+#6]
+	MOV	R3, [R0+#4]
+	ADD	R3, #4
+	ADDC	R2, #0
+	EXTS	R2, #1
+	MOVB	RL1, [R3]
+	MOVBZ	R1, RL1
+	OR	R1, #2
+	EXTS	R2, #1
+	MOVB	[R3], RL1
+?LBB0_4:
+	MOV	R12, R4
+	MOV	R13, R5
+	MOV	R14, R7
+	MOV	R15, R6
+	CALLS	SEG ___udivsi3, SOF ___udivsi3
+?LBB0_5:
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_fwrite?F	ENDP
+	EXTRN	__write : NEAR
+	EXTRN	___udivsi3 : NEAR
+FWRITE_PR	ENDS
+	END

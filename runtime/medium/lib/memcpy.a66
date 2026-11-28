@@ -1,0 +1,44 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MEMCPY_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_memcpy
+_memcpy:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R5, R13
+	MOV	R4, R12
+	MOV	R1, [R0+#2]
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %while.body.preheader
+	MOV	R3, R4
+	MOV	R12, R5
+	MOV	R2, R14
+	MOV	R10, R15
+	MOV	R11, R3
+	MOV	R13, R12
+?LBB0_2:
+	SUB	R1, #1
+	ADD	R2, #1
+	ADDC	R10, #0
+	EXTS	R15, #1
+	MOVB	RL6, [R14]
+	MOVBZ	R6, RL6
+	ADD	R11, #1
+	ADDC	R13, #0
+	EXTS	R12, #1
+	MOVB	[R3], RL6
+	MOV	R14, R2
+	MOV	R15, R10
+	MOV	R3, R11
+	MOV	R12, R13
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_2
+?LBB0_3:
+	MOV	R6, [R0+]
+	RET
+MEMCPY_PR	ENDS
+	END

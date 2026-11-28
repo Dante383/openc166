@@ -1,0 +1,172 @@
+; Compiled from LLVM libc, libc/shared/math/frexp.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FREXP_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_frexp
+_frexp:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #42
+	MOV	R8, [R0+#56]
+	MOV	R12, [R0+#54]
+	MOV	R10, [R0+#52]
+	MOV	R13, [R0+#50]
+	MOV	R7, R0
+	ADD	R7, #62
+	MOV	R6, R8
+	AND	R6, #32752
+	CMP	R6, #32752
+	JMP	cc_EQ, ?LBB0_10
+; %bb.1:                                ; %if.end.i.i
+	MOV	R4, [R0+#60]
+	MOV	[R0+#18], R4
+	MOV	R9, [R0+#58]
+	MOV	R4, #0
+	MOV	[R0+#14], R4
+	MOV	[R0+#12], R4
+	MOV	[R0+#10], R4
+	MOV	[R0+#8], R4
+	MOV	[R0+#20], R10
+	MOV	[R0+#2], R10
+	MOV	[R0+#24], R13
+	MOV	[R0], R13
+	MOV	[R0+#22], R12
+	MOV	[R0+#4], R12
+	MOV	[R0+#6], R8
+	CALL	___nedf2
+	OR	R5, R4
+	JMP	cc_NE, ?LBB0_3
+; %bb.2:                                ; %if.then2.i.i
+	MOV	R4, #0
+	MOV	R5, [R0+#18]
+	EXTS	R5, #1
+	MOV	[R9], R4
+	MOV	R12, [R0+#22]
+	MOV	R10, [R0+#20]
+	MOV	R13, [R0+#24]
+	JMP	cc_UC, ?LBB0_10
+?LBB0_3:
+	MOV	[R0+#16], R9
+	MOV	R14, [R0+#18]
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.4:                                ; %if.else.i.i.i.i
+	MOV	R1, R8
+	SHR	R1, #4
+	AND	R1, #2047
+	SUB	R1, #1023
+	MOV	R5, R8
+	MOV	R12, [R0+#22]
+	MOV	R10, [R0+#20]
+	MOV	R4, [R0+#16]
+	MOV	R13, [R0+#24]
+	JMP	cc_UC, ?LBB0_9
+?LBB0_5:
+	MOV	R4, #0
+	MOV	R5, [R0+#24]
+	MOV	R15, [R0+#20]
+	MOV	R10, R15
+	MOV	R13, [R0+#22]
+	MOV	R2, R13
+	MOV	R1, R8
+?LBB0_6:
+	MOV	R3, R4
+	ADD	R4, #1
+	JB	R1.3, ?LBB0_8
+; %bb.7:                                ; %for.inc.i.i.i.i.i
+	MOV	R11, R5
+	SHR	R11, #15
+	MOV	R12, R10
+	SHL	R12, #1
+	OR	R12, R11
+	SHR	R10, #15
+	MOV	R11, R2
+	SHL	R11, #1
+	OR	R11, R10
+	SHR	R2, #15
+	SHL	R1, #1
+	OR	R1, R2
+	SHL	R5, #1
+	MOV	R10, R12
+	MOV	R2, R11
+	CMP	R3, #51
+	JMP	cc_ULT, ?LBB0_6
+?LBB0_8:
+	MOV	R5, [R0+#24]
+	MOV	[R0+#34], R5
+	MOV	R5, #0
+	MOV	[R0+#32], R5
+	MOV	[R0+#30], R5
+	MOV	[R0+#28], R5
+	MOV	[R0+#26], R5
+	MOV	[R0+#36], R15
+	MOV	[R0+#38], R13
+	MOV	[R0+#40], R8
+	MOV	R1, R0
+	ADD	R1, #26
+	ADD	R1, #8
+	MOV	R5, R4
+	SHR	R5, #3
+	AND	R5, #6
+	SUB	R1, R5
+	MOV	R3, [R1+#6]
+	MOV	R2, R4
+	AND	R2, #15
+	SHL	R3, R2
+	MOV	R10, [R1+#4]
+	MOV	R5, R10
+	SHR	R5, #1
+	MOV	R11, R2
+	XOR	R11, #15
+	SHR	R5, R11
+	OR	R5, R3
+	SHL	R10, R2
+	MOV	R3, [R1+#2]
+	MOV	R12, R3
+	SHR	R12, #1
+	SHR	R12, R11
+	OR	R12, R10
+	SHL	R3, R2
+	MOV	R13, [R1]
+	MOV	R10, R13
+	SHR	R10, #1
+	SHR	R10, R11
+	OR	R10, R3
+	SHL	R13, R2
+	MOV	R1, #64514
+	SUB	R1, R4
+	MOV	R4, [R0+#16]
+?LBB0_9:
+	AND	R5, #15
+	ADD	R1, #1
+	EXTS	R14, #1
+	MOV	[R4], R1
+	AND	R8, #32768
+	OR	R8, R5
+	OR	R8, #16352
+?LBB0_10:
+	MOV	[R7], R13
+	MOV	[R7+#2], R10
+	MOV	[R7+#4], R12
+	MOV	[R7+#6], R8
+	MOV	R4, R0
+	ADD	R4, #62
+	ADD	R0, #42
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	___nedf2 : NEAR
+FREXP_PR	ENDS
+	END

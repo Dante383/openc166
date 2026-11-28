@@ -1,0 +1,240 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+MALLOC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_malloc
+_malloc:
+_malloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOVBZ	R4, SOF _ready
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %if.then
+	MOV	R4, #SOF ___c166_heap
+	MOV	SOF _free_list, R4
+	MOV	R4, #65534
+	AND	R4, SOF ___c166_heap_size
+	MOV	SOF ___c166_heap, R4
+	MOV	R4, #0
+	MOV	SOF (___c166_heap+2), R4
+	MOV	R4, #1
+	MOVB	SOF _ready, RL4
+?LBB0_2:
+	MOV	R2, #0
+	CMP	R12, #65532
+	JMP	cc_UGT, ?LBB0_12
+; %bb.3:                                ; %if.end2
+	MOV	R5, #4
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB0_5
+; %bb.4:                                ; %if.end2
+	ADD	R12, #3
+	AND	R12, #65534
+	MOV	R5, R12
+?LBB0_5:
+	MOV	R4, SOF _free_list
+	JMP	cc_EQ, ?LBB0_12
+; %bb.6:                                ; %for.body.preheader
+	MOV	R3, [R4]
+	MOV	R1, #SOF _free_list
+	CMP	R3, R5
+	JMP	cc_UGE, ?LBB0_10
+?LBB0_7:
+	MOV	R1, R4
+	MOV	R4, [R1+#2]
+	JMP	cc_EQ, ?LBB0_12
+; %bb.8:                                ; %for.body
+	MOV	R3, [R4]
+	CMP	R3, R5
+	JMP	cc_ULT, ?LBB0_7
+; %bb.9:                                ; %if.end11.loopexit
+	ADD	R1, #2
+?LBB0_10:
+	SUB	R3, R5
+	CMP	R3, #6
+	JMP	cc_ULT, ?LBB0_13
+; %bb.11:                               ; %if.then14
+	MOV	R2, R4
+	ADD	R2, R5
+	MOV	[R2], R3
+	MOV	R3, [R4+#2]
+	MOV	[R2+#2], R3
+	MOV	[R4], R5
+	JMP	cc_UC, ?LBB0_14
+?LBB0_12:
+	MOV	R4, R2
+	RETS
+?LBB0_13:
+	MOV	R2, [R4+#2]
+?LBB0_14:
+	MOV	[R1], R2
+	ADD	R4, #2
+	RETS
+_malloc?F	ENDP
+	PUBLIC	_free
+_free:
+_free?F	PROC	FAR
+; %bb.0:                                ; %entry
+	CMP	R12, #0
+	JMP	cc_EQ, ?LBB1_12
+; %bb.1:                                ; %if.end
+	MOV	R4, R12
+	SUB	R4, #2
+	MOV	R2, #SOF _free_list
+	MOV	R5, #0
+?LBB1_2:
+	MOV	R1, R5
+	MOV	R5, [R2]
+	JMP	cc_EQ, ?LBB1_4
+; %bb.3:                                ; %while.cond
+	MOV	R2, R5
+	ADD	R2, #2
+	CMP	R5, R4
+	JMP	cc_ULT, ?LBB1_2
+?LBB1_4:
+	CMP	R5, #0
+	JMP	cc_EQ, ?LBB1_7
+; %bb.5:                                ; %land.lhs.true
+	MOV	R2, [R4]
+	MOV	R3, R4
+	ADD	R3, R2
+	CMP	R3, R5
+	JMP	cc_NE, ?LBB1_8
+; %bb.6:                                ; %if.then6
+	MOV	R3, [R5]
+	ADD	R3, R2
+	MOV	[R4], R3
+	MOV	R5, [R5+#2]
+	JMP	cc_UC, ?LBB1_8
+?LBB1_7:
+	MOV	R5, #0
+?LBB1_8:
+	MOV	[R12], R5
+	CMP	R1, #0
+	JMP	cc_EQ, ?LBB1_11
+; %bb.9:                                ; %land.lhs.true13
+	MOV	R2, [R1]
+	MOV	R3, R1
+	ADD	R3, R2
+	CMP	R3, R4
+	JMP	cc_EQ, ?LBB1_13
+; %bb.10:                               ; %if.then23
+	MOV	[R1+#2], R4
+	RETS
+?LBB1_11:
+	MOV	SOF _free_list, R4
+?LBB1_12:
+	RETS
+?LBB1_13:
+	MOV	R4, [R4]
+	ADD	R4, R2
+	MOV	[R1], R4
+	MOV	[R1+#2], R5
+	RETS
+_free?F	ENDP
+	PUBLIC	_calloc
+_calloc:
+_calloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB2_4
+; %bb.1:                                ; %land.lhs.true
+	MULU	R13, R12
+	MOV	R5, MDH
+	MOV	R6, #0
+	MOV	R4, #1
+	CMP	R5, #0
+	JMP	cc_NE, ?LBB2_3
+; %bb.2:                                ; %land.lhs.true
+	MOV	R4, R6
+?LBB2_3:
+	JB	R4.0, ?LBB2_7
+?LBB2_4:
+	MUL	R13, R12
+	MOV	R7, MDL
+	MOV	R12, R7
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R6, R4
+	JMP	cc_EQ, ?LBB2_6
+; %bb.5:                                ; %if.then2
+	MOV	R13, #0
+	MOV	R12, R6
+	MOV	R14, R7
+	CALLS	SEG _memset, SOF _memset
+	JMP	cc_UC, ?LBB2_7
+?LBB2_6:
+	MOV	R6, #0
+?LBB2_7:
+	MOV	R4, R6
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+_calloc?F	ENDP
+	PUBLIC	_realloc
+_realloc:
+_realloc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R6, R12
+	JMP	cc_EQ, ?LBB3_5
+; %bb.1:                                ; %if.end
+	CMP	R13, #0
+	JMP	cc_EQ, ?LBB3_6
+; %bb.2:                                ; %if.end3
+	MOV	R8, [R6+#65534]
+	SUB	R8, #2
+	CMP	R13, R8
+	JMP	cc_ULE, ?LBB3_8
+; %bb.3:                                ; %if.end6
+	MOV	R12, R13
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R7, R4
+	JMP	cc_EQ, ?LBB3_7
+; %bb.4:                                ; %if.then9
+	MOV	R12, R7
+	MOV	R13, R6
+	MOV	R14, R8
+	CALLS	SEG _memcpy, SOF _memcpy
+	MOV	R12, R6
+	CALLS	SEG _free, SOF _free
+	JMP	cc_UC, ?LBB3_9
+?LBB3_5:
+	MOV	R12, R13
+	CALLS	SEG _malloc, SOF _malloc
+	MOV	R7, R4
+	JMP	cc_UC, ?LBB3_9
+?LBB3_6:
+	MOV	R12, R6
+	CALLS	SEG _free, SOF _free
+?LBB3_7:
+	MOV	R7, #0
+	JMP	cc_UC, ?LBB3_9
+?LBB3_8:
+	MOV	R7, R6
+?LBB3_9:
+	MOV	R4, R7
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	RETS
+_realloc?F	ENDP
+MALLOC_PR	ENDS
+C166_BSS	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_ready:
+	DSB	1
+	EVEN
+_free_list:
+	DSB	2
+	EXTRN	___c166_heap : WORD
+	EXTRN	___c166_heap_size : WORD
+	EXTRN	_memset : NEAR
+	EXTRN	_memcpy : NEAR
+C166_BSS	ENDS
+	END

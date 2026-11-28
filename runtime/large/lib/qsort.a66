@@ -1,0 +1,144 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+QSORT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_qsort
+_qsort:
+_qsort?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #20
+	MOV	[R0+#10], R13
+	MOV	[R0+#8], R12
+	MOV	R4, #1
+	MOV	[R0], R14
+	CMP	R14, #6
+	JMP	cc_ULT, ?LBB0_3
+; %bb.1:                                ; %while.body.preheader
+	MOV	R4, #43691
+	MOV	R5, [R0]
+	MULU	R5, R4
+	MOV	R5, MDH
+	SHR	R5, #1
+	MOV	R4, #1
+	MOV	R1, #3
+?LBB0_2:
+	MUL	R4, R1
+	MOV	R4, MDL
+	ADD	R4, #1
+	CMP	R4, R5
+	JMP	cc_ULT, ?LBB0_2
+?LBB0_3:
+	MOV	R5, [R0+#30]
+	MOV	[R0+#6], R5
+	MOV	R5, [R0+#28]
+	MOV	[R0+#4], R5
+	MOV	[R0+#12], R15
+?LBB0_4:
+	MOV	R10, R4
+	MOV	R4, [R0]
+	CMP	R10, R4
+	JMP	cc_UGE, ?LBB0_13
+; %bb.5:                                ; %for.cond5.preheader.preheader
+	MOV	R5, R10
+	MOV	[R0+#14], R10
+?LBB0_6:
+	MOV	R11, R5
+	MOV	[R0+#2], R5
+	CMP	R5, R10
+	JMP	cc_ULT, ?LBB0_12
+?LBB0_7:
+	MUL	R11, R15
+	MOV	R4, MDL
+	SUB	R11, R10
+	MOV	[R0+#16], R11
+	MUL	R11, R15
+	MOV	R5, MDL
+	MOV	R1, #0
+	MOV	R9, [R0+#8]
+	MOV	R12, R9
+	MOV	R6, [R0+#10]
+	MOV	R8, R6
+	ADD	R12, R5
+	ADDC	R8, R1
+	ADD	R9, R4
+	ADDC	R6, R1
+	MOV	R7, R12
+	MOV	R13, R8
+	MOV	R14, R9
+	MOV	R15, R6
+	MOV	R4, [R0+#4]
+	MOV	R5, [R0+#6]
+	CALLS	SEG ___c166_icall, SOF ___c166_icall
+	MOV	R11, [R0+#16]
+	MOV	R10, [R0+#14]
+	MOV	R15, [R0+#12]
+	CMP	R4, #0
+	JMP	cc_SLE, ?LBB0_12
+; %bb.8:                                ; %for.body13
+	MOV	R12, R7
+	CMP	R15, #0
+	JMP	cc_EQ, ?LBB0_11
+; %bb.9:                                ; %while.body.i.preheader
+	MOV	R4, R15
+	MOV	R5, R12
+	MOV	R1, R8
+	MOV	R2, R9
+	MOV	R3, R6
+?LBB0_10:
+	SUB	R4, #1
+	EXTS	R8, #1
+	MOVB	RL7, [R12]
+	MOVBZ	R7, RL7
+	MOV	[R0+#18], R7
+	EXTS	R6, #1
+	MOVB	RL7, [R9]
+	MOVBZ	R7, RL7
+	ADD	R5, #1
+	ADDC	R1, #0
+	EXTS	R8, #1
+	MOVB	[R12], RL7
+	ADD	R2, #1
+	ADDC	R3, #0
+	MOV	R7, [R0+#18]
+	EXTS	R6, #1
+	MOVB	[R9], RL7
+	MOV	R12, R5
+	MOV	R8, R1
+	MOV	R9, R2
+	MOV	R6, R3
+	CMP	R4, #0
+	JMP	cc_NE, ?LBB0_10
+?LBB0_11:
+	CMP	R11, R10
+	JMP	cc_UGE, ?LBB0_7
+?LBB0_12:
+	MOV	R5, [R0+#2]
+	ADD	R5, #1
+	MOV	R4, [R0]
+	CMP	R5, R4
+	JMP	cc_NE, ?LBB0_6
+?LBB0_13:
+	MOV	R4, #43691
+	MULU	R10, R4
+	MOV	R4, MDH
+	SHR	R4, #1
+	CMP	R10, #3
+	JMP	cc_UGE, ?LBB0_4
+; %bb.14:                               ; %for.end26
+	ADD	R0, #20
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+_qsort?F	ENDP
+	EXTRN	___c166_icall : NEAR
+QSORT_PR	ENDS
+	END

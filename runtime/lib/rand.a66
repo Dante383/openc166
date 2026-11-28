@@ -1,0 +1,53 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+RAND_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_rand
+_rand:
+_rand?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, SOF (_next+2)
+	MOV	R5, SOF _next
+	MOV	R1, #16838
+	MUL	R5, R1
+	MOV	R1, MDL
+	MOV	R2, #20077
+	MULU	R5, R2
+	MOV	R3, MDH
+	ADD	R3, R1
+	MUL	R4, R2
+	MOV	R4, MDL
+	ADD	R4, R3
+	MUL	R5, R2
+	MOV	R5, MDL
+	ADD	R5, #12345
+	ADDC	R4, #0
+	MOV	SOF _next, R5
+	MOV	SOF (_next+2), R4
+	AND	R4, #32767
+	RETS
+_rand?F	ENDP
+	PUBLIC	_srand
+_srand:
+_srand?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R4, #0
+	MOV	SOF (_next+2), R4
+	MOV	SOF _next, R12
+	RETS
+_srand?F	ENDP
+RAND_PR	ENDS
+C166_DATA	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_next:
+	DSB	4
+C166_DATA	ENDS
+C166_DATA_INIT	SECTION	DATA WORD PUBLIC 'CNEARROM'
+	EVEN
+	DW	1
+	DW	0
+C166_DATA_INIT	ENDS
+	END

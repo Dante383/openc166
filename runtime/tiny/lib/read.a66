@@ -1,0 +1,27 @@
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+READ_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	__read
+__read:
+; %bb.0:                                ; %entry
+	MOV	R4, R14
+	JMP	cc_EQ, ?LBB0_4
+; %bb.1:                                ; %while.cond.preheader.preheader
+	MOV	R5, #0
+?LBB0_2:
+	JNB	S0RIR, ?LBB0_2
+; %bb.3:                                ; %while.end
+	BCLR	S0RIR
+	MOV	R1, S0RBUF
+	MOV	R2, R13
+	ADD	R2, R5
+	MOVB	[R2], RL1
+	ADD	R5, #1
+	CMP	R5, R4
+	JMP	cc_NE, ?LBB0_2
+?LBB0_4:
+	RET
+READ_PR	ENDS
+	END

@@ -1,0 +1,125 @@
+; Compiled from LLVM libc, libc/shared/math/fminf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$INCLUDE(REG167.INC)
+FMINF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fminf
+_fminf:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #12
+	MOV	R9, [R0+#22]
+	MOV	R3, [R0+#20]
+	MOV	R5, R9
+	AND	R5, #32767
+	MOV	R2, #0
+	MOV	R1, #1
+	MOV	R4, R1
+	CMP	R3, #0
+	JMP	cc_NE, ?LBB0_2
+; %bb.1:                                ; %entry
+	MOV	R4, R2
+?LBB0_2:
+	CMP	R5, #32640
+	JMP	cc_UGT, ?LBB0_4
+; %bb.3:                                ; %entry
+	MOV	R1, R2
+?LBB0_4:
+	MOV	R8, [R0+#26]
+	CMP	R5, #32640
+	JMP	cc_EQ, ?LBB0_6
+; %bb.5:                                ; %entry
+	MOV	R4, R1
+?LBB0_6:
+	MOV	R6, [R0+#24]
+	JNB	R4.0, ?LBB0_8
+; %bb.7:
+	MOV	R7, R8
+	JMP	cc_UC, ?LBB0_28
+?LBB0_8:
+	MOV	R5, R8
+	AND	R5, #32767
+	MOV	R2, #0
+	MOV	R1, #1
+	MOV	R4, R1
+	CMP	R6, #0
+	JMP	cc_EQ, ?LBB0_13
+; %bb.9:                                ; %if.end.i.i
+	CMP	R5, #32640
+	JMP	cc_ULE, ?LBB0_14
+?LBB0_10:
+	CMP	R5, #32640
+	JMP	cc_NE, ?LBB0_15
+?LBB0_11:
+	JNB	R4.0, ?LBB0_16
+?LBB0_12:
+	MOV	R6, R3
+	MOV	R7, R9
+	JMP	cc_UC, ?LBB0_28
+?LBB0_13:
+	MOV	R4, R2
+	CMP	R5, #32640
+	JMP	cc_UGT, ?LBB0_10
+?LBB0_14:
+	MOV	R1, R2
+	CMP	R5, #32640
+	JMP	cc_EQ, ?LBB0_11
+?LBB0_15:
+	MOV	R4, R1
+	JB	R4.0, ?LBB0_12
+?LBB0_16:
+	MOV	R4, R3
+	JB	R9.15, ?LBB0_18
+; %bb.17:                               ; %if.end3.i.i
+	MOV	R4, R6
+?LBB0_18:
+	MOV	[R0+#8], R4
+	MOV	R7, R9
+	JB	R9.15, ?LBB0_20
+; %bb.19:                               ; %if.end3.i.i
+	MOV	R7, R8
+?LBB0_20:
+	MOV	[R0+#6], R8
+	MOV	[R0+#4], R6
+	MOV	[R0+#2], R9
+	MOV	[R0+#10], R3
+	MOV	[R0], R3
+	CALL	___ltsf2
+	JB	R5.15, ?LBB0_22
+; %bb.21:                               ; %if.end3.i.i
+	MOV	[R0+#10], R6
+?LBB0_22:
+	MOV	R4, R8
+	XOR	R4, R9
+	JB	R5.15, ?LBB0_24
+; %bb.23:                               ; %if.end3.i.i
+	MOV	R9, R8
+?LBB0_24:
+	MOV	R5, [R0+#10]
+	MOV	R6, [R0+#8]
+	JB	R4.15, ?LBB0_26
+; %bb.25:                               ; %if.end3.i.i
+	MOV	R7, R9
+?LBB0_26:
+	JB	R4.15, ?LBB0_28
+; %bb.27:                               ; %if.end3.i.i
+	MOV	R6, R5
+?LBB0_28:
+	MOV	R4, R6
+	MOV	R5, R7
+	ADD	R0, #12
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	EXTRN	___ltsf2 : NEAR
+FMINF_PR	ENDS
+	END

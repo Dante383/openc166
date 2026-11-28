@@ -1,0 +1,271 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+UDIVSI3_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___udivsi3
+___udivsi3:
+; %bb.0:                                ; %entry
+	SUB	R0, #8
+	MOV	R4, R0
+	ADD	R4, #4
+	MOV	R5, R4
+	AND	R5, #16382
+	SHR	R4, #13
+	AND	R4, #6
+	MOV	R4, [R4+#65024]
+	MOV	R1, R4
+	SHL	R1, #14
+	OR	R1, R5
+	SHR	R4, #2
+	MOV	[R0+#2], R4
+	MOV	[R0], R1
+	CALL	_divmod
+	ADD	R0, #8
+	RET
+_divmod:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R1, R12
+	MOV	R3, #0
+	MOV	R4, [R0+#12]
+	MOV	[R0], R4
+	MOV	R2, [R0+#10]
+	MOV	R11, #32
+	MOV	R8, R3
+	MOV	R10, R3
+	MOV	R4, R3
+	MOV	R5, R3
+?LBB1_1:
+	MOV	R6, R8
+	SHR	R6, #15
+	SHL	R10, #1
+	OR	R10, R6
+	MOV	R7, #1
+	MOV	R9, R7
+	CMP	R10, R15
+	JMP	cc_UGE, ?LBB1_3
+; %bb.2:                                ; %for.body
+	MOV	R9, R3
+?LBB1_3:
+	SHL	R8, #1
+	MOV	R6, R13
+	SHR	R6, #15
+	OR	R6, R8
+	CMP	R6, R14
+	JMP	cc_UGE, ?LBB1_5
+; %bb.4:                                ; %for.body
+	MOV	R7, R3
+?LBB1_5:
+	CMP	R10, R15
+	JMP	cc_EQ, ?LBB1_7
+; %bb.6:                                ; %for.body
+	MOV	R7, R9
+?LBB1_7:
+	MOV	R8, R15
+	CMP	R7, #0
+	JMP	cc_NE, ?LBB1_9
+; %bb.8:                                ; %for.body
+	MOV	R8, R3
+?LBB1_9:
+	MOV	R9, R14
+	CMP	R7, #0
+	JMP	cc_NE, ?LBB1_11
+; %bb.10:                               ; %for.body
+	MOV	R9, R3
+?LBB1_11:
+	MOV	R12, R1
+	SHR	R12, #15
+	SHL	R13, #1
+	OR	R13, R12
+	SHL	R1, #1
+	MOV	R12, R4
+	SHR	R12, #15
+	SHL	R5, #1
+	OR	R5, R12
+	SHL	R4, #1
+	OR	R4, R7
+	SUB	R6, R9
+	SUBC	R10, R8
+	SUB	R11, #1
+	MOV	R8, R6
+	CMP	R11, #0
+	JMP	cc_NE, ?LBB1_1
+; %bb.12:                               ; %for.cond.cleanup
+	MOV	R3, R2
+	ADD	R3, #2
+	MOV	R1, [R0]
+	EXTS	R1, #1
+	MOV	[R3], R10
+	EXTS	R1, #1
+	MOV	[R2], R6
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RET
+	PUBLIC	___umodsi3
+___umodsi3:
+; %bb.0:                                ; %entry
+	SUB	R0, #8
+	MOV	R4, R0
+	ADD	R4, #4
+	MOV	R5, R4
+	AND	R5, #16382
+	SHR	R4, #13
+	AND	R4, #6
+	MOV	R4, [R4+#65024]
+	MOV	R1, R4
+	SHL	R1, #14
+	OR	R1, R5
+	SHR	R4, #2
+	MOV	[R0+#2], R4
+	MOV	[R0], R1
+	CALL	_divmod
+	MOV	R5, [R0+#6]
+	MOV	R4, [R0+#4]
+	ADD	R0, #8
+	RET
+	PUBLIC	___divsi3
+___divsi3:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R6, R13
+	MOV	R4, R12
+	MOV	R1, R0
+	ADD	R1, #4
+	MOV	R5, R1
+	SHR	R5, #13
+	AND	R5, #6
+	MOV	R7, #0
+	MOV	R12, R7
+	MOV	R13, R7
+	SUB	R12, R4
+	SUBC	R13, R6
+	JB	R6.15, ?LBB3_2
+; %bb.1:                                ; %entry
+	MOV	R12, R4
+?LBB3_2:
+	MOV	R2, [R5+#65024]
+	JB	R6.15, ?LBB3_4
+; %bb.3:                                ; %entry
+	MOV	R13, R6
+?LBB3_4:
+	AND	R1, #16382
+	MOV	R3, R2
+	SHL	R3, #14
+	MOV	R4, R7
+	MOV	R5, R7
+	SUB	R4, R14
+	SUBC	R5, R15
+	JB	R15.15, ?LBB3_6
+; %bb.5:                                ; %entry
+	MOV	R4, R14
+?LBB3_6:
+	OR	R3, R1
+	SHR	R2, #2
+	XOR	R6, R15
+	JB	R15.15, ?LBB3_8
+; %bb.7:                                ; %entry
+	MOV	R5, R15
+?LBB3_8:
+	MOV	[R0+#2], R2
+	MOV	[R0], R3
+	MOV	R14, R4
+	MOV	R15, R5
+	CALL	_divmod
+	MOV	R1, R5
+	MOV	R5, R7
+	SUB	R7, R4
+	SUBC	R5, R1
+	JB	R6.15, ?LBB3_10
+; %bb.9:                                ; %entry
+	MOV	R7, R4
+?LBB3_10:
+	JB	R6.15, ?LBB3_12
+; %bb.11:                               ; %entry
+	MOV	R5, R1
+?LBB3_12:
+	MOV	R4, R7
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RET
+	PUBLIC	___modsi3
+___modsi3:
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R6, R13
+	MOV	R4, R12
+	MOV	R1, R0
+	ADD	R1, #4
+	MOV	R5, R1
+	SHR	R5, #13
+	AND	R5, #6
+	MOV	R7, #0
+	MOV	R12, R7
+	MOV	R13, R7
+	SUB	R12, R4
+	SUBC	R13, R6
+	JB	R6.15, ?LBB4_2
+; %bb.1:                                ; %entry
+	MOV	R12, R4
+?LBB4_2:
+	MOV	R2, [R5+#65024]
+	JB	R6.15, ?LBB4_4
+; %bb.3:                                ; %entry
+	MOV	R13, R6
+?LBB4_4:
+	AND	R1, #16382
+	MOV	R3, R2
+	SHL	R3, #14
+	MOV	R4, R7
+	MOV	R5, R7
+	SUB	R4, R14
+	SUBC	R5, R15
+	JB	R15.15, ?LBB4_6
+; %bb.5:                                ; %entry
+	MOV	R4, R14
+?LBB4_6:
+	OR	R3, R1
+	SHR	R2, #2
+	JB	R15.15, ?LBB4_8
+; %bb.7:                                ; %entry
+	MOV	R5, R15
+?LBB4_8:
+	MOV	[R0+#2], R2
+	MOV	[R0], R3
+	MOV	R14, R4
+	MOV	R15, R5
+	CALL	_divmod
+	MOV	R4, [R0+#6]
+	MOV	R1, [R0+#4]
+	MOV	R5, R7
+	SUB	R7, R1
+	SUBC	R5, R4
+	JB	R6.15, ?LBB4_10
+; %bb.9:                                ; %entry
+	MOV	R7, R1
+?LBB4_10:
+	JB	R6.15, ?LBB4_12
+; %bb.11:                               ; %entry
+	MOV	R5, R4
+?LBB4_12:
+	MOV	R4, R7
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RET
+UDIVSI3_PR	ENDS
+	END

@@ -1,0 +1,59 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+EXIT_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_atexit
+_atexit:
+_atexit?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, SOF _count
+	MOV	R4, #65535
+	CMP	R5, #8
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.end
+	MOV	R4, R5
+	ADD	R4, #1
+	MOV	SOF _count, R4
+	SHL	R5, #2
+	MOV	[R5+#SOF (_handlers+2)], R13
+	MOV	[R5+#SOF _handlers], R12
+	MOV	R4, #0
+?LBB0_2:
+	RETS
+_atexit?F	ENDP
+	PUBLIC	_exit
+_exit:
+_exit?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R6
+	MOV	R6, R12
+?LBB1_1:
+	MOV	R4, SOF _count
+	JMP	cc_EQ, ?LBB1_3
+; %bb.2:                                ; %while.body
+	SUB	R4, #1
+	MOV	SOF _count, R4
+	SHL	R4, #2
+	MOV	R5, [R4+#SOF (_handlers+2)]
+	MOV	R4, [R4+#SOF _handlers]
+	CALLS	SEG ___c166_icall, SOF ___c166_icall
+	JMP	cc_UC, ?LBB1_1
+?LBB1_3:
+	MOV	R12, R6
+	CALLS	SEG __exit, SOF __exit
+_exit?F	ENDP
+EXIT_PR	ENDS
+C166_BSS	SECTION	DATA WORD PUBLIC 'CNEAR'
+	EVEN
+_count:
+	DSB	2
+	EVEN
+_handlers:
+	DSB	32
+	EXTRN	___c166_icall : NEAR
+	EXTRN	__exit : NEAR
+C166_BSS	ENDS
+	END

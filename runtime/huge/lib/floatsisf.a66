@@ -1,0 +1,168 @@
+; Compiled from LLVM compiler-rt, lib/builtins/floatsisf.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOATSISF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___floatsisf
+___floatsisf:
+___floatsisf?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	MOV	R6, R13
+	MOV	R4, R12
+	MOV	R5, R4
+	OR	R5, R6
+	JMP	cc_EQ, ?LBB0_5
+; %bb.1:                                ; %if.end
+	MOV	R12, #0
+	MOV	R13, R12
+	SUB	R12, R4
+	SUBC	R13, R6
+	JNB	R6.15, ?LBB0_6
+; %bb.2:                                ; %if.end
+	JNB	R6.15, ?LBB0_7
+?LBB0_3:
+	CMP	R13, #0
+	JMP	cc_NE, ?LBB0_8
+?LBB0_4:
+	MOV	R4, R12
+	SHR	R4, #1
+	OR	R4, R12
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
+	ADD	R7, #16
+	JMP	cc_UC, ?LBB0_9
+?LBB0_5:
+	MOV	R4, #0
+	MOV	R5, R4
+	JMP	cc_UC, ?LBB0_17
+?LBB0_6:
+	MOV	R12, R4
+	JB	R6.15, ?LBB0_3
+?LBB0_7:
+	MOV	R13, R6
+	JMP	cc_EQ, ?LBB0_4
+?LBB0_8:
+	MOV	R4, R13
+	SHR	R4, #1
+	OR	R4, R13
+	MOV	R5, R4
+	SHR	R5, #2
+	OR	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	OR	R4, R5
+	MOV	R5, R4
+	SHR	R5, #8
+	OR	R5, R4
+	CPL	R5
+	MOV	R4, R5
+	SHR	R4, #1
+	AND	R4, #21845
+	SUB	R5, R4
+	MOV	R4, R5
+	AND	R4, #13107
+	SHR	R5, #2
+	AND	R5, #13107
+	ADD	R5, R4
+	MOV	R4, R5
+	SHR	R4, #4
+	ADD	R4, R5
+	AND	R4, #3855
+	MOV	R5, R4
+	SHR	R5, #8
+	ADD	R5, R4
+	MOVBZ	R7, RL5
+?LBB0_9:
+	AND	R6, #32768
+	CMP	R7, #8
+	JMP	cc_ULT, ?LBB0_11
+; %bb.10:                               ; %if.then6
+	MOV	R14, R7
+	SUB	R14, #8
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
+	XOR	R5, #128
+	JMP	cc_UC, ?LBB0_16
+?LBB0_11:
+	MOV	R4, #8
+	SUB	R4, R7
+	MOV	R5, R12
+	SHR	R5, R4
+	MOV	R2, R4
+	XOR	R2, #15
+	MOV	R1, R13
+	SHL	R1, #1
+	SHL	R1, R2
+	OR	R1, R5
+	SHR	R13, R4
+	XOR	R13, #128
+	MOV	R4, R7
+	OR	R4, #8
+	AND	R4, #15
+	SHL	R12, R4
+	MOV	R5, #0
+	MOV	R4, #1
+	MOV	R2, R4
+	CMP	R12, #32768
+	JMP	cc_UGT, ?LBB0_13
+; %bb.12:                               ; %if.else
+	MOV	R2, R5
+?LBB0_13:
+	ADD	R1, R2
+	ADDC	R13, R5
+	CMP	R12, #32768
+	JMP	cc_EQ, ?LBB0_15
+; %bb.14:                               ; %if.else
+	MOV	R4, R5
+?LBB0_15:
+	AND	R4, R1
+	ADD	R4, R1
+	ADDC	R5, R13
+?LBB0_16:
+	MOV	R1, #158
+	SUB	R1, R7
+	SHL	R1, #7
+	MOV	R2, #0
+	ADD	R4, R2
+	ADDC	R5, R1
+	OR	R5, R6
+?LBB0_17:
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+___floatsisf?F	ENDP
+	EXTRN	___ashlsi3 : NEAR
+FLOATSISF_PR	ENDS
+	END

@@ -1,0 +1,120 @@
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FGETC_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_fgetc
+_fgetc:
+_fgetc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #2
+	MOV	R6, R13
+	MOV	R7, R12
+	MOV	R5, R7
+	MOV	R1, R6
+	ADD	R5, #2
+	ADDC	R1, #0
+	EXTS	R1, #1
+	MOV	R4, [R5]
+	CMP	R4, #65535
+	JMP	cc_EQ, ?LBB0_2
+; %bb.1:                                ; %if.then
+	MOV	R2, #65535
+	EXTS	R1, #1
+	MOV	[R5], R2
+	JMP	cc_UC, ?LBB0_5
+?LBB0_2:
+	MOV	R4, R0
+	ADD	R4, #1
+	MOV	R5, R4
+	AND	R5, #16383
+	SHR	R4, #13
+	AND	R4, #6
+	MOV	R14, [R4+#65024]
+	MOV	R13, R14
+	SHL	R13, #14
+	OR	R13, R5
+	SHR	R14, #2
+	EXTS	R6, #1
+	MOV	R12, [R7]
+	MOV	R15, #1
+	CALLS	SEG __read, SOF __read
+	CMP	R4, #1
+	JMP	cc_NE, ?LBB0_4
+; %bb.3:                                ; %if.end8
+	MOVB	RL4, [R0+#1]
+	MOVBZ	R4, RL4
+	JMP	cc_UC, ?LBB0_5
+?LBB0_4:
+	ADD	R7, #4
+	ADDC	R6, #0
+	EXTS	R6, #1
+	MOVB	RL4, [R7]
+	MOVBZ	R4, RL4
+	OR	R4, #1
+	EXTS	R6, #1
+	MOVB	[R7], RL4
+	MOV	R4, #65535
+?LBB0_5:
+	ADD	R0, #2
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	RETS
+_fgetc?F	ENDP
+	PUBLIC	_getc
+_getc:
+_getc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	CALLS	SEG _fgetc, SOF _fgetc
+	RETS
+_getc?F	ENDP
+	PUBLIC	_getchar
+_getchar:
+_getchar?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R12, #SOF ___c166_iob
+	MOV	R13, #SEG ___c166_iob
+	CALLS	SEG _fgetc, SOF _fgetc
+	RETS
+_getchar?F	ENDP
+	PUBLIC	_ungetc
+_ungetc:
+_ungetc?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	R5, R12
+	MOV	R4, #65535
+	CMP	R5, #65535
+	JMP	cc_EQ, ?LBB3_2
+; %bb.1:                                ; %lor.lhs.false
+	MOV	R1, R14
+	MOV	R2, R13
+	ADD	R2, #2
+	ADDC	R1, #0
+	EXTS	R1, #1
+	MOV	R3, [R2]
+	CMP	R3, #65535
+	JMP	cc_EQ, ?LBB3_3
+?LBB3_2:
+	RETS
+?LBB3_3:
+	MOVBZ	R4, RL5
+	EXTS	R1, #1
+	MOV	[R2], R4
+	ADD	R13, #4
+	ADDC	R14, #0
+	EXTS	R14, #1
+	MOVB	RL5, [R13]
+	MOVBZ	R5, RL5
+	AND	R5, #65534
+	EXTS	R14, #1
+	MOVB	[R13], RL5
+	RETS
+_ungetc?F	ENDP
+	EXTRN	__read : NEAR
+	EXTRN	___c166_iob : WORD
+FGETC_PR	ENDS
+	END

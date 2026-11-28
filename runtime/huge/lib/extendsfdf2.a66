@@ -1,0 +1,190 @@
+; Compiled from LLVM compiler-rt, lib/builtins/extendsfdf2.c, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+EXTENDSFDF2_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	___extendsfdf2
+___extendsfdf2:
+___extendsfdf2?F	PROC	FAR
+; %bb.0:                                ; %entry
+	SUB	R0, #16
+	MOV	R4, R0
+	ADD	R4, #20
+	MOV	R2, [R0+#16]
+	MOV	R5, [R0+#18]
+	MOV	R3, R5
+	SHR	R3, #7
+	MOV	R1, R5
+	AND	R1, #127
+	MOVBZ	R3, RL3
+	JMP	cc_EQ, ?LBB0_3
+; %bb.1:                                ; %entry
+	CMP	R3, #255
+	JMP	cc_NE, ?LBB0_6
+; %bb.2:                                ; %if.then11.i
+	MOV	R3, R2
+	SHR	R3, #3
+	MOV	R10, R1
+	SHL	R10, #13
+	OR	R10, R3
+	SHL	R2, #13
+	SHR	R1, #3
+	MOV	R11, #0
+	MOV	R3, #2047
+	JMP	cc_UC, ?LBB0_10
+?LBB0_3:
+	MOV	R3, R2
+	OR	R3, R1
+	JMP	cc_EQ, ?LBB0_7
+; %bb.4:                                ; %if.then15.i
+	CMP	R1, #0
+	JMP	cc_NE, ?LBB0_8
+; %bb.5:                                ; %if.then15.i
+	MOV	R3, R2
+	SHR	R3, #1
+	OR	R3, R2
+	MOV	R10, R3
+	SHR	R10, #2
+	OR	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	OR	R3, R10
+	MOV	R10, R3
+	SHR	R10, #8
+	OR	R10, R3
+	CPL	R10
+	MOV	R3, R10
+	SHR	R3, #1
+	AND	R3, #21845
+	SUB	R10, R3
+	MOV	R3, R10
+	AND	R3, #13107
+	SHR	R10, #2
+	AND	R10, #13107
+	ADD	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	ADD	R3, R10
+	AND	R3, #3855
+	MOV	R10, R3
+	SHR	R10, #8
+	ADD	R10, R3
+	AND	R10, #31
+	ADD	R10, #16
+	JMP	cc_UC, ?LBB0_9
+?LBB0_6:
+	MOV	R11, #0
+	MOV	R10, R11
+	ADD	R3, #896
+	ADDC	R10, #0
+	MOV	R12, R2
+	SHR	R12, #3
+	MOV	R10, R1
+	SHL	R10, #13
+	OR	R10, R12
+	SHL	R2, #13
+	SHR	R1, #3
+	JMP	cc_UC, ?LBB0_10
+?LBB0_7:
+	MOV	R11, #0
+	MOV	R2, R11
+	MOV	R10, R11
+	MOV	R1, R11
+	MOV	R3, R11
+	JMP	cc_UC, ?LBB0_10
+?LBB0_8:
+	MOV	R3, R1
+	SHR	R3, #1
+	OR	R3, R1
+	MOV	R10, R3
+	SHR	R10, #2
+	OR	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	OR	R3, R10
+	MOV	R10, R3
+	SHR	R10, #8
+	OR	R10, R3
+	CPL	R10
+	MOV	R3, R10
+	SHR	R3, #1
+	AND	R3, #21845
+	SUB	R10, R3
+	MOV	R3, R10
+	AND	R3, #13107
+	SHR	R10, #2
+	AND	R10, #13107
+	ADD	R10, R3
+	MOV	R3, R10
+	SHR	R3, #4
+	ADD	R3, R10
+	AND	R3, #3855
+	MOV	R10, R3
+	SHR	R10, #8
+	ADD	R10, R3
+	AND	R10, #31
+?LBB0_9:
+	MOV	R3, #905
+	SUB	R3, R10
+	MOV	R11, #0
+	ADD	R10, #21
+	MOV	[R0+#14], R11
+	MOV	[R0+#12], R11
+	MOV	[R0+#8], R2
+	MOV	[R0+#6], R11
+	MOV	[R0+#4], R11
+	MOV	[R0+#2], R11
+	MOV	[R0], R11
+	MOV	[R0+#10], R1
+	MOV	R12, R10
+	AND	R12, #15
+	SHR	R10, #3
+	AND	R10, #6
+	MOV	R13, R0
+	ADD	R13, #8
+	SUB	R13, R10
+	MOV	R1, [R13+#4]
+	MOV	R2, R1
+	SHL	R2, R12
+	MOV	R14, R12
+	XOR	R14, #15
+	MOV	R15, [R13+#2]
+	MOV	R10, R15
+	SHR	R10, #1
+	SHR	R10, R14
+	OR	R10, R2
+	SHL	R15, R12
+	MOV	R11, [R13]
+	MOV	R2, R11
+	SHR	R2, #1
+	SHR	R2, R14
+	OR	R2, R15
+	MOV	R13, [R13+#6]
+	SHL	R13, R12
+	SHR	R1, #1
+	SHR	R1, R14
+	OR	R1, R13
+	SHL	R11, R12
+	XOR	R1, #16
+?LBB0_10:
+	AND	R5, #32768
+	SHL	R3, #4
+	OR	R3, R5
+	OR	R3, R1
+	MOV	[R4], R11
+	MOV	[R4+#2], R2
+	MOV	[R4+#4], R10
+	MOV	[R4+#6], R3
+	MOV	R4, R0
+	ADD	R4, #20
+	ADD	R0, #16
+	RETS
+___extendsfdf2?F	ENDP
+EXTENDSFDF2_PR	ENDS
+	END

@@ -1,0 +1,128 @@
+; Compiled from LLVM libc, libc/shared/math/floorf.h, by openc166's
+; runtime/build.py. Part of the LLVM Project, under the Apache License v2.0
+; with LLVM Exceptions. See https://llvm.org/LICENSE.txt for license
+; information. SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+$NOMACRO
+$CASE
+$MOD167
+$SEGMENTED
+$INCLUDE(REG167.INC)
+	ASSUME	DPP3:SYSTEM
+FLOORF_PR	SECTION	CODE WORD PUBLIC 'CPROGRAM'
+	PUBLIC	_floorf
+_floorf:
+_floorf?F	PROC	FAR
+; %bb.0:                                ; %entry
+	MOV	[-R0], R9
+	MOV	[-R0], R8
+	MOV	[-R0], R7
+	MOV	[-R0], R6
+	SUB	R0, #8
+	MOV	R7, [R0+#18]
+	MOV	R5, R7
+	MOV	R8, [R0+#16]
+	MOV	R6, R8
+	JB	R7.15, ?LBB0_5
+; %bb.1:                                ; %if.else.i.i
+	MOV	R9, R7
+	AND	R9, #32640
+	MOV	R4, #0
+	CMP	R9, #32640
+	JMP	cc_EQ, ?LBB0_10
+; %bb.2:                                ; %if.end.i8.i.i
+	MOV	R4, R7
+	SHR	R4, #7
+	CMP	R4, #149
+	JMP	cc_UGT, ?LBB0_10
+; %bb.3:                                ; %if.end3.i.i.i
+	MOV	R6, #0
+	MOV	R5, R6
+	CMP	R4, #127
+	JMP	cc_ULT, ?LBB0_10
+; %bb.4:                                ; %if.end7.i.i.i
+	MOV	R14, #150
+	SUB	R14, R4
+	MOV	R12, #65535
+	MOV	R13, R12
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
+	AND	R8, R4
+	AND	R7, R5
+	AND	R7, #127
+	OR	R7, R9
+	MOV	R6, R8
+	MOV	R5, R7
+	JMP	cc_UC, ?LBB0_10
+?LBB0_5:
+	XOR	R7, #32768
+	MOV	R4, #0
+	MOV	[R0+#6], R4
+	MOV	[R0+#4], R4
+	MOV	[R0+#2], R5
+	MOV	[R0], R6
+	CALLS	SEG ___eqsf2, SOF ___eqsf2
+	OR	R5, R4
+	JMP	cc_EQ, ?LBB0_8
+; %bb.6:                                ; %if.then.i.i
+	MOV	R4, R7
+	AND	R4, #32640
+	CMP	R4, #32640
+	JMP	cc_EQ, ?LBB0_8
+; %bb.7:                                ; %if.end.i.i.i
+	MOV	R4, R7
+	SHR	R4, #7
+	CMP	R4, #149
+	JMP	cc_ULE, ?LBB0_11
+?LBB0_8:
+	MOV	R6, R8
+	MOV	R5, R7
+?LBB0_9:
+	XOR	R5, #32768
+?LBB0_10:
+	MOV	R4, R6
+	ADD	R0, #8
+	MOV	R6, [R0+]
+	MOV	R7, [R0+]
+	MOV	R8, [R0+]
+	MOV	R9, [R0+]
+	RETS
+?LBB0_11:
+	CMP	R4, #127
+	JMP	cc_UGE, ?LBB0_13
+; %bb.12:
+	MOV	R5, #16256
+	MOV	R6, #0
+	JMP	cc_UC, ?LBB0_9
+?LBB0_13:
+	MOV	R14, #150
+	SUB	R14, R4
+	MOV	R12, #65535
+	MOV	R13, R12
+	CALLS	SEG ___ashlsi3, SOF ___ashlsi3
+	MOV	R1, R5
+	AND	R4, R6
+	AND	R1, R7
+	MOV	R5, R1
+	XOR	R5, R7
+	MOV	R2, R4
+	XOR	R2, R6
+	OR	R2, R5
+	MOV	R6, R8
+	MOV	R5, R7
+	CMP	R2, #0
+	JMP	cc_EQ, ?LBB0_9
+; %bb.14:                               ; %if.end13.i.i.i
+	MOV	R5, #16256
+	MOV	[R0+#6], R5
+	MOV	R5, #0
+	MOV	[R0+#4], R5
+	MOV	[R0+#2], R1
+	MOV	[R0], R4
+	CALLS	SEG ___addsf3, SOF ___addsf3
+	MOV	R6, R4
+	JMP	cc_UC, ?LBB0_9
+_floorf?F	ENDP
+	EXTRN	___ashlsi3 : NEAR
+	EXTRN	___eqsf2 : NEAR
+	EXTRN	___addsf3 : NEAR
+FLOORF_PR	ENDS
+	END
