@@ -7,6 +7,7 @@
 #include "isa/isa_types.hpp"
 #include "value.hpp"
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -69,6 +70,12 @@ struct AssembleOptions {
     std::vector<std::pair<std::string, Range>> class_ranges;
     // Addresses no section without AT may use, like L166's RESERVE control.
     std::vector<Range> reserved;
+    // The data pages DPP0..DPP3 hold when the program runs, like the SND
+    // and LINEAR controls of TASKING's locator: NOF x is x's 16-bit address
+    // through the DPP that holds its page. With dpps_given, a DATA section
+    // without AT goes only in pages that a DPP holds.
+    std::array<std::int64_t, 4> dpps{0, 1, 2, 3};
+    bool dpps_given = false;
     // Library modules, like the members of an L166 library: each is linked
     // only if it makes PUBLIC or GLOBAL a name that a linked module declares
     // EXTERN and no linked module defines yet; it may then pull in others in

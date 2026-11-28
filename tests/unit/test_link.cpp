@@ -317,3 +317,42 @@ TEST_CASE("linker symbols for sections and classes that do not exist") {
     CHECK(r.diagnostics[1].message.find("no section has class 'NONE'") != std::string::npos);
     CHECK(r.diagnostics[2].message.find("no other module") != std::string::npos);
 }
+
+// NOF and --dpp: an openc166 extension, like the SND control of TASKING's
+// locator, so there is no Keil reference.
+TEST_CASE("NOF gives the near address through the DPP that holds the page") {
+    const std::string src =
+        "$SEGMENTED\n$MOD167\n"
+        "NC SECTION DATA WORD PUBLIC 'CNEARROM'\ntab: DB 1,2,3,4\nNC ENDS\n"
+        "ND SECTION DATA WORD PUBLIC 'CNEAR'\nvar: DSW 1\nND ENDS\n"
+        "PR SECTION CODE WORD PUBLIC 'CPROGRAM'\n"
+        "f PROC FAR\n MOVB RL1, [R1+#NOF tab]\n MOV R4, NOF var\n MOV R5, #NOF tab\n RETS\nf ENDP\nPR ENDS\n"
+        "IN SECTION CONST WORD PUBLIC 'CNEARROM'\n DW NOF tab, NOF var, NOF 0FD7AH\nIN ENDS\nEND\n";
+    AssembleOptions o;
+    o.class_ranges = {{"CNEARROM", {0x94000, 0x97FFF}}, {"CNEAR", {0xC000, 0xEFFF}}, {"CPROGRAM", {0, 0x7FFF}}};
+    SUBCASE("with the DPPs of the program") {
+        o.dpps = {0x24, 0x28, 0x25, 3};
+        o.dpps_given = true;
+        auto r = link({{"t.a66", src}}, o);
+        REQUIRE(r.ok());
+        CHECK(symbol(r, "tab", 0)->value.num == 0x94000);
+        CHECK(symbol(r, "var", 0)->value.num == 0xC000);
+        // tab through DPP2 (25H): 8000H; var through DPP3: C000H.
+        CHECK(image(r).substr(0, 28) == "F4210080F2F400C0E6F50080DB00");
+        const SectionInfo* in = section(r, "IN");
+        REQUIRE(in);
+        CHECK((in->address >> 14) == 0x25);  // with --dpp, CONST goes in a page a DPP holds
+    }
+    SUBCASE("with DPPn = n, page 25H has no near address") {
+        auto r = link({{"t.a66", src}}, o);
+        CHECK(diags(r) == "t.a66:11:OC38E t.a66:13:OC38E t.a66:18:OC38E");
+    }
+    SUBCASE("with --dpp, a DATA section goes only in pages a DPP holds") {
+        o.class_ranges = {{"CNEARROM", {0xB0000, 0xB3FFF}}, {"CNEAR", {0xC000, 0xEFFF}}, {"CPROGRAM", {0, 0x7FFF}}};
+        o.dpps = {0x24, 0x28, 0x25, 3};
+        o.dpps_given = true;
+        auto r = link({{"t.a66", src}}, o);
+        CHECK_FALSE(r.ok());
+        CHECK(diags(r).find("OC12E") != std::string::npos);
+    }
+}

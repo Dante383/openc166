@@ -168,6 +168,7 @@ carry the address of every record, so they hold only the bytes used.
 | `--class NAME=FIRST-LAST[,...]` | put the sections of class `NAME` in these address ranges, like L166's `CLASSES` (may be repeated) |
 | `--lib PATH` | library module, or a directory of them: linked only when needed (may be repeated) |
 | `--reserve FIRST-LAST[,...]` | keep these addresses free of placed sections, like L166's `RESERVE` (may be repeated) |
+| `--dpp DPPn=PAGE[,...]` | the data pages the DPPs hold when the program runs, like the `SND` control of TASKING's locator; `NOF x` is then x's near address through them (may be repeated) |
 | `--base ADDR` | binary: address of the first byte of the file |
 | `--fill BYTE` | binary: value of gaps between pieces of code (default `0FFh`) |
 | `--record-size N` | HEX and S-records: data bytes per record (default 16) |

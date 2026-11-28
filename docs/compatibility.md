@@ -580,6 +580,7 @@ Messages that Keil does not have use codes starting with `OC`:
 | OC35 | warning | `--class` ranges for a class that no section has |
 | OC36 | error | a line that starts with `#` but is not a [line marker](#line-markers) |
 | OC37 | error | a `CODE`, `HDATA` or `HCONST` section, joined from all modules, that is longer than 64 KB (one segment) |
+| OC38 | error | `NOF` of an address in a data page that no DPP holds (see [`--dpp`](#near-addresses-nof-and---dpp)) |
 
 ## Sections
 
@@ -1158,6 +1159,29 @@ DPP to use:
   instruction supplies the page, so there is no A77.
 - `EQU` and `SET` keep the `ASSUME` link only for a plain label
   (`X SET W1`). A section name or `W1+2` becomes a plain number.
+
+### Near addresses: NOF and --dpp
+
+An openc166 extension, for code whose DPPs are not 0 to 3 (TASKING's small
+model with its locator's `SND` or `LINEAR` control: DPP0 to DPP2 hold any
+three pages, DPP3 the system page):
+
+- **`--dpp DPPn=PAGE`** (C API `oc166_options_set_dpp`, Python `dpps=`)
+  says which data page each DPP holds when the program runs, for example
+  `--dpp DPP0=24h,DPP1=28h,DPP2=25h`. By default DPPn holds page n.
+- **`NOF x`** is x's 16-bit *near address*: the number of the DPP that
+  holds x's page in bits 15-14 and `x AND 3FFFH` below, `n * 4000H + POF x`.
+  With the DPPs above, a label at `94010H` (page 25H) gives `8010H`. It works
+  in instructions (`MOV R4, NOF var`, `MOV R4, #NOF var`,
+  `[R1+#NOF tab]`) and in data (`DW NOF tab`), on labels, linker symbols
+  and numbers. If several DPPs hold the page, the lowest-numbered one
+  counts. An address in a page that no DPP holds is error OC38, so with
+  the default DPPs, `NOF` of anything from `10000H` on is an error, not
+  a truncated address. The C compiler writes near data as `NOF name`.
+- **Placement:** with `--dpp`, a `DATA` or `CONST` section without `AT` (or
+  a `DGROUP`) goes only in pages that a DPP holds, inside its class's
+  ranges. Each such section already stays inside one 16 KB page, so a near
+  object never straddles two DPPs.
 
 **Data directives** (`DB`, `DW`, `DD`, `DPPTR`, `DSPTR`) store a label's
 plain address, even after `ASSUME`. A data section's *name* is different:

@@ -60,6 +60,9 @@ public:
         (void)movable;
         return false;
     }
+    // The DPP (0..3) that holds data page 'page' when the program runs, or
+    // -1 if none does (for NOF). By default DPPn holds page n.
+    virtual int dpp_for_page(std::int64_t page) const { return page >= 0 && page < 4 ? static_cast<int>(page) : -1; }
     // In the final pass undefined symbols are errors; before it they are
     // unknown values that later passes resolve.
     virtual bool final_pass() const = 0;

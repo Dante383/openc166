@@ -141,9 +141,26 @@ unqualified far data share `HDATA` sections, at most 64 KB in all.
 | `CBITWORDS` | `_bitword` variables, placed in the bit-addressable RAM |
 
 openc166 places sections in the first free space unless told otherwise, so
-give the classes with `--class`. In the small model all data is near: it
-must lie in the pages the DPPs select (by default DPPn = n, the first
-64 KB).
+give the classes with `--class`. In the small model all data is near: code
+reaches it with a 16-bit address whose top two bits pick a DPP, so it must
+lie in a page that a DPP holds. By default DPPn holds page n (the first
+64 KB). A program whose DPPs hold other pages, as TASKING's locator sets
+them with `SND`, tells the compiler with `-mdpp=`:
+
+```sh
+clang -Os main.c -o prog.hex -mdpp=24h,28h,25h \
+  -Wl,--class,CNEARROM=094000h-097FFFh,--class,CNEAR=0E000h-0EFFFh
+```
+
+DPP0 holds page 24H, DPP1 28H, DPP2 25H (and DPP3 page 3, the default).
+The compiler writes near data as `NOF name`, and openc166 (`--dpp`, which
+`-mdpp=` passes on) turns that into the address through the DPP that holds
+its page, in code and in initialised pointers alike: a constant at 94010H
+is `8010H`. Near sections then go only in pages that a DPP holds, and an
+object in any other page is error OC38 instead of a wrong address. The
+startup code does not set the DPPs; that stays with the program (or the
+firmware it runs in). Linking modules with openc166 directly takes the
+same `--dpp DPP0=24h,DPP1=28h,DPP2=25h`.
 
 ## Calling convention
 

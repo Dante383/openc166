@@ -74,7 +74,7 @@ class Program:
     """C modules linked with openc166 and loaded into a simulated C167."""
 
     def __init__(self, sources, opt="-O2", startup=False, classes=None, image=None, board="c167",
-                 sections=None, tiny=False, model="small", reserve=(), asm=()):
+                 sections=None, tiny=False, model="small", reserve=(), asm=(), dpps=None):
         if tiny:
             model = "tiny"
         # The harness module matches the model: $SEGMENTED but in tiny.
@@ -106,7 +106,9 @@ class Program:
             sections=sections,
             reserve=reserve,
             libraries=[os.path.join(runtime, "lib")],
+            dpps=dpps,
         )
+        self.dpps = dpps
         if not self.result.ok:
             listing = "\n".join(str(e) for e in self.result.errors)
             raise AssertionError("openc166 failed:\n" + listing + "\n" + modules[-1][1])
@@ -126,6 +128,9 @@ class Program:
 
     def simulator(self):
         s = sim.Simulator(self.rom, board=self.board)
+        # The DPPs the program was linked for, as its startup would set them.
+        for n, page in enumerate(self.dpps or ()):
+            s.sfr["DPP%d" % n] = page
         for chunk in self.loaded:
             s.write(chunk.address, chunk.data)
         return s
@@ -672,6 +677,50 @@ int test(int a, int b) {
         asm = p.asm[-1][1]
         self.assertIn("RETI", asm)
         self.assertIn("SCXT\tMDC, #0010H", asm)
+
+
+@unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")
+class NearDataDppTest(unittest.TestCase):
+    """Near data where the DPPs are not 0..3, as in the 5WY19 application
+    (DPP0 = 24H, DPP1 = 28H, DPP2 = 25H, DPP3 = 3): constants in flash page
+    25H, variables in page 3, both reached through the DPP that holds their
+    page (NOF, openc166 --dpp)."""
+
+    SRC = r"""
+static const unsigned char tab[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+static const int wtab[3] = {1000, 2000, 3000};
+int var = 7;
+int bss;
+int *pv = &var;
+const unsigned char *pt = tab + 2;
+const char *msg = "near";
+
+unsigned char get(unsigned i) { return tab[i & 7]; }
+int test(int i) {
+  bss = wtab[i] + *pv;
+  *pv += 1;
+  return bss + *pt * 100 + msg[1] + get(i + 5) * 10000;
+}
+"""
+    DPPS = (0x24, 0x28, 0x25, 3)
+    CLASSES = {"CPROGRAM": [ROM], "CNEARROM": [(0x94000, 0x97FFF)], "CNEAR": [RAM]}
+
+    def test_constants_in_another_page(self):
+        p = Program([self.SRC], opt="-Os", classes=self.CLASSES, image=b"\xff" * 0x98000,
+                    dpps=self.DPPS)
+        # The constants went to page 25H, which DPP2 holds.
+        self.assertEqual(p.address("_tab") >> 14, 0x25)
+        lo, _, s = p.call("test", 1)
+        self.assertEqual(lo, 2000 + 7 + 3 * 100 + ord("e") + 7 * 10000 & 0xFFFF)
+        self.assertEqual(s.read16(p.address("_var")), 8)
+        # A pointer to a constant in data is its near address: DPP2, 8000H on.
+        self.assertEqual(s.read16(p.address("_pt")), 0x8000 | (p.address("_tab") + 2) & 0x3FFF)
+
+    def test_page_no_dpp_holds_is_an_error(self):
+        # Without --dpp (DPPn = n), page 25H is out of reach: an error, not
+        # a silently wrong address.
+        with self.assertRaisesRegex(AssertionError, "OC38"):
+            Program([self.SRC], opt="-Os", classes=self.CLASSES, image=b"\xff" * 0x98000)
 
 
 @unittest.skipUnless(CLANG, "clang for C166 not found (set OPENC166_CLANG)")

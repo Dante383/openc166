@@ -53,6 +53,12 @@ options:
       --reserve RANGE[,RANGE...]
                       keep these addresses free of the sections openc166 places,
                       like L166's RESERVE (may be repeated)
+      --dpp DPPn=PAGE[,DPPn=PAGE...]
+                      the data page DPPn holds when the program runs, like the
+                      SND control of TASKING's locator (default DPPn = n): NOF x
+                      is x's near address through the DPP that holds x's page,
+                      and DATA sections without AT go only in pages a DPP holds,
+                      e.g. --dpp DPP0=24h,DPP1=28h,DPP2=25h (may be repeated)
       --lib PATH      library module: linked only if it defines a name that the
                       program needs and nothing else defines, like a member of an
                       L166 library; a directory gives each of its .a66 files, in
@@ -232,6 +238,22 @@ int run(int argc, char** argv) {
                 throw UsageError("--class needs NAME=FIRST-LAST, not '" + std::string(v) + "'");
             for (const auto& r : parse_ranges(v.substr(eq + 1), "--class"))
                 opt.class_ranges.emplace_back(std::string(v.substr(0, eq)), r);
+        } else if (is("", "--dpp")) {
+            std::string_view v = value();
+            while (!v.empty()) {
+                std::size_t comma = v.find(',');
+                std::string_view item = v.substr(0, comma);
+                v = comma == std::string_view::npos ? std::string_view() : v.substr(comma + 1);
+                std::size_t eq = item.find('=');
+                std::string_view reg = eq == std::string_view::npos ? std::string_view() : item.substr(0, eq);
+                if (reg.size() == 4 && (reg[0] == 'D' || reg[0] == 'd')) reg.remove_prefix(3);
+                if (reg.size() != 1 || reg[0] < '0' || reg[0] > '3')
+                    throw UsageError("--dpp needs DPPn=PAGE with n from 0 to 3, not '" + std::string(item) + "'");
+                std::int64_t page = parse_number(item.substr(eq + 1), "page number");
+                if (page < 0 || page > 0x3FF) throw UsageError("--dpp page numbers go from 0 to 3FFh");
+                opt.dpps[reg[0] - '0'] = page;
+                opt.dpps_given = true;
+            }
         } else if (is("", "--reserve")) {
             for (const auto& r : parse_ranges(value(), "--reserve")) opt.reserved.push_back(r);
         } else if (is("", "--lib")) {

@@ -32,7 +32,7 @@ import os
 import threading
 import weakref
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from . import _native
 
@@ -439,6 +439,7 @@ def assemble(
     libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
+    dpps: Optional[Sequence[int]] = None,
 ) -> Result:
     """Assembles Keil A166 (or TASKING a166) source text.
 
@@ -475,6 +476,11 @@ def assemble(
                   sources are always for the C167.
     controls      controls read before the source, as on the assembler's
                   command line: ["CASE", "STDNAMES(reg.def)"].
+    dpps          the data pages DPP0..DPP3 hold when the program runs, like
+                  the SND control of TASKING's locator: (0x24, 0x28, 0x25, 3).
+                  NOF x is then x's near address through the DPP that holds
+                  its page, and DATA sections without AT go only in pages
+                  that a DPP holds. Default: DPPn holds page n.
     """
     source = _source_bytes(source)
     name = os.fsencode(os.fspath(file_name)) if file_name is not None else None
@@ -489,6 +495,7 @@ def assemble(
         libraries,
         dialect,
         controls,
+        dpps,
     )
 
 
@@ -542,7 +549,7 @@ def _library_sources(libraries):
     return out
 
 
-def _run(call, cpu, origin, include_dirs, sections, classes, reserve, libraries, dialect, controls) -> Result:
+def _run(call, cpu, origin, include_dirs, sections, classes, reserve, libraries, dialect, controls, dpps=None) -> Result:
     """Makes the options, calls call(options) and wraps the result."""
     opts = _lib.oc166_options_new()
     if not opts:
@@ -574,6 +581,13 @@ def _run(call, cpu, origin, include_dirs, sections, classes, reserve, libraries,
                     raise ValueError("bad class name {!r}".format(class_name))
         for first, last in _ranges(reserve, "reserve"):
             _lib.oc166_options_add_reserved(opts, first, last)
+        if dpps is not None:
+            dpps = list(dpps)
+            if not 1 <= len(dpps) <= 4:
+                raise ValueError("dpps gives the pages of DPP0..DPP3 (1 to 4 numbers)")
+            for n, page in enumerate(dpps):
+                if _lib.oc166_options_set_dpp(opts, n, page) != 0:
+                    raise ValueError("bad page {!r} for DPP{} (use 0..3FFH)".format(page, n))
         for lib_name, text in _library_sources(libraries):
             if _lib.oc166_options_add_library(opts, text, len(text), lib_name) != 0:
                 raise MemoryError("cannot add library module")
@@ -597,6 +611,7 @@ def assemble_file(
     libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
+    dpps: Optional[Sequence[int]] = None,
 ) -> Result:
     """Reads and assembles a source file. See assemble() for the options."""
     with open(path, "rb") as f:
@@ -613,6 +628,7 @@ def assemble_file(
         libraries=libraries,
         dialect=dialect,
         controls=controls,
+        dpps=dpps,
     )
 
 
@@ -628,6 +644,7 @@ def assemble_many(
     libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
+    dpps: Optional[Sequence[int]] = None,
 ) -> Result:
     """Assembles several modules and links them into one program.
 
@@ -669,6 +686,7 @@ def assemble_many(
         libraries,
         dialect,
         controls,
+        dpps,
     )
 
 
@@ -684,6 +702,7 @@ def assemble_files(
     libraries: Libraries = (),
     dialect: str = "keil",
     controls: Iterable[str] = (),
+    dpps: Optional[Sequence[int]] = None,
 ) -> Result:
     """Reads source files and assembles them as modules of one program.
 
@@ -704,4 +723,5 @@ def assemble_files(
         libraries=libraries,
         dialect=dialect,
         controls=controls,
+        dpps=dpps,
     )

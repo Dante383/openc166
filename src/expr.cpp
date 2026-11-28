@@ -13,7 +13,7 @@ using U = std::uint64_t;
 constexpr std::string_view kOperatorKeywords[] = {
     "AND", "OR",  "XOR", "NOT", "MOD", "SHL", "SHR", "HIGH", "LOW", "EQ",    "NE",    "LT",    "LE",     "GT",
     "GE",  "ULT", "ULE", "UGT", "UGE", "SEG", "PAG", "SOF",  "POF", "BOF",   "DATA3", "DATA4", "DATA8", "DATA16",
-    "NUL",
+    "NUL", "NOF",
 };
 
 int byte_word_index(std::string_view t, std::string_view prefix) {
@@ -232,6 +232,7 @@ private:
             if (int w = data_width(t); w > 0) return data_op(w, t);
             if (data_width(t) < 0) throw AsmError("A6", "syntax error: Keil A166 has DATA3, DATA4, DATA8 and DATA16 only", t.column);
             if (ieq(t.text, "BOF")) return bit_offset_op(t);
+            if (ieq(t.text, "NOF")) return near_offset_op(t);
             int which = ieq(t.text, "SEG") ? 0 : ieq(t.text, "PAG") ? 1 : ieq(t.text, "SOF") ? 2 : ieq(t.text, "POF") ? 3 : -1;
             if (which >= 0) {
                 cur_.next();
@@ -252,6 +253,43 @@ private:
         }
         return bit_select();
     }
+
+    // NOF x (an openc166 extension): x's 16-bit near address, through the
+    // DPP that holds its page when the program runs (--dpp; DPPn = n by
+    // default): n * 4000H + (x AND 3FFFH). This is what TASKING's locator
+    // does with the addresses of 'normal data' (its SND and LINEAR
+    // controls). An address in a page that no DPP holds is error OC38.
+    Value near_offset_op(const Token& t) {
+        cur_.next();
+        Value a = resolved(segment_ops());
+        require_number(a, t.column);
+        U x = static_cast<U>(a.num);
+        const std::int64_t page = static_cast<std::int64_t>(x >> 14);
+        int n = ctx_.dpp_for_page(page);
+        if (n < 0) {
+            // Before the final pass, addresses may still move.
+            if (ctx_.final_pass() && a.known)
+                ctx_.soft_error(AsmError("OC38", "no DPP holds page " + hex_page(page) +
+                                                     ", so NOF has no near address for " + hex_address(x) +
+                                                     " (see --dpp)",
+                                         t.column));
+            n = static_cast<int>(page & 3);
+        }
+        U r = (static_cast<U>(n) << 14) | (x & 0x3FFF);
+        return moving_with(num(a, a, r), a);
+    }
+
+    static std::string hex_page(std::int64_t page) {
+        static const char* digits = "0123456789ABCDEF";
+        std::string s;
+        do {
+            s.insert(s.begin(), digits[page & 15]);
+            page >>= 4;
+        } while (page);
+        if (s[0] > '9') s.insert(s.begin(), '0');
+        return s + "H";
+    }
+    static std::string hex_address(U x) { return hex_page(static_cast<std::int64_t>(x)); }
 
     // DPPn: selects the data page register for an address in segmented mode;
     // the operand binds like a unary operator (DPP2:HIGH x is DPP2:(HIGH x)).

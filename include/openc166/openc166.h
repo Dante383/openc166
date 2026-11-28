@@ -116,6 +116,13 @@ OC166_API int oc166_options_add_class_range(oc166_options *opts, const char *cla
  * for a range that is empty or outside 0..0FFFFFFH. */
 OC166_API int oc166_options_add_reserved(oc166_options *opts, int64_t first, int64_t last);
 
+/* Sets the data page that DPPn (n = 0..3) holds when the program runs, like
+ * the SND control of TASKING's locator (default: DPPn holds page n). NOF x
+ * is then x's near address through the DPP that holds its page, and once a
+ * DPP is set, DATA sections without AT go only in pages that a DPP holds.
+ * Returns 0, or -1 for n outside 0..3 or a page outside 0..3FFH. */
+OC166_API int oc166_options_set_dpp(oc166_options *opts, int n, int64_t page);
+
 /* Adds a library module: 'length' bytes of source, and the name of its file
  * (may be NULL: "libraryN.a66"), for diagnostics and $INCLUDE. Like a member
  * of an L166 library, it is linked only if it makes PUBLIC or GLOBAL a name

@@ -568,6 +568,7 @@ public:
     void warning(const AsmError& w) override { outer_.warning(w); }
     bool segmented() const override { return outer_.segmented(); }
     bool final_pass() const override { return true; }
+    int dpp_for_page(std::int64_t page) const override { return outer_.dpp_for_page(page); }
 
     bool forward = false;
     bool condition_code = false;
@@ -854,6 +855,11 @@ public:
     void warning(const AsmError& w) override { rep_->warning(w.code(), w.message(), w.column()); }
     bool segmented() const override { return segmented_; }
     bool final_pass() const override { return final_; }
+    int dpp_for_page(std::int64_t page) const override {
+        for (int n = 0; n < 4; ++n)
+            if (opt_.dpps[n] == page) return n;
+        return -1;
+    }
     void external_used(const Value& v, int column) override;
     bool register_bank(std::uint16_t movable) const override {
         if (movable == 0 || movable >= Value::kGroupBase) return false;
@@ -5049,6 +5055,21 @@ void Program::locate(bool final) {
         }
         return std::nullopt;
     };
+    // With --dpp, DATA and CONST sections (which code reaches through a DPP)
+    // go only in the pages that a DPP holds: the windows cut to those pages.
+    auto held_page = [&](std::int64_t page) {
+        return std::find(opt_.dpps.begin(), opt_.dpps.end(), page) != opt_.dpps.end();
+    };
+    auto in_held_pages = [&](const Ranges& w) {
+        Ranges out;
+        for (const auto& [from, to] : w)
+            for (std::int64_t page = from >> 14; page << 14 < to; ++page) {
+                if (!held_page(page)) continue;
+                const std::int64_t a = std::max(from, page << 14), b = std::min(to, (page + 1) << 14);
+                if (a < b) out.emplace_back(a, b);
+            }
+        return out;
+    };
     // The first window in which u fits.
     auto fit_in = [&](const Unit& u, const Ranges& w, std::int64_t boundary,
                       const Ranges& occupied) -> std::optional<std::int64_t> {
@@ -5161,6 +5182,8 @@ void Program::locate(bool final) {
             }
             for (std::int64_t page = pinned ? *pinned : start / region * region;
                  page < top && (!pinned || page == *pinned) && !g.placed; page += region) {
+                // With --dpp, a DGROUP goes in a page that a DPP holds.
+                if (!code && !pinned && opt_.dpps_given && !held_page(page >> 14)) continue;
                 Ranges trial = taken(false), added;
                 std::vector<std::pair<std::size_t, std::int64_t>> bases;
                 std::vector<std::size_t> left_out;
@@ -5232,7 +5255,10 @@ void Program::locate(bool final) {
                 m.report_at_section(u.parts[0].index, Severity::Error, "OC21",
                                     "section '" + s.name + "' (" + hex(u.size, 4) +
                                         "H bytes) does not fit in one 16 KB data page (L166 reports L129)");
-            std::optional<std::int64_t> a = fit_in(u, windows(u, low, from, to), boundary, taken(u.bits));
+            const bool paged = !bit_area && boundary == 0x4000 && opt_.dpps_given;
+            Ranges w = windows(u, low, from, to);
+            if (paged) w = in_held_pages(w);
+            std::optional<std::int64_t> a = fit_in(u, w, boundary, taken(u.bits));
             if (!a && too_big[i]) {
                 a = s.base;  // OC37 says why
             } else if (!a) {
@@ -5240,7 +5266,8 @@ void Program::locate(bool final) {
                          "no room for section '" + s.name + "' (" +
                              (u.bits ? std::to_string(u.size) + " bits" : hex(u.size, 4) + "H bytes") +
                              (bit_area ? " in FD00H..FDFFH" : "") +
-                             (cls.empty() ? "" : " in the address ranges of class '" + cls + "'") + ")" +
+                             (cls.empty() ? "" : " in the address ranges of class '" + cls + "'") +
+                             (paged ? " in the pages the DPPs hold" : "") + ")" +
                              (needs_segmented ? " (addresses from 10000H on need $SEGMENTED)" : ""));
                 a = s.base;
             } else {

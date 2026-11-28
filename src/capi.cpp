@@ -226,6 +226,13 @@ int oc166_options_add_reserved(oc166_options* opts, int64_t first, int64_t last)
     }
 }
 
+int oc166_options_set_dpp(oc166_options* opts, int n, int64_t page) {
+    if (!opts || n < 0 || n > 3 || page < 0 || page > 0x3FF) return -1;
+    opts->opt.dpps[n] = page;
+    opts->opt.dpps_given = true;
+    return 0;
+}
+
 int oc166_options_add_library(oc166_options* opts, const char* source, size_t length, const char* file_name) {
     if (!opts || (!source && length != 0)) return -1;
     try {
